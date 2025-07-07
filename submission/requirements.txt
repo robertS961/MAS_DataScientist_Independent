@@ -1,1 +1,10 @@
-# Please copy your requirements.txt file from studio/ to submission/ folder. 
+langchain-core
+langchain-openai
+langchain-community
+langgraph
+langgraph-sdk
+langgraph-checkpoint-sqlite
+matplotlib
+numpy
+seaborn
+reportlab
