@@ -13,3 +13,8 @@ matplotlib
 numpy
 seaborn
 reportlab
+scipy
+networkx
+wordcloud
+scikit-learn
+statsmodels

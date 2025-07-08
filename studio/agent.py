@@ -11,30 +11,48 @@ class State(TypedDict):
     message: str
     dataset_info: str
 
-def generate_msg(state: State):
-    dataset_info = state["dataset_info"]
-    # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
-    # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
-   
-    # if the prompt is to generate Python codes, then specify in sys_prompt and use generate_pdf_report()
-    sys_prompt = f"Please generate Python code to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
-    
-    # get the LLM instance
-    llm = get_llm(temperature=0, max_tokens=4096)
+def generate_msg_node(version: int):
+    def _generate(state: State):
+        dataset_info = state["dataset_info"]
+        previous_message = state.get("message", "")
+        
+        expert_intro = {
+            1: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets.",
+            2: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations.",
+            3: "You are a final reviewer, refining the insights and making sure the Python visualizations are well-structured and insightful.",
+        }[version]
 
-    # generate the response
-    response = llm.invoke(
-        [SystemMessage(content=sys_prompt), HumanMessage(content="Generate a response.")]
-    )
-    return {"message": response}
+        prompt = (
+            f"{expert_intro}\n\n"
+            f"Here is the current state of the analysis:\n{previous_message}\n\n"
+            f"The dataset description is:\n{dataset_info}\n\n"
+            "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights."
+        )
+
+        llm = get_llm(temperature=0, max_tokens=4096)
+        response = llm.invoke([
+            SystemMessage(content=prompt),
+            HumanMessage(content="Continue and refine the analysis.")
+        ])
+        return {"message": response}
+    return _generate
 
 
 def create_workflow():
     # create the agentic workflow using LangGraph
     builder = StateGraph(State)
-    builder.add_node("generate_msg", generate_msg)
-    builder.add_edge(START, "generate_msg")
-    builder.add_edge("generate_msg", END)
+
+    #Add Each Expert Node in a Chain
+    builder.add_node("generate_msg_1", generate_msg_node(1))
+    builder.add_node("generate_msg_2", generate_msg_node(2))
+    builder.add_node("generate_msg_3", generate_msg_node(3))
+
+    #Structure the nodes together
+    builder.add_edge(START, 'generate_msg_1')
+    builder.add_edge('generate_msg_1', 'generate_msg_2')
+    builder.add_edge('generate_msg_2', 'generate_msg_3')
+    builder.add_edge('generate_msg_3', END)
+
     return builder.compile()
 
 class Agent:
@@ -80,15 +98,25 @@ class Agent:
         
         # initialize the state & read the dataset
         state = self.initialize_state_from_csv()
+        
 
         # invoke the workflow
         output_state = self.workflow.invoke(state)
-        print(output_state)
 
         # flatten the output
+        """
         def _flatten(value):
             return getattr(value, "content", value)
         result = {k: _flatten(v) for k, v in output_state.items()}
+        """
+        # Flatten the output since Langraph outputs AIMessage(content = " content here")
+        def _flatten(value):
+            return getattr(value, "content", value)
+
+        result = {key: _flatten(field_value) for key, field_value in output_state.items()}
+        print("----- Generated Code Output -----")
+        print(result['message'])  
+        print("---------------------------------")
 
         # decode the output
         self.decode_output(result)
