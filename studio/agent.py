@@ -56,8 +56,8 @@ class Agent:
         example_values = "\t".join(first_row)
 
         # if the final output contains Vega-Lite codes, then use the github hosted dataset rather than the local dataset
-        file_name = "https://raw.githubusercontent.com/demoPlz/mini-template/main/studio/dataset.csv"
-        # file_name = "dataset.csv"
+        # file_name = "https://raw.githubusercontent.com/demoPlz/mini-template/main/studio/dataset.csv"
+        file_name = "dataset.csv"
         example_input = f"""
             There is a dataset, there are the following {len(header)} attributes:
             {attributes}
