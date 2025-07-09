@@ -13,6 +13,8 @@ class State(TypedDict):
 
 def generate_msg_node(version: int):
     def _generate(state: State):
+        # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
+        # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
         dataset_info = state["dataset_info"]
         previous_message = state.get("message", "")
         
