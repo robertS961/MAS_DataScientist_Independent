@@ -50,6 +50,7 @@ def generate_msg_supervisor(state: State):
         "- Clarifying vague statements\n"
         "- Filling in missing explanations for code\n"
         "- Adding any relevant insights that were missed\n"
+        "- Make sure there isn't any reindexing on an axis with duplicate labels"
         "- Ensuring the Python code is complete, clean, and runs correctly\n\n"
         "Here is the current draft:\n"
         f"{previous_message}\n\n"
@@ -145,9 +146,11 @@ class Agent:
             return getattr(value, "content", value)
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
+        """
         print("----- Generated Code Output -----")
         print(result['message'])  
         print("---------------------------------")
+        """
 
         # decode the output
         self.decode_output(result)

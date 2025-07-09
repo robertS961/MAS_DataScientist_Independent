@@ -19,3 +19,4 @@ networkx
 wordcloud
 scikit-learn
 statsmodels
+textblob
