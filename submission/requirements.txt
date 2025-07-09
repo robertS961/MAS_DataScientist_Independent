@@ -20,3 +20,4 @@ wordcloud
 scikit-learn
 statsmodels
 textblob
+geopandas
