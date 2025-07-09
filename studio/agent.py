@@ -37,6 +37,33 @@ def generate_msg_node(version: int):
         return {"message": response}
     return _generate
 
+def generate_msg_supervisor(state: State):
+    dataset_info = state["dataset_info"]
+    previous_message = state.get("message", "")
+
+    supervisor_prompt = (
+        "You are a senior data science supervisor tasked with reviewing a draft Python report "
+        "that includes code and narrative insights based on a dataset. Your goal is to review the report "
+        "carefully and improve it by:\n"
+        "- Clarifying vague statements\n"
+        "- Filling in missing explanations for code\n"
+        "- Adding any relevant insights that were missed\n"
+        "- Ensuring the Python code is complete, clean, and runs correctly\n\n"
+        "Here is the current draft:\n"
+        f"{previous_message}\n\n"
+        "Here is the dataset description:\n"
+        f"{dataset_info}\n\n"
+        "Please return the improved version of the full Python report with narrative and visualizations."
+    )
+
+    llm = get_llm(temperature=0, max_tokens=4096)
+    response = llm.invoke([
+        SystemMessage(content=supervisor_prompt),
+        HumanMessage(content="Please review and revise the report.")
+    ])
+    return {"message": response}
+
+
 
 def create_workflow():
     # create the agentic workflow using LangGraph
@@ -46,12 +73,14 @@ def create_workflow():
     builder.add_node("generate_msg_1", generate_msg_node(1))
     builder.add_node("generate_msg_2", generate_msg_node(2))
     builder.add_node("generate_msg_3", generate_msg_node(3))
+    builder.add_node('generate_msg_supervisor', generate_msg_supervisor)
 
     #Structure the nodes together
     builder.add_edge(START, 'generate_msg_1')
     builder.add_edge('generate_msg_1', 'generate_msg_2')
     builder.add_edge('generate_msg_2', 'generate_msg_3')
-    builder.add_edge('generate_msg_3', END)
+    builder.add_edge('generate_msg_3', 'generate_msg_supervisor')
+    builder.add_edge('generate_msg_supervisor', END)
 
     return builder.compile()
 
