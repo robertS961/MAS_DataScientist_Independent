@@ -12,6 +12,7 @@ class State(TypedDict):
     dataset_info: str
 
 def generate_msg_node(version: int):
+    #Must return a function for Langraph. Hence the functions inside function
     def _generate(state: State):
         # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
         # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
