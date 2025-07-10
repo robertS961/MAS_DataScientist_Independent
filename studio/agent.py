@@ -65,7 +65,7 @@ def generate_msg_supervisor(state: State):
     llm = get_llm(temperature=0, max_tokens=4096)
     response = llm.invoke([
         SystemMessage(content=supervisor_prompt),
-        HumanMessage(content="Please review and revise the report.")
+        HumanMessage(content="Please review and revise the report. Make sure the code runs clean. They should be zero bugs! Thank you")
     ])
     return {"message": response}
 

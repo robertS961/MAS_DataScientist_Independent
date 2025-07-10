@@ -22,19 +22,20 @@ def generate_msg_node(version: int):
             1: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets.",
             2: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations.",
             3: "You are a final reviewer, refining the insights and making sure the Python visualizations are well-structured and insightful.",
-        }[version]
+        }[(version % 3) + 1]
 
         prompt = (
             f"{expert_intro}\n\n"
             f"Here is the current state of the analysis:\n{previous_message}\n\n"
             f"The dataset description is:\n{dataset_info}\n\n"
-            "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights."
+            "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights. \n"
+            "Before you submit your Python code and narrative. Please make sure it runs without bugs. Do not pass on Faulty Code!"
         )
 
         llm = get_llm(temperature=0, max_tokens=4096)
         response = llm.invoke([
             SystemMessage(content=prompt),
-            HumanMessage(content="Continue and refine the analysis.")
+            HumanMessage(content="Continue and refine the analysis. Look to enhance the narrative, figures, and code! Thank you")
         ])
         return {"message": response}
     return _generate
@@ -50,7 +51,9 @@ def generate_msg_supervisor(state: State):
         "- Clarifying vague statements\n"
         "- Filling in missing explanations for code\n"
         "- Adding any relevant insights that were missed\n"
-        "- Make sure there isn't any reindexing on an axis with duplicate labels"
+        "- Make sure there isn't any reindexing on an axis with duplicate labels \n"
+        "- Make sure no objects have attriute dtype for numpy \n"
+        "- Make sure there isn't any errors in the code and it is runable, especially after you edit it \n"
         "- Ensuring the Python code is complete, clean, and runs correctly\n\n"
         "Here is the current draft:\n"
         f"{previous_message}\n\n"
@@ -62,29 +65,30 @@ def generate_msg_supervisor(state: State):
     llm = get_llm(temperature=0, max_tokens=4096)
     response = llm.invoke([
         SystemMessage(content=supervisor_prompt),
-        HumanMessage(content="Please review and revise the report.")
+        HumanMessage(content="Please review and revise the report. Make sure the code runs clean. They should be zero bugs! Thank you")
     ])
     return {"message": response}
-
-
 
 def create_workflow():
     # create the agentic workflow using LangGraph
     builder = StateGraph(State)
 
     #Add Each Expert Node in a Chain
-    builder.add_node("generate_msg_1", generate_msg_node(1))
-    builder.add_node("generate_msg_2", generate_msg_node(2))
-    builder.add_node("generate_msg_3", generate_msg_node(3))
-    builder.add_node('generate_msg_supervisor', generate_msg_supervisor)
+    node_count = 6 
+    for node_cnt in range(1, node_count + 2):
+        #Define Variables
+        curr_node = f"generate_msg_{node_cnt}" if node_cnt <= node_count else 'generate_msg_supervisor'
+        prev_node = f"generate_msg_{node_cnt - 1}" if node_cnt > 1 else START
+        func = generate_msg_node(node_cnt) if node_cnt <= node_count else generate_msg_supervisor
 
-    #Structure the nodes together
-    builder.add_edge(START, 'generate_msg_1')
-    builder.add_edge('generate_msg_1', 'generate_msg_2')
-    builder.add_edge('generate_msg_2', 'generate_msg_3')
-    builder.add_edge('generate_msg_3', 'generate_msg_supervisor')
+        #Create a Normal Work Node or a Supervisor Node
+        builder.add_node(curr_node, func)
+        print(curr_node, prev_node)
+
+        #Create either Start, transition, or supervisor edge
+        builder.add_edge(prev_node, curr_node)
+
     builder.add_edge('generate_msg_supervisor', END)
-
     return builder.compile()
 
 class Agent:
@@ -146,11 +150,11 @@ class Agent:
             return getattr(value, "content", value)
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
-        """
+        
         print("----- Generated Code Output -----")
         print(result['message'])  
         print("---------------------------------")
-        """
+        
 
         # decode the output
         self.decode_output(result)
