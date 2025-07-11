@@ -1,25 +1,28 @@
 from typing_extensions import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import StateGraph, START, END, MergeList
+from langgraph.graph import StateGraph, START, END
 
 import csv
+import operator
 import numpy as np
 from helpers import get_llm
 from report_html import generate_html_report
 from report_pdf import generate_pdf_report
 
 class State(TypedDict):
-    message: Annotated[list[str], MergeList()]
+    messages: Annotated[list, operator.add ]
     dataset_info: str
     iterations: int
+    final_message: str
+    report: str
 
 def generate_msg_node(version: int):
     def _generate(state: State):
         #Safety Check for Infinite Loops
-        iteration = state.get("iteration", 0)
+        '''iteration = state.get("iteration", 0)
         max_iterations = 1
         if iteration >= max_iterations:
-            return state
+            return state'''
         
         # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
         # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
@@ -46,18 +49,17 @@ def generate_msg_node(version: int):
             HumanMessage(content="Please generate and show the ideas to me. The output must be very specific. I want each ideas on its own line. So '\n' in between them. Nothing else, thank you")
         ])
         
-        ans = getattr(response, "content", response)
+        # ans = getattr(response, "content", response)
         return {
-        "message":  ans,
-        "iterations": iteration + 1
+        "messages":  [response.content]
+         #"iterations": iteration + 1
         }
-    
     return _generate
 
 
 def generate_msg_coach(state: State) -> State:
     # Get the list of messages from all player nodes
-    messages = state["message"]  # This is now a list of strings
+    messages = state["messages"]  # This is now a list of strings
     dataset_info = state["dataset_info"]
 
     # Collect all ideas from each message
@@ -77,22 +79,22 @@ def generate_msg_coach(state: State) -> State:
         + "\n".join(f"{i+1}. {idea}" for i, idea in enumerate(all_ideas)) +
         "\n\nPlease return the selected top 8 ideas that a panel of data scientists would consistently pick."
     )
+    human_prompt = (
+        "Select the best 8 ideas as requested. Please list one idea per line, with no extra blank lines. Only Select 8 thank you\n"
+        " In addition the file should only contain python code. Nothing else. So if there is weird titles or extra content, please remove that. Thank you \n"
+    )
 
     llm = get_llm(temperature=0, max_tokens=4096)
     response = llm.invoke([
         SystemMessage(content=prompt),
-        HumanMessage(content="Select the best ideas as requested. Please list one idea per line, with no extra blank lines."),
+        HumanMessage(content= human_prompt),
     ])
-
-    new_state = {
-        "message": getattr(response, "content", response),
-        "iteration": max(state.get("iteration", 0) for state in states.values()) + 1
-    }
-    return new_state
+    # "final_message": getattr(response, "content", response),
+    return {"final_message": response.content}
 
 def generate_msg_GM(state: State) -> State:
     dataset_info = state.get("dataset_info", "")
-    ideas_text = state.get("message", "")
+    ideas_text = state.get("final_message", "")
 
     prompt = (
         "You are a senior data scientist writing Python code for a report. "
@@ -115,10 +117,10 @@ def generate_msg_GM(state: State) -> State:
         SystemMessage(content=prompt),
         HumanMessage(content="Please generate the code for each idea with explanations. Make sure you test the code and it runs without bugs or errors. Double, triple check that please! Thank you")
     ])
-
+    # "message": getattr(response, "content", response),
     return {
-        "message": getattr(response, "content", response),
-        "iteration": state.get("iteration", 0) + 1
+        "report": response.content
+        # "iteration": state.get("iteration", 0) + 1
     }
 
 
@@ -132,29 +134,19 @@ def generate_team(builder):
         func = generate_msg_node(player)
         builder.add_node(curr_player, func)
         builder.add_edge(START, curr_player)
-    print("Players Generated")
-    # Time out node to coordinate players training
-    time_out = "time_out"
-    builder.add_node(time_out, lambda s: s)  # pass-through dummy
-    for player in range(team_size):
-        builder.add_edge(f"generate_msg_{player}", time_out)
-    print("Time out Generated")
+    
     #Create the Coach to collect all the players and pick the best ones
     coach = "generate_msg_coach"
     builder.add_node(coach, generate_msg_coach)
-    builder.add_edge(time_out, coach)
-
-    print("Coach Created")
-
+    for player in range(team_size):
+        builder.add_edge(f"generate_msg_{player}", coach)
+    
     #Create the General Manager to Aggregate the Final Players into a Cohesive Team
     general_manager = "generate_msg_GM"
     builder.add_node(general_manager, generate_msg_GM)
     builder.add_edge(coach, general_manager)
     builder.add_edge(general_manager, END)
-    print("Graph Built")
     return builder
-
-
 
 def create_workflow():
     # create the agentic workflow using LangGraph
@@ -223,7 +215,7 @@ class Agent:
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
         
         print("----- Generated Code Output -----")
-        print(result['message'])  
+        print(result['report'])  
         print("---------------------------------")
         
 
