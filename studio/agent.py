@@ -17,6 +17,7 @@ class State(TypedDict):
     report: str
 
 def generate_msg_node(version: int):
+    #Must return a function for Langraph. Hence the functions inside function
     def _generate(state: State):
         #Safety Check for Infinite Loops
         '''iteration = state.get("iteration", 0)
