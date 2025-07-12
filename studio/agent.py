@@ -1,94 +1,157 @@
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, START, END
 
 import csv
+import operator
+import numpy as np
 from helpers import get_llm
 from report_html import generate_html_report
 from report_pdf import generate_pdf_report
 
 class State(TypedDict):
-    message: str
+    messages: Annotated[list, operator.add ]
     dataset_info: str
+    iterations: int
+    final_message: str
+    report: str
 
 def generate_msg_node(version: int):
     def _generate(state: State):
+        #Safety Check for Infinite Loops
+        '''iteration = state.get("iteration", 0)
+        max_iterations = 1
+        if iteration >= max_iterations:
+            return state'''
+        
         # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
         # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
         dataset_info = state["dataset_info"]
         previous_message = state.get("message", "")
         
         expert_intro = {
-            1: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets.",
-            2: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations.",
-            3: "You are a final reviewer, refining the insights and making sure the Python visualizations are well-structured and insightful.",
+            1: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets. Focus on modern day statistical learning techniques like regression, clustering, correlation, p values, t test etc. Look for variable relationships",
+            2: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations. Feel free to also dive into individual variables, discover distributions or connections to compounding other variables",
+            3: "You are a statistician, find unique and interesting ideas backed by statistics in the data",
         }[(version % 3) + 1]
 
         prompt = (
             f"{expert_intro}\n\n"
             f"Here is the current state of the analysis:\n{previous_message}\n\n"
             f"The dataset description is:\n{dataset_info}\n\n"
-            "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights. \n"
-            "Before you submit your Python code and narrative. Please make sure it runs without bugs. Do not pass on Faulty Code!"
+            "Please come up with several unique ideas to perform on the data. The ideas should be codeable and produce visualization. Do not code them. Just state them. \n"
+            "You should return a list of 5 - 10 unique narratives about the data that can be tested with data visualizations. \n\n "
         )
 
         llm = get_llm(temperature=0, max_tokens=4096)
         response = llm.invoke([
             SystemMessage(content=prompt),
-            HumanMessage(content="Continue and refine the analysis. Look to enhance the narrative, figures, and code! Thank you")
+            HumanMessage(content="Please generate and show the ideas to me. The output must be very specific. I want each ideas on its own line. So '\n' in between them. Nothing else, thank you")
         ])
-        return {"message": response}
+        
+        # ans = getattr(response, "content", response)
+        return {
+        "messages":  [response.content]
+         #"iterations": iteration + 1
+        }
     return _generate
 
-def generate_msg_supervisor(state: State):
-    dataset_info = state["dataset_info"]
-    previous_message = state.get("message", "")
 
-    supervisor_prompt = (
-        "You are a senior data science supervisor tasked with reviewing a draft Python report "
-        "that includes code and narrative insights based on a dataset. Your goal is to review the report "
-        "carefully and improve it by:\n"
-        "- Clarifying vague statements\n"
-        "- Filling in missing explanations for code\n"
-        "- Adding any relevant insights that were missed\n"
-        "- Make sure there isn't any reindexing on an axis with duplicate labels \n"
-        "- Make sure no objects have attriute dtype for numpy \n"
-        "- Make sure there isn't any errors in the code and it is runable, especially after you edit it \n"
-        "- Ensuring the Python code is complete, clean, and runs correctly\n\n"
-        "Here is the current draft:\n"
-        f"{previous_message}\n\n"
-        "Here is the dataset description:\n"
-        f"{dataset_info}\n\n"
-        "Please return the improved version of the full Python report with narrative and visualizations."
+def generate_msg_coach(state: State) -> State:
+    # Get the list of messages from all player nodes
+    messages = state["messages"]  # This is now a list of strings
+    dataset_info = state["dataset_info"]
+
+    # Collect all ideas from each message
+    all_ideas = []
+    for msg in messages:
+        ideas = msg.split("\n")
+        cleaned = [idea.strip() for idea in ideas if idea.strip()]
+        all_ideas.extend(cleaned)
+
+    prompt = (
+        "You are a senior data scientist leading a panel of experts. "
+        "Given the following list of ideas generated by your team, select the top 8 ideas that are:\n"
+        "- Novel and unique\n"
+        "- Testable with data\n"
+        "- Capable of producing beautiful data visualizations\n\n"
+        "Ideas:\n"
+        + "\n".join(f"{i+1}. {idea}" for i, idea in enumerate(all_ideas)) +
+        "\n\nPlease return the selected top 8 ideas that a panel of data scientists would consistently pick."
+    )
+    human_prompt = (
+        "Select the best 8 ideas as requested. Please list one idea per line, with no extra blank lines. Only Select 8 thank you\n"
+        " In addition the file should only contain python code. Nothing else. So if there is weird titles or extra content, please remove that. Thank you \n"
     )
 
     llm = get_llm(temperature=0, max_tokens=4096)
     response = llm.invoke([
-        SystemMessage(content=supervisor_prompt),
-        HumanMessage(content="Please review and revise the report.")
+        SystemMessage(content=prompt),
+        HumanMessage(content= human_prompt),
     ])
-    return {"message": response}
+    # "final_message": getattr(response, "content", response),
+    return {"final_message": response.content}
+
+def generate_msg_GM(state: State) -> State:
+    dataset_info = state.get("dataset_info", "")
+    ideas_text = state.get("final_message", "")
+
+    prompt = (
+        "You are a senior data scientist writing Python code for a report. "
+        "Below is a list of 8 data visualization ideas that were selected by a panel of top data scientist.\n\n"
+        "Dataset Info:\n"
+        f"{dataset_info}\n\n"
+        "Ideas:\n"
+        f"{ideas_text}\n\n"
+        "Your job is to write Python code that implements each idea. For each idea:\n"
+        "- Write clean, well-documented Python code\n"
+        "- Use libraries like pandas, matplotlib, seaborn, or plotly\n"
+        "- Use beautiful and effective visualizations\n"
+        "- Structure your answer as:\n"
+        "- Test your code for each idea and make sure it runs without bugs"
+        "Make sure that visualizations are clear and insightful"
+    )
+
+    llm = get_llm(temperature=0.3, max_tokens=4096)
+    response = llm.invoke([
+        SystemMessage(content=prompt),
+        HumanMessage(content="Please generate the code for each idea with explanations. Make sure you test the code and it runs without bugs or errors. Double, triple check that please! Thank you")
+    ])
+    # "message": getattr(response, "content", response),
+    return {
+        "report": response.content
+        # "iteration": state.get("iteration", 0) + 1
+    }
+
+
+
+def generate_team(builder):
+    team_size = 3
+
+    # Create the player connections
+    for player in range(team_size):
+        curr_player = f"generate_msg_{player}"
+        func = generate_msg_node(player)
+        builder.add_node(curr_player, func)
+        builder.add_edge(START, curr_player)
+    
+    #Create the Coach to collect all the players and pick the best ones
+    coach = "generate_msg_coach"
+    builder.add_node(coach, generate_msg_coach)
+    for player in range(team_size):
+        builder.add_edge(f"generate_msg_{player}", coach)
+    
+    #Create the General Manager to Aggregate the Final Players into a Cohesive Team
+    general_manager = "generate_msg_GM"
+    builder.add_node(general_manager, generate_msg_GM)
+    builder.add_edge(coach, general_manager)
+    builder.add_edge(general_manager, END)
+    return builder
 
 def create_workflow():
     # create the agentic workflow using LangGraph
     builder = StateGraph(State)
-
-    #Add Each Expert Node in a Chain
-    node_count = 6 
-    for node_cnt in range(1, node_count + 2):
-        #Define Variables
-        curr_node = f"generate_msg_{node_cnt}" if node_cnt <= node_count else 'generate_msg_supervisor'
-        prev_node = f"generate_msg_{node_cnt - 1}" if node_cnt > 1 else START
-        func = generate_msg_node(node_cnt) if node_cnt <= node_count else generate_msg_supervisor
-
-        #Create a Normal Work Node or a Supervisor Node
-        builder.add_node(curr_node, func)
-        print(curr_node, prev_node)
-
-        #Create either Start, transition, or supervisor edge
-        builder.add_edge(prev_node, curr_node)
-
-    builder.add_edge('generate_msg_supervisor', END)
+    builder = generate_team(builder)
     return builder.compile()
 
 class Agent:
@@ -152,7 +215,7 @@ class Agent:
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
         
         print("----- Generated Code Output -----")
-        print(result['message'])  
+        print(result['report'])  
         print("---------------------------------")
         #Just a test comment
 

@@ -11,7 +11,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
 def generate_pdf_report(output_state: dict, output_path: str):
-    content = output_state["message"]
+    content = output_state["report"]
 
     # 1. Prepare pdf
     doc = SimpleDocTemplate(output_path, pagesize=letter)
