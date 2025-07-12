@@ -70,30 +70,46 @@ def WebSearch():
     return web_search
     
 
-def Research_Agent():
+def Research_DataScience_Agent():
     web_search = WebSearch()
-    research_agent = create_react_agent(
+    research_ds_agent = create_react_agent(
         model="openai:gpt-4o",
         tools=[web_search],
         prompt=(
-            "You are a research agent.\n\n"
+            "You are a research data science agent.\n\n"
             "INSTRUCTIONS:\n"
-            "- Assist ONLY with research-related tasks, your task is to discover novel data science tactics\n"
+            "- Assist ONLY with research-related tasks, your task is to discover novel data science strategies. \n"
             "- After you're done with your tasks, respond to the supervisor directly\n"
             "- Respond ONLY with the results of your work, do NOT include ANY other text."
         ),
-        name="research_agent",
+        name="research_ds_agent",
     )
-    return research_agent
+    return research_ds_agent
+
+def Research_Stat_Agent():
+    web_search = WebSearch()
+    research_stat_agent = create_react_agent(
+        model="openai:gpt-4o",
+        tools=[web_search],
+        prompt=(
+            "You are a research statistician agent.\n\n"
+            "INSTRUCTIONS:\n"
+            "- Assist ONLY with research-related tasks, your task is to discover novel statistic ideas to perform on tabular datasets. \n"
+            "- After you're done with your tasks, respond to the supervisor directly\n"
+            "- Respond ONLY with the results of your work, do NOT include ANY other text."
+        ),
+        name="research_stat_agent",
+    )
+    return research_stat_agent
 
 def Visualization_Agent():
     visualization_agent = create_react_agent(
         model="openai:gpt-4o",
         tools=[],
         prompt=(
-            "You are a visualiation agent.\n\n"
+            "You are a visualiation and python coding agent.\n\n"
             "INSTRUCTIONS:\n"
-            "- Assist ONLY with visualization related tasks. You will recieve websites and ideas. Take these ideas and write python code to execute them.\n"
+            f"- Assist ONLY with visualization and code related tasks. You are to write clean code in Python to create beaitful data visualizations.\n"
             "- After you're done with your tasks, respond to the supervisor directly\n"
             "- Respond ONLY with the results of your work, do NOT include ANY other text."
         ),
@@ -102,15 +118,17 @@ def Visualization_Agent():
     return visualization_agent
 
 def Supervisor_Agent():
-    research_agent = Research_Agent()
+    research_ds_agent = Research_DataScience_Agent()
+    research_stat_agent = Research_Stat_Agent()
     visualization_agent = Visualization_Agent()
     supervisor = create_supervisor(
     model=init_chat_model("openai:gpt-4o"),
-    agents=[research_agent, visualization_agent],
+    agents=[research_ds_agent, research_stat_agent, visualization_agent],
     prompt=(
-        "You are a supervisor managing two agents:\n"
-        "- a research agent. Assign research-related tasks to this agent\n"
-        "- a visualization agent. Assign visualization tasks to this agent\n"
+        "You are a supervisor managing three agents:\n"
+        "- a research data science agent. Assign research-related data science tasks to this agent\n"
+        "- a research statistician agent. Assign research-related statistic tasks to this agent"
+        "- a visualization and coding agent. Assign coding tasks for visualization to this agent\n"
         "Assign work to one agent at a time, do not call agents in parallel.\n"
         "Do not do any work yourself."
     ),
@@ -126,7 +144,10 @@ def create_workflow():
             "messages": [
                 {
                     "role": "user",
-                    "content": "Find great data visualization techniques on the web. Then code them up in Python to create data visualizations.",
+                    "content": "Imagine you are given a tabular dataset. Your goal to research novel data science and statistic ideas to perform on the data \n"
+                    "Assign data exploration tasks to the both the stats_agent and the data science_agent \n"
+                    "Then turn these ideas into python code that creates beautiful data visualizations \n"
+                    "You should return code as the output \n",
                 }
             ]
         },
