@@ -15,16 +15,18 @@ load_dotenv()
 import csv
 import operator
 import numpy as np
+import json
+import pickle
 from helpers import get_llm
 from report_html import generate_html_report
 from report_pdf import generate_pdf_report
 
 class State(TypedDict):
-    messages: Annotated[list, operator.add ]
+    messages: str
     dataset_info: str
-    iterations: int
-    final_message: str
-    report: str
+    #iterations: int
+    #final_message: str
+    #report: str
 
 def pretty_print_message(message, indent=False):
     pretty_message = message.pretty_repr(html=True)
@@ -103,19 +105,23 @@ def Research_Stat_Agent():
     return research_stat_agent
 
 def Visualization_Agent():
-    visualization_agent = create_react_agent(
+    tools = []
+    prompt_template = (
+        "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, or plotly.\n\n"
+        "DATASET INFO:\n{dataset_info}\n\n"
+        "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything."
+    )
+    def custom_prompt(state: dict) -> str:
+        return prompt_template.format(
+            dataset_info=state.get("dataset_info", "")
+        )
+    return create_react_agent(
         model="openai:gpt-4o",
-        tools=[],
-        prompt=(
-            "You are a visualiation and python coding agent.\n\n"
-            "INSTRUCTIONS:\n"
-            f"- Assist ONLY with visualization and code related tasks. You are to write clean code in Python to create beaitful data visualizations.\n"
-            "- After you're done with your tasks, respond to the supervisor directly\n"
-            "- Respond ONLY with the results of your work, do NOT include ANY other text."
-        ),
+        tools=tools,
+        prompt= prompt_template,
         name="visualization_agent",
     )
-    return visualization_agent
+    
 
 def Supervisor_Agent():
     research_ds_agent = Research_DataScience_Agent()
@@ -138,29 +144,20 @@ def Supervisor_Agent():
 
 
 def create_workflow():
-    supervisor = Supervisor_Agent().compile()
-    for chunk in supervisor.stream(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "Imagine you are given a tabular dataset. Your goal to research novel data science and statistic ideas to perform on the data \n"
-                    "Assign data exploration tasks to the both the stats_agent and the data science_agent \n"
-                    "Then turn these ideas into python code that creates beautiful data visualizations \n"
-                    "You should return code as the output \n",
-                }
-            ]
-        },
-    ):
-        pretty_print_messages(chunk, last_message=True)
+    return Supervisor_Agent().compile()
+    
 
-    final_message_history = chunk["supervisor"]["messages"]
     '''
     create the agentic workflow using LangGraph
     builder = StateGraph(State)
     builder = generate_team(builder)
     return builder.compile()
     '''
+
+def create_output(supervisor):
+    for chunk in supervisor['supervisor']['messages']:
+        print(chunk)
+    
 
 class Agent:
     def __init__(self):
@@ -205,10 +202,28 @@ class Agent:
         
         # initialize the state & read the dataset
         state = self.initialize_state_from_csv()
-        
-
         # invoke the workflow
-        output_state = self.workflow.invoke(state)
+        #output_state = self.workflow.invoke(state)
+        prompt= (f"You are given a tabular dataset. Here is the data {state["dataset_info"]} \n"
+                "Your goal to research novel data science and statistic ideas to perform on the data \n"
+                "Assign data exploration tasks to the both the stats_agent and the data science_agent \n"
+                f"Then turn these ideas into python code that creates beautiful data visualizations using the {state['dataset_info']} \n"
+                "You should return code as the output \n")
+
+        dic = {"messages": [
+            {
+                "role": "user",
+                "content": f"{prompt}"
+            }
+            ]
+        }
+        
+        supervisor = self.workflow.invoke(dic) # Label this state better
+        print('hi')
+        
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(str(supervisor))
+        create_output(supervisor)
 
         # flatten the output
         """
