@@ -6,6 +6,8 @@ langsmith
 langchain-community
 langchain-core
 langchain-openai
+langgraph-supervisor 
+langchain-tavily
 notebook
 tavily-python
 trustcall
