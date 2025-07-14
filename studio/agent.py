@@ -41,6 +41,7 @@ def generate_msg_node(version: int):
     return _generate
 
 def generate_msg_supervisor(state: State):
+    #Create a supervisor at the end of the chain to add the finishig touches
     dataset_info = state["dataset_info"]
     previous_message = state.get("message", "")
 
