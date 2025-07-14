@@ -28,6 +28,10 @@ class State(TypedDict):
     #final_message: str
     #report: str
 
+class FinalState(TypedDict):
+    final_report: str
+    dataset_info: str
+
 def pretty_print_message(message, indent=False):
     pretty_message = message.pretty_repr(html=True)
     if not indent:
@@ -68,7 +72,7 @@ def pretty_print_messages(update, last_message=False):
         print("\n")
 
 def WebSearch():
-    web_search = TavilySearch(max_results=3)
+    web_search = TavilySearch(max_results=1)
     return web_search
     
 
@@ -142,6 +146,41 @@ def Supervisor_Agent():
     output_mode="full_history", )
     return supervisor
 
+def translate_node(state:FinalState):
+    final_report = state['final_report']
+    dataset_info = state['dataset_info']
+    prompt = (
+        "You are a senior level data analyst. You excell at python programming especially in data visualization \n"
+        f"Here is the current state of the analysis:\n{final_report}\n\n"
+        f"The dataset description is:\n{dataset_info}\n\n"
+        "There is a lot of python code in the output along with some useless text from the previous agents. Parse for all the python code first \n"
+        "Then transform the python text into readbale and runable python code. Then improve it to make the data visualizations better \n"
+        "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights."
+    )
+    human_prompt = (
+        "Please make sure the python code runs without bugs. Then double check to make sure that it runs and that the images are easily visable and don't contain emepty graphs or unreadable figures \n\n"
+        "Also make sure the code doesn't contain any non coding lines. IT will be put through a coding translator which can only take Python code! Thank you \n\n"
+        "Lastly please make the code simple and easy to read!"
+    )
+
+    llm = get_llm(temperature=0, max_tokens=4096)
+    response = llm.invoke([
+        SystemMessage(content=prompt),
+        HumanMessage(content= human_prompt)
+    ])
+    return {"final_report": response}
+
+
+
+def create_finalReport():
+    builder = StateGraph(FinalState)
+    builder.add_node('translate_node', translate_node)
+    
+    builder.add_edge(START, 'translate_node')
+    builder.add_edge('translate_node', END)
+
+    return builder.compile()
+
 
 def create_workflow():
     return Supervisor_Agent().compile()
@@ -154,9 +193,6 @@ def create_workflow():
     return builder.compile()
     '''
 
-def create_output(supervisor):
-    for chunk in supervisor['supervisor']['messages']:
-        print(chunk)
     
 
 class Agent:
@@ -188,6 +224,7 @@ class Agent:
         state = {
             "dataset_info": str(example_input)
         }
+
         return state
     def decode_output(self, output: dict):
         # if the final output contains Vega-Lite codes, then use generate_html_report
@@ -218,30 +255,36 @@ class Agent:
             ]
         }
         
-        supervisor = self.workflow.invoke(dic) # Label this state better
-        print('hi')
-        
-        with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(str(supervisor))
-        create_output(supervisor)
+        for chunk in self.workflow.stream(input = dic): # Label this state better
+            pretty_print_messages(chunk, last_message=True)
 
-        # flatten the output
-        """
-        def _flatten(value):
-            return getattr(value, "content", value)
-        result = {k: _flatten(v) for k, v in output_state.items()}
-        """
+        final_message_history = chunk["supervisor"]["messages"]
+        final_state = {
+            'final_report': final_message_history,
+            'dataset_info': state['dataset_info']
+        }
+        final = create_finalReport()
+        output_state = final.invoke(final_state)
+        print(output_state)
+        
+        '''with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(values)'''
+        #create_output(supervisor)
+
+   
         # Flatten the output since Langraph outputs AIMessage(content = " content here")
+        
         def _flatten(value):
             return getattr(value, "content", value)
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
         
+        
         print("----- Generated Code Output -----")
-        print(result['report'])  
+        print(result['final_report'])  
         print("---------------------------------")
         
-
+        
         # decode the output
         self.decode_output(result)
 
