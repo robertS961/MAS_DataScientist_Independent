@@ -5,6 +5,7 @@ from langchain_tavily import TavilySearch
 from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_supervisor
 from langchain.chat_models import init_chat_model
+from langgraph_swarm import create_swarm, create_handoff_tool
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -72,51 +73,92 @@ def pretty_print_messages(update, last_message=False):
         print("\n")
 
 def WebSearch():
+    """ This function searches the web for relevant research information! """
     web_search = TavilySearch(max_results=1)
     return web_search
+
+def transfer_to_ds_agent():
+    transfer_to_ds_agent = create_handoff_tool(
+        agent_name = 'ds_assistant',
+        description = (
+            'Transfer user to a data science agent! Capabale of coming up with novel data science ideas \n\n'
+            'It uses a websearch tool Tavily to help find research ideas for data science \n\n'
+        ),
+    )
+    return transfer_to_ds_agent
+
+def transfer_to_stats_agent():
+    transfer_to_stats_agent = create_handoff_tool(
+        agent_name = 'stats_assistant',
+        description = (
+            'Transfer user to a statistician agent! Capabale of coming up with novel statistical learning ideas \n\n'
+            'It uses a websearch tool Tavily to help find research ideas for statisticial learning and statistics \n\n'
+        ),
+    )
+    return transfer_to_stats_agent
+
+def transfer_to_vis_agent():
+    transfer_to_vis_agent = create_handoff_tool(
+        agent_name = 'vis_assistant',
+        description = (
+            'Transfer user to a visualization agent! Capabale of taking the previous ideas and turning them into computable python code! \n\n'
+            'It uses the LLM enginge to take those ideas and create clean, bug free, and simple python code! \n\n'
+        ),
+    )
+    return transfer_to_vis_agent
+
+
     
 
 def Research_DataScience_Agent():
     web_search = WebSearch()
+    stats_agent = transfer_to_stats_agent()
     research_ds_agent = create_react_agent(
         model="openai:gpt-4o",
-        tools=[web_search],
+        tools=[web_search, stats_agent],
         prompt=(
             "You are a research data science agent.\n\n"
             "INSTRUCTIONS:\n"
-            "- Assist ONLY with research-related tasks, your task is to discover novel data science strategies. \n"
-            "- After you're done with your tasks, respond to the supervisor directly\n"
-            "- Respond ONLY with the results of your work, do NOT include ANY other text."
+            "Your goal is find novel data science ideas for a tabular dataset. You have access to two different tools! \n\n"
+            "You can web_search the internet to discover ideas! \n\n"
+            "Once you discover interesting and novel ideas then transfer the user to the stats agent\n\n"
         ),
-        name="research_ds_agent",
+        name="ds_assistant",
     )
     return research_ds_agent
 
 def Research_Stat_Agent():
     web_search = WebSearch()
+    ds_agent = transfer_to_ds_agent()
+    
+    vis_agent = transfer_to_vis_agent()
     research_stat_agent = create_react_agent(
         model="openai:gpt-4o",
-        tools=[web_search],
+        tools=[web_search, vis_agent],
         prompt=(
             "You are a research statistician agent.\n\n"
             "INSTRUCTIONS:\n"
-            "- Assist ONLY with research-related tasks, your task is to discover novel statistic ideas to perform on tabular datasets. \n"
-            "- After you're done with your tasks, respond to the supervisor directly\n"
-            "- Respond ONLY with the results of your work, do NOT include ANY other text."
+            "Your goal is find novel statistical learning ideas for a tabular dataset. You have access to two different tools! \n\n"
+            "You can web_search the internet to discover ideas! \n\n"
+            "Once you discover interesting and novel ideas then transfer the user to the vis agent\n\n"
         ),
-        name="research_stat_agent",
+        name="stats_assistant",
     )
     return research_stat_agent
 
 def Visualization_Agent():
-    tools = []
+    ds_agent = transfer_to_ds_agent()
+    stats_agent = transfer_to_stats_agent()
+    tools = [ds_agent, stats_agent]
     prompt_template = (
-        "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, or plotly.\n\n"
+        "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
         "DATASET INFO:\n{dataset_info}\n\n"
         "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
         "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+        "Once you discover interesting and novel ideas then transfer the user to the ds agent\n\n"
     )
     def custom_prompt(state: dict) -> str:
+        """ Creates an output for the model below"""
         return prompt_template.format(
             dataset_info=state.get("dataset_info", "")
         )
@@ -124,67 +166,23 @@ def Visualization_Agent():
         model="openai:gpt-4o",
         tools=tools,
         prompt= prompt_template,
-        name="visualization_agent",
+        name="vis_assistant",
     )
     
 
-def Supervisor_Agent():
+def Swarm_Agent():
     research_ds_agent = Research_DataScience_Agent()
     research_stat_agent = Research_Stat_Agent()
-    visualization_agent = Visualization_Agent()
-    supervisor = create_supervisor(
-    model=init_chat_model("openai:gpt-4o"),
-    agents=[research_ds_agent, research_stat_agent, visualization_agent],
-    prompt=(
-        "You are a supervisor managing three agents:\n"
-        "- a research data science agent. Assign research-related data science tasks to this agent\n"
-        "- a research statistician agent. Assign research-related statistic tasks to this agent"
-        "- a visualization and coding agent. Assign coding tasks for visualization to this agent\n"
-        "Assign work to one agent at a time, do not call agents in parallel.\n"
-        "Do not do any work yourself."
-    ),
-    add_handoff_back_messages=True,
-    output_mode="full_history", )
-    return supervisor
-
-def translate_node(state:FinalState):
-    final_report = state['final_report']
-    dataset_info = state['dataset_info']
-    prompt = (
-        "You are a senior level data analyst. You excell at python programming especially in data visualization \n"
-        f"Here is the current state of the analysis:\n{final_report}\n\n"
-        f"The dataset description is:\n{dataset_info}\n\n"
-        "There is a lot of python code in the output along with some useless text from the previous agents. Parse for all the python code first \n"
-        "Then transform the python text into readbale and runable python code. Then improve it to make the data visualizations better \n"
-        "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights."
+    reserarch_vis_agent = Visualization_Agent()
+    swarm_agent = create_swarm(
+    agents=[research_ds_agent, research_stat_agent, reserarch_vis_agent],
+    default_active_agent = 'ds_assistant'
     )
-    human_prompt = (
-        "Please make sure the python code runs without bugs. Then double check to make sure that it runs and that the images are easily visable and don't contain emepty graphs or unreadable figures \n\n"
-        "Also make sure the code doesn't contain any non coding lines. IT will be put through a coding translator which can only take Python code! Thank you \n\n"
-        "Lastly please make the code simple and easy to read!"
-    )
-
-    llm = get_llm(temperature=0, max_tokens=4096)
-    response = llm.invoke([
-        SystemMessage(content=prompt),
-        HumanMessage(content= human_prompt)
-    ])
-    return {"final_report": response}
-
-
-
-def create_finalReport():
-    builder = StateGraph(FinalState)
-    builder.add_node('translate_node', translate_node)
-    
-    builder.add_edge(START, 'translate_node')
-    builder.add_edge('translate_node', END)
-
-    return builder.compile()
+    return swarm_agent
 
 
 def create_workflow():
-    return Supervisor_Agent().compile()
+    return Swarm_Agent().compile()
     
 
     '''
@@ -244,9 +242,10 @@ class Agent:
         #output_state = self.workflow.invoke(state)
         prompt= (f"You are given a tabular dataset. Here is the data {state["dataset_info"]} \n"
                 "Your goal to research novel data science and statistic ideas to perform on the data \n"
-                "Assign data exploration tasks to the both the stats_agent and the data science_agent \n"
-                f"Then turn these ideas into python code that creates beautiful data visualizations using the {state['dataset_info']} \n"
-                "You should return code as the output \n")
+                "Swarm all the agents until code is generated!\n"
+                "You must return runable python code! IT should produce data visualization based on the ideas generated from the ds and stats agents! \n"
+                "Do not return anything but python code!\n\n"
+        )
 
         dic = {"messages": [
             {
@@ -255,27 +254,35 @@ class Agent:
             }
             ]
         }
-        
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
-
         # Hold the final message from supervisor
-        final_message_history = chunk
+        final_message_history = chunk['vis_assistant']['messages'][-1].content
+        
+        print(final_message_history)
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(str(final_message_history))
+        # Let's say your output is stored in a variable called `raw_output`
+        #matches = re.findall(r"```python\n(.*?)\n```", final_message_history, re.DOTALL)
+       
         
         # Let's say your huge dict is called `result_dict`
-        result_text = final_message_history["supervisor"]["messages"][-1].content
-        
+        # result_text = final_message_history["stats_assistant"]["messages"]['HumanMessage'].content
+        '''
         # Extract everything that looks like code inside triple backticks
         code_blocks = re.findall(r"```(?:python)?\n(.*?)```", result_text, re.DOTALL)
-
+        '''
         # Write each block to a separate file or combine into one
+        '''
         with open("extracted_code.py", "w", encoding="utf-8") as f:
-            for block in code_blocks:
+            for block in matches:
                 f.write(block + "\n\n")
-
+        '''
+        '''
         # Write the entire block to a file for debugging purposes
         with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(final_message_history['supervisor']['messages'][-1].content)
+            f.write(result_text)
+        '''
         '''
         final_state = {
             'final_report': final_message_history,
@@ -305,7 +312,7 @@ class Agent:
         '''
         
         # decode the output
-        self.decode_output(result_text)
+        self.decode_output(final_message_history)
 
         # return the result
-        return code_blocks
+        return final_message_history

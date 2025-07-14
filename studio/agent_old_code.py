@@ -199,3 +199,37 @@ def generate_team(builder):
     builder.add_edge(coach, general_manager)
     builder.add_edge(general_manager, END)
     return builder
+def translate_node(state:FinalState):
+    final_report = state['final_report']
+    dataset_info = state['dataset_info']
+    prompt = (
+        "You are a senior level data analyst. You excell at python programming especially in data visualization \n"
+        f"Here is the current state of the analysis:\n{final_report}\n\n"
+        f"The dataset description is:\n{dataset_info}\n\n"
+        "There is a lot of python code in the output along with some useless text from the previous agents. Parse for all the python code first \n"
+        "Then transform the python text into readbale and runable python code. Then improve it to make the data visualizations better \n"
+        "Please improve and extend the Python code and narrative to make the analysis deeper and more impactful. Output should be Python code with graphs and written insights."
+    )
+    human_prompt = (
+        "Please make sure the python code runs without bugs. Then double check to make sure that it runs and that the images are easily visable and don't contain emepty graphs or unreadable figures \n\n"
+        "Also make sure the code doesn't contain any non coding lines. IT will be put through a coding translator which can only take Python code! Thank you \n\n"
+        "Lastly please make the code simple and easy to read!"
+    )
+
+    llm = get_llm(temperature=0, max_tokens=4096)
+    response = llm.invoke([
+        SystemMessage(content=prompt),
+        HumanMessage(content= human_prompt)
+    ])
+    return {"final_report": response}
+
+
+
+def create_finalReport():
+    builder = StateGraph(FinalState)
+    builder.add_node('translate_node', translate_node)
+    
+    builder.add_edge(START, 'translate_node')
+    builder.add_edge('translate_node', END)
+
+    return builder.compile()
