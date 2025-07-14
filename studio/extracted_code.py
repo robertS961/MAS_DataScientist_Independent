@@ -1,6 +1,3 @@
-The tasks have been successfully assigned to the respective agents, and the resulting Python code for data visualization has been provided. Here is the code:
-
-```python
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -49,6 +46,5 @@ plt.figure(figsize=(12, 12))
 nx.draw(G, with_labels=True, node_size=50, font_size=8)
 plt.title('Author Collaboration Network')
 plt.show()
-```
 
-This code includes creating a correlation heatmap, analyzing trends over time, conducting topic modeling on abstracts, and visualizing author networks. You can run the code to generate the visualizations and insights.
+

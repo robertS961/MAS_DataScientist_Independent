@@ -5,13 +5,14 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from typing import List
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Image, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
-def generate_pdf_report(output_state: dict, output_path: str):
-    content = output_state["final_report"]
+def generate_pdf_report(output_state: str, output_path: str):
+    content = output_state
 
     # 1. Prepare pdf
     doc = SimpleDocTemplate(output_path, pagesize=letter)

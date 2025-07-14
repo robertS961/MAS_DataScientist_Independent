@@ -11,7 +11,7 @@ load_dotenv()
 
 
 
-
+import re
 import csv
 import operator
 import numpy as np
@@ -113,7 +113,8 @@ def Visualization_Agent():
     prompt_template = (
         "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, or plotly.\n\n"
         "DATASET INFO:\n{dataset_info}\n\n"
-        "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything."
+        "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
+        "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
     )
     def custom_prompt(state: dict) -> str:
         return prompt_template.format(
@@ -258,7 +259,23 @@ class Agent:
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
 
-        final_message_history = chunk["supervisor"]["messages"]
+        final_message_history = chunk
+        
+        # Let's say your huge dict is called `result_dict`
+        result_text = final_message_history["supervisor"]["messages"][-1].content
+        
+        # Extract everything that looks like code inside triple backticks
+        code_blocks = re.findall(r"```(?:python)?\n(.*?)```", result_text, re.DOTALL)
+
+        # Write each block to a separate file or combine into one
+        with open("extracted_code.py", "w", encoding="utf-8") as f:
+            for block in code_blocks:
+                f.write(block + "\n\n")
+
+        # Write the entire block to a file for debugging purposes
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(final_message_history['supervisor']['messages'][-1].content)
+        '''
         final_state = {
             'final_report': final_message_history,
             'dataset_info': state['dataset_info']
@@ -266,6 +283,7 @@ class Agent:
         final = create_finalReport()
         output_state = final.invoke(final_state)
         print(output_state)
+        '''
         
         '''with open("debug_output.txt", "w", encoding="utf-8") as f:
             f.write(values)'''
@@ -273,20 +291,20 @@ class Agent:
 
    
         # Flatten the output since Langraph outputs AIMessage(content = " content here")
-        
+        '''
         def _flatten(value):
             return getattr(value, "content", value)
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
-        
-        
+        '''
+        '''
         print("----- Generated Code Output -----")
         print(result['final_report'])  
         print("---------------------------------")
-        
+        '''
         
         # decode the output
-        self.decode_output(result)
+        self.decode_output(result_text)
 
         # return the result
-        return result
+        return code_blocks
