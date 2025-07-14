@@ -160,7 +160,7 @@ def translate_node(state:FinalState):
     human_prompt = (
         "Please make sure the python code runs without bugs. Then double check to make sure that it runs and that the images are easily visable and don't contain emepty graphs or unreadable figures \n\n"
         "Also make sure the code doesn't contain any non coding lines. IT will be put through a coding translator which can only take Python code! Thank you \n\n"
-        "Lastly please make the code simple and easy to read!"
+        "Lastly please make the code simple and easy to read! \n"
     )
 
     llm = get_llm(temperature=0, max_tokens=4096)
@@ -265,10 +265,10 @@ class Agent:
         }
         final = create_finalReport()
         output_state = final.invoke(final_state)
-        print(output_state)
+        # print(output_state)
         
-        '''with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(values)'''
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(output_state['final_report'].content)
         #create_output(supervisor)
 
    
@@ -279,11 +279,11 @@ class Agent:
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
         
-        
+        '''
         print("----- Generated Code Output -----")
         print(result['final_report'])  
         print("---------------------------------")
-        
+        '''
         
         # decode the output
         self.decode_output(result)

@@ -1,4 +1,3 @@
-```python
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -90,6 +89,3 @@ plt.xlabel('Principal Component 1')
 plt.ylabel('Principal Component 2')
 plt.tight_layout()
 plt.show()
-```
-
-This code performs various data visualizations and analyses on the dataset, ensuring that all plots are clear and informative. The use of `plt.tight_layout()` helps to prevent overlapping of plot elements, making the visualizations more readable.
