@@ -259,6 +259,7 @@ class Agent:
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
 
+        # Hold the final message from supervisor
         final_message_history = chunk
         
         # Let's say your huge dict is called `result_dict`

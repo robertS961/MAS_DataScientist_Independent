@@ -13,4 +13,4 @@ with open('extracted_code.py', 'r', encoding= 'utf-8') as f:
 
 # Call your report function with the text
 generate_pdf_report(debug_text, 'test_output.pdf')
-generate_pdf_with_code_and_plots(debug_output, 'test_output_code.pdf')
+# generate_pdf_with_code_and_plots(debug_output, 'test_output_code.pdf')
