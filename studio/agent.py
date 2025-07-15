@@ -1,15 +1,19 @@
 from typing_extensions import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages
 from langgraph.graph import StateGraph, START, END
+from langgraph.graph.state import CompiledStateGraph
 from langchain_tavily import TavilySearch
+from langgraph.managed import RemainingSteps
+from langchain_core.messages import HumanMessage
 from langgraph.prebuilt import create_react_agent
 from langgraph_supervisor import create_supervisor
 from langchain.chat_models import init_chat_model
 from langgraph_swarm import create_swarm, create_handoff_tool
-
+from langgraph_reflection import create_reflection_graph
+from openevals.llm import create_llm_as_judge
+from typing import List, Optional, Type, Any, get_type_hints, Literal
 from dotenv import load_dotenv
 load_dotenv()
-
 
 
 import re
@@ -23,7 +27,7 @@ from report_html import generate_html_report
 from report_pdf import generate_pdf_report
 
 class State(TypedDict):
-    messages: str
+    messages: List[str] # Might need to change to str
     dataset_info: str
     #iterations: int
     #final_message: str
@@ -32,6 +36,52 @@ class State(TypedDict):
 class FinalState(TypedDict):
     final_report: str
     dataset_info: str
+
+class Finish(TypedDict):
+    """Tool for the judge to indicate the response is acceptable."""
+
+    finish: bool
+
+
+
+class MessagesWithSteps(State):
+    remaining_steps: RemainingSteps
+
+def end_or_reflect(state: MessagesWithSteps) -> Literal[END, "graph"]:
+    print(state["remaining_steps"], len(state["messages"]))
+    if state["remaining_steps"] <= 2:
+        return END
+    if len(state["messages"]) <= 0:
+        return END
+    return "graph"
+    
+
+
+def create_reflection_graph(
+    graph: CompiledStateGraph,
+    reflection: CompiledStateGraph,
+    state_schema: Optional[Type[Any]] = None,
+    config_schema: Optional[Type[Any]] = None,
+) -> StateGraph:
+    _state_schema = state_schema or graph.builder.schema
+    
+    if "remaining_steps" in _state_schema.__annotations__:
+        raise ValueError(
+            "Has key 'remaining_steps' in state_schema, this shadows a built in key"
+        )
+    
+    if "messages" not in _state_schema.__annotations__:
+        raise ValueError("Missing required key 'messages' in state_schema")
+
+    class StateSchema(_state_schema):
+        remaining_steps: RemainingSteps
+    rgraph = StateGraph(StateSchema, config_schema=config_schema)
+    rgraph.add_node("graph", graph)
+    rgraph.add_node("reflection", reflection)
+    rgraph.add_edge(START, "graph")
+    rgraph.add_edge("graph", "reflection")
+    rgraph.add_conditional_edges("reflection", end_or_reflect)
+    return rgraph
 
 def pretty_print_message(message, indent=False):
     pretty_message = message.pretty_repr(html=True)
@@ -180,11 +230,56 @@ def Swarm_Agent():
     )
     return swarm_agent
 
+def judge_agent():
+    def make_judge(state:State):
+        print("Right before code")
+        code = state['messages'][-1]
+        print('right after code')
+        critique_prompt = (
+            
+            "-You are a senior data scientist. You have over 20 years of experience! \n\n"
+            "- You are going to be given python code that will generate data visualizations! \n\n"
+            "Use your experience to state if it uses modern day data science practices \n\n"
+            "If there is any room for improvement please suggest it back to the team of data scientist! \n\n"
+            "If the response meets the ALL the above criteria, return an empty string"
+            "If you find ANY issues with the response, do not return an empty string. Instead, provide specific and constructive feedback which should return as a string."
+            "Be detailed in your critique so the team can understand exactly how to improve."
+    
+        )
+
+        """Evaluate the assistant's response using a separate judge model."""
+        llm = get_llm(temperature=0, max_tokens=4096)
+        response = llm.invoke([
+            SystemMessage(content=critique_prompt),
+            HumanMessage(content=f"Here is the code{code} \n\n. State wether this code meets the protocol. If false return a message so a string with all the improvements. If True return an empty string \n\n")
+        ])
+        print(state['messages'])
+        
+        print(f" \n\n These are th eval_result {response} \n\n")
+
+        if response == "":
+            print("✅ Response approved by judge")
+            return
+        else:
+            # Otherwise, return the judge's critique as a new user message
+            print("⚠️ Judge requested improvements")
+            return {"messages": [{"role": "user", "content": str(response)}]}
+    return make_judge
+
+
 
 def create_workflow():
     return Swarm_Agent().compile()
     
 
+def create_judge():
+    return(
+        StateGraph(State)
+        .add_node('judge_agent', judge_agent())
+        .add_edge(START, 'judge_agent')
+        .add_edge('judge_agent', END)
+        .compile()
+    )
     '''
     create the agentic workflow using LangGraph
     builder = StateGraph(State)
@@ -254,14 +349,25 @@ class Agent:
             }
             ]
         }
+        judge_graph = create_judge()
+        print('judge graph created')
+        main_graph = create_workflow()
+        print('main graph created')
+        reflection_app = create_reflection_graph(main_graph, judge_graph, State)
+        print('reflection_app created')
+        result = reflection_app.compile().invoke(dic, {"recursion_limit": 6})
+
+        '''
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
         # Hold the final message from supervisor
-        final_message_history = chunk['vis_assistant']['messages'][-1].content
+        '''
+        #final_message_history = chunk['vis_assistant']['messages'][-1].content
         
-        print(final_message_history)
+        print(result)
+
         with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(str(final_message_history))
+            f.write(str(result['messages']))
         # Let's say your output is stored in a variable called `raw_output`
         #matches = re.findall(r"```python\n(.*?)\n```", final_message_history, re.DOTALL)
        
@@ -312,7 +418,7 @@ class Agent:
         '''
         
         # decode the output
-        self.decode_output(final_message_history)
+        #self.decode_output(final_message_history)
 
         # return the result
-        return final_message_history
+        return result
