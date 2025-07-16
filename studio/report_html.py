@@ -20,7 +20,7 @@ def generate_html_report(output_state: dict, output_path: str):
     treating each ```json ...``` block as a Vega-Lite spec,
     interleaving it with narrative converted from simple Markdown.
     """
-    content = output_state["message"]
+    content = output_state["final_report"]
     fence_re = re.compile(r'```json\s*\n(.*?)```', re.DOTALL)
     parts = []
     last_end = 0

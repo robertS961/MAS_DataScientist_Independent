@@ -1,166 +1,330 @@
 from typing_extensions import TypedDict, Annotated
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages
 from langgraph.graph import StateGraph, START, END
+from langgraph.graph.state import CompiledStateGraph
+from langchain_tavily import TavilySearch
+from langgraph.managed import RemainingSteps
+from langchain_core.messages import HumanMessage
+from langgraph.prebuilt import create_react_agent
+from langgraph.cache.memory import InMemoryCache
+from langgraph_supervisor import create_supervisor
+from langchain.chat_models import init_chat_model
+from langchain_openai import ChatOpenAI
+from langgraph_swarm import create_swarm, create_handoff_tool
+from langgraph_reflection import create_reflection_graph
+from openevals.llm import create_llm_as_judge
+from typing import List, Optional, Type, Any, get_type_hints, Literal
+from dotenv import load_dotenv
+load_dotenv()
 
+
+import re
 import csv
 import operator
 import numpy as np
+import json
+import pickle
 from helpers import get_llm
 from report_html import generate_html_report
 from report_pdf import generate_pdf_report
 
 class State(TypedDict):
-    messages: Annotated[list, operator.add ]
+    messages: List[str] # Might need to change to str
+    feedback: List[str]
     dataset_info: str
-    iterations: int
-    final_message: str
-    report: str
+    #iterations: int
+    #final_message: str
+    #report: str
 
-def generate_msg_node(version: int):
-    #Must return a function for Langraph. Hence the functions inside function
-    def _generate(state: State):
-        #Safety Check for Infinite Loops
-        '''iteration = state.get("iteration", 0)
-        max_iterations = 1
-        if iteration >= max_iterations:
-            return state'''
-        
-        # if the prompt is to generate Vega-Lite charts, then specify in sys_prompt and use generate_html_report()
-        # sys_prompt = f"Please generate Vega-Lite graphs to visualize insights from the dataset, output should be graphs and narrative: {dataset_info}"
-        dataset_info = state["dataset_info"]
-        previous_message = state.get("message", "")
-        
-        expert_intro = {
-            1: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets. Focus on modern day statistical learning techniques like regression, clustering, correlation, p values, t test etc. Look for variable relationships",
-            2: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations. Feel free to also dive into individual variables, discover distributions or connections to compounding other variables",
-            3: "You are a statistician, find unique and interesting ideas backed by statistics in the data",
-        }[(version % 3) + 1]
+class FinalState(TypedDict):
+    final_report: str
+    dataset_info: str
 
-        prompt = (
-            f"{expert_intro}\n\n"
-            f"Here is the current state of the analysis:\n{previous_message}\n\n"
-            f"The dataset description is:\n{dataset_info}\n\n"
-            "Please come up with several unique ideas to perform on the data. The ideas should be codeable and produce visualization. Do not code them. Just state them. \n"
-            "You should return a list of 5 - 10 unique narratives about the data that can be tested with data visualizations. \n\n "
+class Finish(TypedDict):
+    """Tool for the judge to indicate the response is acceptable."""
+
+    finish: bool
+
+
+
+class MessagesWithSteps(State):
+    remaining_steps: RemainingSteps
+
+def end_or_reflect(state: MessagesWithSteps) -> Literal["visualization", "graph"]:
+    print(state["remaining_steps"], len(state["messages"]))
+    if state["remaining_steps"] <= 2:
+        return "visualization"
+    if len(state["messages"]) <= 0:
+        return "visualization"
+    return "graph"
+    
+
+
+def create_reflection_graph(
+    graph: CompiledStateGraph,
+    reflection: CompiledStateGraph,
+    visualization: CompiledStateGraph,
+    state_schema: Optional[Type[Any]] = None,
+    config_schema: Optional[Type[Any]] = None,
+) -> StateGraph:
+    _state_schema = state_schema or graph.builder.schema
+    
+    if "remaining_steps" in _state_schema.__annotations__:
+        raise ValueError(
+            "Has key 'remaining_steps' in state_schema, this shadows a built in key"
         )
+    
+    if "messages" not in _state_schema.__annotations__:
+        raise ValueError("Missing required key 'messages' in state_schema")
 
-        llm = get_llm(temperature=0, max_tokens=4096)
-        response = llm.invoke([
+    class StateSchema(_state_schema):
+        remaining_steps: RemainingSteps
+
+    rgraph = StateGraph(StateSchema, config_schema=config_schema)
+    rgraph.add_node("graph", graph)
+    rgraph.add_node("reflection", reflection)
+    rgraph.add_node('visualization', visualization)
+    rgraph.add_edge(START, "graph")
+    rgraph.add_edge("graph", "reflection")
+    rgraph.add_conditional_edges("reflection", end_or_reflect)
+    return rgraph
+
+def pretty_print_message(message, indent=False):
+    pretty_message = message.pretty_repr(html=True)
+    if not indent:
+        print(pretty_message)
+        return
+
+    indented = "\n".join("\t" + c for c in pretty_message.split("\n"))
+    print(indented)
+
+
+def pretty_print_messages(update, last_message=False):
+    is_subgraph = False
+    if isinstance(update, tuple):
+        ns, update = update
+        # skip parent graph updates in the printouts
+        if len(ns) == 0:
+            return
+
+        graph_id = ns[-1].split(":")[0]
+        print(f"Update from subgraph {graph_id}:")
+        print("\n")
+        is_subgraph = True
+
+    for node_name, node_update in update.items():
+        update_label = f"Update from node {node_name}:"
+        if is_subgraph:
+            update_label = "\t" + update_label
+
+        print(update_label)
+        print("\n")
+
+        messages = convert_to_messages(node_update["messages"])
+        if last_message:
+            messages = messages[-1:]
+
+        for m in messages:
+            pretty_print_message(m, indent=is_subgraph)
+        print("\n")
+
+def WebSearch():
+    """ This function searches the web for relevant research information! """
+    web_search = TavilySearch(max_results=1)
+    return web_search
+
+def transfer_to_ds_agent():
+    transfer_to_ds_agent = create_handoff_tool(
+        agent_name = 'ds_assistant',
+        description = (
+            'Transfer user to a data science agent! Capabale of coming up with novel data science ideas \n\n'
+            'It uses a websearch tool Tavily to help find research ideas for data science \n\n'
+        ),
+    )
+    return transfer_to_ds_agent
+
+def transfer_to_stats_agent():
+    transfer_to_stats_agent = create_handoff_tool(
+        agent_name = 'stats_assistant',
+        description = (
+            'Transfer user to a statistician agent! Capabale of coming up with novel statistical learning ideas \n\n'
+            'It uses a websearch tool Tavily to help find research ideas for statisticial learning and statistics \n\n'
+        ),
+    )
+    return transfer_to_stats_agent
+
+def transfer_to_vis_agent():
+    transfer_to_vis_agent = create_handoff_tool(
+        agent_name = 'vis_assistant',
+        description = (
+            'Transfer user to a visualization agent! Capabale of taking the previous ideas and turning them into computable python code! \n\n'
+            'It uses the LLM enginge to take those ideas and create clean, bug free, and simple python code! \n\n'
+        ),
+    )
+    return transfer_to_vis_agent
+
+
+    
+
+def Research_DataScience_Agent(state:State):
+    web_search = WebSearch()
+    stats_agent = transfer_to_stats_agent()
+    previous_message = state['messages']
+    previous_feedback = state['feedback']
+    data = state['dataset_info']
+    research_ds_agent = create_react_agent(
+        model="openai:gpt-4o",
+        tools=[web_search, stats_agent],
+        prompt=(
+            "You are a research data science agent.\n\n"
+            "INSTRUCTIONS:\n"
+            "Your goal is find novel data science ideas for a tabular dataset. These ideas should be able to be applied to tabular data .\n\n"
+            f"You might have a previous messaged from another agent it is: {previous_message}"
+            "You might also have feedback message from another agent to improve upon the previous_message and your soon to be future message. \n\n"
+            f"If there is feedback it is: {previous_feedback}\n\n"
+            f"These are the columns of the tabular data. Use them in the ideas by citing the column names: {data} \n\n"
+            "You have access to two different tools! \n\n"
+            "You can web_search the internet to discover ideas! \n\n"
+            "You can also transfer you knowledge to the statistican agent \n\n"
+            "Once you discover interesting and novel ideas then list them! Make sure you use the feedback in the ideas if there is any! \n\n"
+            "Come up with at least 5 ideas before you transfer the user to the stats agent. Thank you!!! \n\n"
+        ),
+        name="ds_assistant",
+    )
+    return research_ds_agent
+
+def Research_Stat_Agent(state:State):
+    web_search = WebSearch()
+    ds_agent = transfer_to_ds_agent()
+    previous_message = state['messages']
+    previous_feedback = state['feedback']
+    data = state['dataset_info']
+    #vis_agent = transfer_to_vis_agent()
+    research_stat_agent = create_react_agent(
+        model="openai:gpt-4o",
+        tools=[web_search, ds_agent],
+        prompt=(
+            "You are a research statistician agent.\n\n"
+            "INSTRUCTIONS:\n"
+            "Your goal is find novel statistical learning ideas for a tabular dataset."
+            f"You might have a previous messaged from another agent it is: {previous_message}"
+            "You might also have feedback message from another agent to improve upon the previous message and your soon to be future message. \n\n"
+            f"If there is feedback it is: {previous_feedback} \n\n"
+            f"These are the columns of the tabular data. Use them in the ideas by citing the column names: {data} \n\n"
+            "You have access to two different tools! \n\n"
+            "You can web_search the internet to discover ideas! \n\n"
+            "You can also call on the ds (Data science agent) \n\n"
+            "Feel free to discover interesting ideas on your own, add to the ideas of the previous message, and search the web! \n\n!"
+            "If there is feedback make sure you use this to improve your results espeically adding onto other ideas and creating new ideas! \n\n"
+            "Return all the ideas in a list. Make sure there is at least 6 ideas then transfer the user to the ds(data science) agent\n\n"
+            "Thank you! \n\n"
+        ),
+        name="stats_assistant",
+    )
+    return research_stat_agent
+
+
+def vis_a(state:State):
+    tools = []
+    data = state['dataset_info'] if state['dataset_info'] else ""
+    ideas = state['messages'][-1] if state['messages'] else ""
+    prompt = (
+        "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
+        "We have already created several ideas. Your objective is to take the ideas and code them ! \n\n"
+        f"The dataset columns are as follows: {data}\n\n"
+        f"The ideas are as follows: {ideas}\n\n"
+        "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
+        "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+    )
+    model = ChatOpenAI(model="gpt-4o", temperature=0,  max_tokens=4096)
+    response = model.invoke([
             SystemMessage(content=prompt),
-            HumanMessage(content="Please generate and show the ideas to me. The output must be very specific. I want each ideas on its own line. So '\n' in between them. Nothing else, thank you")
-        ])
+            HumanMessage(content=f"Generate the code from these ideas {ideas}. Please make sure it runs and it is in python without bugs! Double check that it runs without error. In the past the code would not run because of errors! Thank you \n\n")
+    ])
+    print(response)
+    return {'messages':[{"role": "user", "content": str(response.content)}]}
+
+
+def Swarm_Agent(state:State):
+    
+    research_ds_agent = Research_DataScience_Agent(State)
+    print('created research_ds_agent\n\n')
+    research_stat_agent = Research_Stat_Agent(State)
+    #reserarch_vis_agent = Visualization_Agent()
+    swarm_agent = create_swarm(
+    agents=[research_ds_agent, research_stat_agent],
+    default_active_agent = 'ds_assistant',
+    )
+    return swarm_agent #create the swarm everytime and input the new state from the other graph
+
+
+def make_judge(state:State):
+    current_message = state['messages']
+    critique_prompt = (
         
-        # ans = getattr(response, "content", response)
-        return {
-        "messages":  [response.content]
-         #"iterations": iteration + 1
-        }
-    return _generate
+        "-You are a senior data scientist. You have over 20 years of experience! \n\n"
+        "- You are going to be given data science and statistical learning ideas that can be applied to tabular data! \n\n"
+        "Use your experience to state if it uses modern day data science practices \n\n"
+        "If there is any room for improvement please suggest it back to the team of data scientist! \n\n"
+        "If the response meets the ALL the above criteria, return an empty string"
+        "If you find ANY issues with the response, do not return an empty string. Instead, provide specific and constructive feedback which should return as a string."
+        "Be detailed in your critique so the team can understand exactly how to improve."
 
-
-def generate_msg_coach(state: State) -> State:
-    # Get the list of messages from all player nodes
-    messages = state["messages"]  # This is now a list of strings
-    dataset_info = state["dataset_info"]
-
-    # Collect all ideas from each message
-    all_ideas = []
-    for msg in messages:
-        ideas = msg.split("\n")
-        cleaned = [idea.strip() for idea in ideas if idea.strip()]
-        all_ideas.extend(cleaned)
-
-    prompt = (
-        "You are a senior data scientist leading a panel of experts. "
-        "Given the following list of ideas generated by your team, select the top 8 ideas that are:\n"
-        "- Novel and unique\n"
-        "- Testable with data\n"
-        "- Capable of producing beautiful data visualizations\n\n"
-        "Ideas:\n"
-        + "\n".join(f"{i+1}. {idea}" for i, idea in enumerate(all_ideas)) +
-        "\n\nPlease return the selected top 8 ideas that a panel of data scientists would consistently pick."
-    )
-    human_prompt = (
-        "Select the best 8 ideas as requested. Please list one idea per line, with no extra blank lines. Only Select 8 thank you\n"
-        " In addition the file should only contain python code. Nothing else. So if there is weird titles or extra content, please remove that. Thank you \n"
     )
 
-    llm = get_llm(temperature=0, max_tokens=4096)
-    response = llm.invoke([
-        SystemMessage(content=prompt),
-        HumanMessage(content= human_prompt),
+    """Evaluate the assistant's response using a separate judge model."""
+    model = ChatOpenAI(model = 'gpt-4o', temperature = 0, max_tokens = 4096)
+    response = model.invoke([
+        SystemMessage(content=critique_prompt),
+        HumanMessage(content=f"Here is the current message{current_message} \n\n. State wether this code meets the protocol. If false return a message so a string with all the improvements. If True return an empty string \n\n")
     ])
-    # "final_message": getattr(response, "content", response),
-    return {"final_message": response.content}
+    print(f" \n\n These are the eval_result : {response} \n\n")
 
-def generate_msg_GM(state: State) -> State:
-    dataset_info = state.get("dataset_info", "")
-    ideas_text = state.get("final_message", "")
+    if response == "":
+        print("✅ Response approved by judge")
+        return
+    else:
+        # Otherwise, return the judge's critique as a new user message
+        print("⚠️ Judge requested improvements")
+        return {"feedback": [{"role": "user", "content": str(response.content)}]}
 
-    prompt = (
-        "You are a senior data scientist writing Python code for a report. "
-        "Below is a list of 8 data visualization ideas that were selected by a panel of top data scientist.\n\n"
-        "Dataset Info:\n"
-        f"{dataset_info}\n\n"
-        "Ideas:\n"
-        f"{ideas_text}\n\n"
-        "Your job is to write Python code that implements each idea. For each idea:\n"
-        "- Write clean, well-documented Python code\n"
-        "- Use libraries like pandas, matplotlib, seaborn, or plotly\n"
-        "- Use beautiful and effective visualizations\n"
-        "- Structure your answer as:\n"
-        "- Test your code for each idea and make sure it runs without bugs"
-        "Make sure that visualizations are clear and insightful"
+
+
+
+def create_swerm():
+    return Swarm_Agent(State).compile()
+
+def create_vis():
+    return(
+        StateGraph(State)
+        .add_node('vis_agent', vis_a)
+        .add_edge(START, 'vis_agent')
+        .add_edge('vis_agent', END)
+        .compile()
     )
 
-    llm = get_llm(temperature=0.3, max_tokens=4096)
-    response = llm.invoke([
-        SystemMessage(content=prompt),
-        HumanMessage(content="Please generate the code for each idea with explanations. Make sure you test the code and it runs without bugs or errors. Double, triple check that please! Thank you")
-    ])
-    # "message": getattr(response, "content", response),
-    return {
-        "report": response.content
-        # "iteration": state.get("iteration", 0) + 1
-    }
+def create_judge():
+    return(
+        StateGraph(State)
+        .add_node('judge_agent', make_judge)
+        .add_edge(START, 'judge_agent')
+        .add_edge('judge_agent', END)
+        .compile()
+    )
 
-
-
-def generate_team(builder):
-    team_size = 3
-
-    # Create the player connections
-    for player in range(team_size):
-        curr_player = f"generate_msg_{player}"
-        func = generate_msg_node(player)
-        builder.add_node(curr_player, func)
-        builder.add_edge(START, curr_player)
     
-    #Create the Coach to collect all the players and pick the best ones
-    coach = "generate_msg_coach"
-    builder.add_node(coach, generate_msg_coach)
-    for player in range(team_size):
-        builder.add_edge(f"generate_msg_{player}", coach)
-    
-    #Create the General Manager to Aggregate the Final Players into a Cohesive Team
-    general_manager = "generate_msg_GM"
-    builder.add_node(general_manager, generate_msg_GM)
-    builder.add_edge(coach, general_manager)
-    builder.add_edge(general_manager, END)
-    return builder
-
-def create_workflow():
-    # create the agentic workflow using LangGraph
-    builder = StateGraph(State)
-    builder = generate_team(builder)
-    return builder.compile()
 
 class Agent:
     def __init__(self):
         self.workflow = None
 
     def initialize(self):
-        self.workflow = create_workflow()
+        self.swarm = create_swerm()
+        print('swarm created \n\n')
+        self.judge = create_judge()
+        print('judge created \n\n')
+        self.vis = create_vis()
+        print('vis created \n\n')
 
     def initialize_state_from_csv(self) -> dict:
         # The dataset should be first input to the agentic configuration, and it should be generalizable to any dataset
@@ -184,6 +348,7 @@ class Agent:
         state = {
             "dataset_info": str(example_input)
         }
+
         return state
     def decode_output(self, output: dict):
         # if the final output contains Vega-Lite codes, then use generate_html_report
@@ -193,33 +358,96 @@ class Agent:
         # generate_html_report(output, "output.html")
     def process(self):
 
-        if self.workflow is None:
+        if self.swarm is None or self.vis is None or self.judge is None:
             raise RuntimeError("Agent not initialised. Call initialize() first.")
         
         # initialize the state & read the dataset
         state = self.initialize_state_from_csv()
-        
-
         # invoke the workflow
-        output_state = self.workflow.invoke(state)
+        #output_state = self.workflow.invoke(state)
+        prompt= (f"You are given a tabular dataset. Here is the data {state["dataset_info"]} \n"
+                "Your goal to research novel data science and statistic ideas to perform on the data \n"
+                "Swarm all the agents until novel data science and statistic learning ideas are created based on the tabular dataset given above!\n"
+                "The ideas should be clearly labeled and readable \n\n"
+                "This data will be passed on for evulation so please make it the best you can! Thank you \n\n"
+        )
 
-        # flatten the output
-        """
-        def _flatten(value):
-            return getattr(value, "content", value)
-        result = {k: _flatten(v) for k, v in output_state.items()}
-        """
+        dic = {"messages": [
+            {
+                "role": "user",
+                "content": f"{prompt}"
+            }
+            ],
+            "dataset_info": state['dataset_info']
+        }
+
+        reflection_app = create_reflection_graph(self.swarm, self.judge, self.vis, State)
+        for chunk in reflection_app.compile(cache=InMemoryCache()).stream(dic, {"recursion_limit": 6}):
+            pretty_print_messages(chunk, last_message=True)
+        
+        result = chunk['visualization']['messages'][0]['content']
+        '''
+        for chunk in self.workflow.stream(input = dic): # Label this state better
+            pretty_print_messages(chunk, last_message=True)
+        # Hold the final message from supervisor
+        '''
+        #final_message_history = chunk['vis_assistant']['messages'][-1].content
+        '''
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(str(result))
+        '''
+
+        #Put the output in a python file 
+        code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
+        with open("extracted_code.py", "w", encoding="utf-8") as f:
+            for block in code:
+                f.write(block + "\n\n")
+        
+        # Let's say your huge dict is called `result_dict`
+        # result_text = final_message_history["stats_assistant"]["messages"]['HumanMessage'].content
+        '''
+        # Extract everything that looks like code inside triple backticks
+        code_blocks = re.findall(r"```(?:python)?\n(.*?)```", result_text, re.DOTALL)
+        '''
+        # Write each block to a separate file or combine into one
+        '''
+        with open("extracted_code.py", "w", encoding="utf-8") as f:
+            for block in matches:
+                f.write(block + "\n\n")
+        '''
+        '''
+        # Write the entire block to a file for debugging purposes
+        with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(result_text)
+        '''
+        '''
+        final_state = {
+            'final_report': final_message_history,
+            'dataset_info': state['dataset_info']
+        }
+        final = create_finalReport()
+        output_state = final.invoke(final_state)
+        print(output_state)
+        '''
+        
+        '''with open("debug_output.txt", "w", encoding="utf-8") as f:
+            f.write(values)'''
+        #create_output(supervisor)
+
+   
         # Flatten the output since Langraph outputs AIMessage(content = " content here")
+        '''
         def _flatten(value):
             return getattr(value, "content", value)
 
         result = {key: _flatten(field_value) for key, field_value in output_state.items()}
-        
+        '''
+        '''
         print("----- Generated Code Output -----")
-        print(result['report'])  
+        print(result['final_report'])  
         print("---------------------------------")
-        #Just a test comment
-
+        '''
+        
         # decode the output
         self.decode_output(result)
 

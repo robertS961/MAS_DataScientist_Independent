@@ -6,6 +6,11 @@ langsmith
 langchain-community
 langchain-core
 langchain-openai
+langgraph-supervisor
+langgraph-swarm 
+langchain-tavily
+langchain openevals
+langgraph-reflection
 notebook
 tavily-python
 trustcall
@@ -21,3 +26,4 @@ scikit-learn
 statsmodels
 textblob
 geopandas
+fpdf
