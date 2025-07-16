@@ -235,6 +235,7 @@ def vis_a(state:State):
         f"The ideas are as follows: {ideas}\n\n"
         "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
         "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+        "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
     )
     model = ChatOpenAI(model="gpt-4o", temperature=0,  max_tokens=4096)
     response = model.invoke([
