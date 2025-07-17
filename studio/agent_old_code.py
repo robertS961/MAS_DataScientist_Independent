@@ -233,3 +233,25 @@ def create_finalReport():
     builder.add_edge('translate_node', END)
 
     return builder.compile()
+
+
+
+
+'''
+model = ChatOpenAI(model="gpt-4o", temperature=0,  max_tokens=4096)
+        code = model.invoke([
+                SystemMessage(content=prompt),
+                HumanMessage(content= human_prompt)
+        ])
+        sand_box = SandBox()
+        tool_node = ToolNode([sand_box])
+        message = AIMessage(
+            content  = code.content
+        )
+        print(f'This is the message {message}\n\n')
+        result = tool_node.invoke({'messages' : [message]})
+        print(f"This is the result of the tool \n {result} \n")
+        pass_msg ^= result['messages'].status != 'error'
+        error = result['messages'].content
+        print(f'This is the error message \n --- ERROR --- \n {error} \n')
+'''

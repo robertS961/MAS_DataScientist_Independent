@@ -1,15 +1,18 @@
 from typing_extensions import TypedDict, Annotated
-from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages
+from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages, AIMessage
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 from langchain_tavily import TavilySearch
 from langgraph.managed import RemainingSteps
 from langchain_core.messages import HumanMessage
-from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt import create_react_agent, ToolNode
 from langgraph.cache.memory import InMemoryCache
+from langgraph.checkpoint.memory import MemorySaver, InMemorySaver
 from langgraph_supervisor import create_supervisor
 from langchain.chat_models import init_chat_model
+from langgraph.func import entrypoint
 from langchain_openai import ChatOpenAI
+from langchain_sandbox import PyodideSandboxTool
 from langgraph_swarm import create_swarm, create_handoff_tool
 from langgraph_reflection import create_reflection_graph
 from openevals.llm import create_llm_as_judge
@@ -32,9 +35,13 @@ class State(TypedDict):
     messages: List[str] # Might need to change to str
     feedback: List[str]
     dataset_info: str
-    #iterations: int
-    #final_message: str
-    #report: str
+    session_bytes: bytes
+    session_metadata: dict
+
+class Configurable(TypedDict):
+    tread_id: int
+    recursion_limit: int
+
 
 class FinalState(TypedDict):
     final_report: str
@@ -79,13 +86,17 @@ def create_reflection_graph(
 
     class StateSchema(_state_schema):
         remaining_steps: RemainingSteps
+    print('made it here\n')
 
     rgraph = StateGraph(StateSchema, config_schema=config_schema)
     rgraph.add_node("graph", graph)
     rgraph.add_node("reflection", reflection)
+    print('about to have error?!\n')
     rgraph.add_node('visualization', visualization)
+    print('ERROR\n')
     rgraph.add_edge(START, "graph")
     rgraph.add_edge("graph", "reflection")
+    print('almost at conditional_Edge\n')
     rgraph.add_conditional_edges("reflection", end_or_reflect)
     return rgraph
 
@@ -127,6 +138,16 @@ def pretty_print_messages(update, last_message=False):
         for m in messages:
             pretty_print_message(m, indent=is_subgraph)
         print("\n")
+
+def SandBox():
+    return PyodideSandboxTool(
+        # Create stateful sandbox
+        stateful=True,
+        # Allow Pyodide to install python packages that
+        # might be required.
+        allow_net=True
+    )
+    
 
 def WebSearch():
     """ This function searches the web for relevant research information! """
@@ -226,8 +247,12 @@ def Research_Stat_Agent(state:State):
 
 def vis_a(state:State):
     tools = []
+    pass_msg = False
     data = state['dataset_info'] if state['dataset_info'] else ""
-    ideas = state['messages'][-1] if state['messages'] else ""
+    ideas = state['messages'] if state['messages'] else ""
+    #error = ""
+    sand_box = SandBox()
+    #while not pass_msg:
     prompt = (
         "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
         "We have already created several ideas. Your objective is to take the ideas and code them ! \n\n"
@@ -237,13 +262,44 @@ def vis_a(state:State):
         "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
         "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
     )
-    model = ChatOpenAI(model="gpt-4o", temperature=0,  max_tokens=4096)
-    response = model.invoke([
-            SystemMessage(content=prompt),
-            HumanMessage(content=f"Generate the code from these ideas {ideas}. Please make sure it runs and it is in python without bugs! Double check that it runs without error. In the past the code would not run because of errors! Thank you \n\n")
-    ])
-    print(response)
-    return {'messages':[{"role": "user", "content": str(response.content)}]}
+    human_prompt = (
+        f"Generate the code from these ideas {ideas}. Please make sure it runs and it is in python without bugs!"
+        "Double check that it runs without error. In the past the code would not run because of errors! Make sure to only return python code! Thank you \n\n"
+    )
+    '''
+    else:
+        prompt = (
+            "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
+            f"Code has already been generated for the following ideas {ideas} based on the following {data}\n\n"
+            f"However there were errors in the code. Here is the error {error} and here is the code{code}\n\n"
+            "Please fix the code and improve the clariy of any graphs that seems confusing, or axis that have long labels/uncertain, make the coloring more clear, etc.\n\n"
+            "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
+            "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
+        )
+        human_prompt = (
+            f"Fix the code {code} from the previous step with these {error} erros in mind! Please make sure it runs and double,triple check it! \n\n "
+            "Only return Python Code. Thank you \n\n"
+        )
+    '''  
+    vis_agent = create_react_agent(
+        model = "openai:gpt-4o",
+        tools = [sand_box],
+        prompt = prompt,
+        name = 'vis_agent',
+        checkpointer=InMemorySaver()
+    )
+    '''
+    config : Configurable= {"configurable": {"thread_id": "123"}}
+    code = vis_agent.invoke({'messages': [{'role': 'user', 'content' : human_prompt}]}, config = config)
+    print(f'This is the return code {code}\n\n')
+    pass_msg = True
+    '''
+    return vis_agent
+    
+
+
+    #return {'messages':[{"role": "user", "content": code['messages'][0].content}]}
 
 
 def Swarm_Agent(state:State):
@@ -296,13 +352,7 @@ def create_swerm():
     return Swarm_Agent(State).compile()
 
 def create_vis():
-    return(
-        StateGraph(State)
-        .add_node('vis_agent', vis_a)
-        .add_edge(START, 'vis_agent')
-        .add_edge('vis_agent', END)
-        .compile()
-    )
+    return vis_a(State)
 
 def create_judge():
     return(
@@ -351,6 +401,7 @@ class Agent:
         }
 
         return state
+    
     def decode_output(self, output: dict):
         # if the final output contains Vega-Lite codes, then use generate_html_report
         # if the final output contains Python codes, then use generate_pdf_report
@@ -381,12 +432,14 @@ class Agent:
             ],
             "dataset_info": state['dataset_info']
         }
-
+        config :Configurable = {"thread_id": 1, "recursion_limit": 6}
+        print("Config has been created \n\n")
         reflection_app = create_reflection_graph(self.swarm, self.judge, self.vis, State)
-        for chunk in reflection_app.compile(cache=InMemoryCache()).stream(dic, {"recursion_limit": 6}):
+        print('Reflection app has been created!')
+        for chunk in reflection_app.compile(cache=MemorySaver()).stream(input = dic, config = config):
             pretty_print_messages(chunk, last_message=True)
-        
-        result = chunk['visualization']['messages'][0]['content']
+        print(f"This is chunk {chunk} \n\n")
+        result = chunk['visualization']['messages'][-1].content
         '''
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
@@ -400,7 +453,8 @@ class Agent:
 
         #Put the output in a python file 
         code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
-        with open("extracted_code.py", "w", encoding="utf-8") as f:
+        with open("extracted_code.py", "a", encoding="utf-8") as f:
+            f.write("# ---- NEW BLOCK ---- # \n")
             for block in code:
                 f.write(block + "\n\n")
         

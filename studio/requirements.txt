@@ -11,6 +11,8 @@ langgraph-swarm
 langchain-tavily
 langchain openevals
 langgraph-reflection
+langchain-anthropic
+langchain-sandbox
 notebook
 tavily-python
 trustcall
