@@ -37,8 +37,11 @@ class State(TypedDict):
     #report: str
 
 class FinalState(TypedDict):
-    final_report: str
+    code: str
+    error: str
+    flag: bool
     dataset_info: str
+
 
 class Finish(TypedDict):
     """Tool for the judge to indicate the response is acceptable."""
@@ -127,6 +130,13 @@ def pretty_print_messages(update, last_message=False):
         for m in messages:
             pretty_print_message(m, indent=is_subgraph)
         print("\n")
+
+def decode_output(output):
+        # if the final output contains Vega-Lite codes, then use generate_html_report
+        # if the final output contains Python codes, then use generate_pdf_report
+
+        generate_pdf_report(output, "output.pdf")
+        # generate_html_report(output, "output.html")
 
 def WebSearch():
     """ This function searches the web for relevant research information! """
@@ -288,6 +298,40 @@ def make_judge(state:State):
         print("⚠️ Judge requested improvements")
         return {"feedback": [{"role": "user", "content": str(response.content)}]}
 
+def validate_code(state:FinalState):
+    code = state['code']
+    #print(f"\n\nThis is the content of the code {code[0]['content']}\n\n")
+    print(f"Normal output code{code}\n\n")
+    try:
+        decode_output(code)
+        print('WInnner \n\n')
+        return {'flag':True}
+    except Exception as e:
+        print(f"{e}\n\n")
+        return {'error':[{"role": "user", "content": f"⚠️ The code failed with error:\n```\n{str(e)}\n```\n Please fix it and try again."}]}
+
+
+def fix_code(state:FinalState):
+    code = state['code']
+    error = state['error']
+    columns = state['dataset_info']
+    prompt = (
+        "You are an expert Python coder! You are senior level with ove 15 years of experience with coding in Python!.\n\n"
+        f"Code has already been generated for you and it is here{code} \n\n"
+        f"The following error occured {error} and these are the dataset columns {columns}\n\n"
+        "Please fix the code and make sure it runs without error\n\n"
+        "Respond ONLY with Python code. Thank you \n\n"
+        "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+    )
+    model = ChatOpenAI(model="gpt-4o", temperature=0,  max_tokens=4096)
+    response = model.invoke([
+            SystemMessage(content=prompt),
+            HumanMessage(content=f"Please fix this {code}! Return the fixed code without any bugs or new bugs. Please run it to make sure it works! Thank you \n\n")
+    ])
+    print(f'\n\nThis is the model response {response} \n\n')
+    return {'code':[{"role": "user", "content": str(response.content)}]}
+
+
 
 
 
@@ -312,6 +356,23 @@ def create_judge():
         .compile()
     )
 
+def create_coder():
+    return (
+        StateGraph(FinalState)
+        .add_node('validate_node', validate_code)
+        .add_node('fix_node', fix_code)
+        .add_edge(START, 'validate_node')
+        .add_conditional_edges('validate_node', lambda state: state['flag'] == True, {
+            True: END,
+            False: 'fix_node'
+        })
+        .add_edge('fix_node', 'validate_node')
+        .compile()
+    )
+
+
+
+
     
 
 class Agent:
@@ -325,6 +386,8 @@ class Agent:
         print('judge created \n\n')
         self.vis = create_vis()
         print('vis created \n\n')
+        self.code = create_coder()
+        print('coder created \n\n')
 
     def initialize_state_from_csv(self) -> dict:
         # The dataset should be first input to the agentic configuration, and it should be generalizable to any dataset
@@ -350,15 +413,9 @@ class Agent:
         }
 
         return state
-    def decode_output(self, output: dict):
-        # if the final output contains Vega-Lite codes, then use generate_html_report
-        # if the final output contains Python codes, then use generate_pdf_report
-
-        generate_pdf_report(output, "output.pdf")
-        # generate_html_report(output, "output.html")
     def process(self):
 
-        if self.swarm is None or self.vis is None or self.judge is None:
+        if self.swarm is None or self.vis is None or self.judge is None or self.code is None:
             raise RuntimeError("Agent not initialised. Call initialize() first.")
         
         # initialize the state & read the dataset
@@ -386,6 +443,17 @@ class Agent:
             pretty_print_messages(chunk, last_message=True)
         
         result = chunk['visualization']['messages'][0]['content']
+
+        code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
+        with open("extracted_code.py", "a", encoding="utf-8") as f:
+            f.write('\n\n#--- New Code Block --- \n')
+            for block in code:
+                f.write(block + "\n\n")
+        print(f"\n\n This is the result code {result}\n\n")
+        final_state = {'code' : result, 'error': "", 'dataset_info': state['dataset_info'],' flag': False}
+        res = self.code.invoke(final_state)
+        return res
+
         '''
         for chunk in self.workflow.stream(input = dic): # Label this state better
             pretty_print_messages(chunk, last_message=True)
@@ -398,10 +466,7 @@ class Agent:
         '''
 
         #Put the output in a python file 
-        code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
-        with open("extracted_code.py", "w", encoding="utf-8") as f:
-            for block in code:
-                f.write(block + "\n\n")
+        
         
         # Let's say your huge dict is called `result_dict`
         # result_text = final_message_history["stats_assistant"]["messages"]['HumanMessage'].content
@@ -449,7 +514,8 @@ class Agent:
         '''
         
         # decode the output
-        self.decode_output(result)
+        
+
+        
 
         # return the result
-        return result
