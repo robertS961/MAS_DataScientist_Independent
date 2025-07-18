@@ -1,6 +1,7 @@
 from typing_extensions import TypedDict, Annotated
 from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages, AIMessage
 from langgraph.graph import StateGraph, START, END
+from langgraph.types import Command
 from langgraph.graph.state import CompiledStateGraph
 from langchain_tavily import TavilySearch
 from langgraph.managed import RemainingSteps
@@ -14,8 +15,6 @@ from langgraph.func import entrypoint
 from langchain_openai import ChatOpenAI
 from langchain_sandbox import PyodideSandboxTool
 from langgraph_swarm import create_swarm, create_handoff_tool
-from langgraph_reflection import create_reflection_graph
-from openevals.llm import create_llm_as_judge
 from typing import List, Optional, Type, Any, get_type_hints, Literal
 from dotenv import load_dotenv
 load_dotenv()
@@ -35,8 +34,9 @@ class State(TypedDict):
     messages: List[str] # Might need to change to str
     feedback: List[str]
     dataset_info: str
-    session_bytes: bytes
-    session_metadata: dict
+    error: str
+    ideas: str
+    flag: bool
 
 class Configurable(TypedDict):
     tread_id: int
@@ -86,17 +86,13 @@ def create_reflection_graph(
 
     class StateSchema(_state_schema):
         remaining_steps: RemainingSteps
-    print('made it here\n')
 
     rgraph = StateGraph(StateSchema, config_schema=config_schema)
     rgraph.add_node("graph", graph)
     rgraph.add_node("reflection", reflection)
-    print('about to have error?!\n')
     rgraph.add_node('visualization', visualization)
-    print('ERROR\n')
     rgraph.add_edge(START, "graph")
     rgraph.add_edge("graph", "reflection")
-    print('almost at conditional_Edge\n')
     rgraph.add_conditional_edges("reflection", end_or_reflect)
     return rgraph
 
@@ -139,16 +135,7 @@ def pretty_print_messages(update, last_message=False):
             pretty_print_message(m, indent=is_subgraph)
         print("\n")
 
-def SandBox():
-    return PyodideSandboxTool(
-        # Create stateful sandbox
-        stateful=True,
-        # Allow Pyodide to install python packages that
-        # might be required.
-        allow_net=True
-    )
     
-
 def WebSearch():
     """ This function searches the web for relevant research information! """
     web_search = TavilySearch(max_results=1)
@@ -248,54 +235,62 @@ def Research_Stat_Agent(state:State):
 def vis_a(state:State):
     tools = []
     pass_msg = False
-    data = state['dataset_info'] if state['dataset_info'] else ""
-    ideas = state['messages'] if state['messages'] else ""
-    #error = ""
-    sand_box = SandBox()
-    #while not pass_msg:
-    prompt = (
-        "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
-        "We have already created several ideas. Your objective is to take the ideas and code them ! \n\n"
-        f"The dataset columns are as follows: {data}\n\n"
-        f"The ideas are as follows: {ideas}\n\n"
-        "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
-        "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
-        "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
-    )
-    human_prompt = (
-        f"Generate the code from these ideas {ideas}. Please make sure it runs and it is in python without bugs!"
-        "Double check that it runs without error. In the past the code would not run because of errors! Make sure to only return python code! Thank you \n\n"
-    )
-    '''
-    else:
+    data = state['dataset_info']
+    code = state['messages'][-1].content 
+    error = state['error']
+    if state['flag']: 
+        state['ideas'] = state['messages'][-1].content
+        state['flag'] = False
+    ideas = state['ideas']
+
+    if error == "":
         prompt = (
             "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
-            f"Code has already been generated for the following ideas {ideas} based on the following {data}\n\n"
-            f"However there were errors in the code. Here is the error {error} and here is the code{code}\n\n"
-            "Please fix the code and improve the clariy of any graphs that seems confusing, or axis that have long labels/uncertain, make the coloring more clear, etc.\n\n"
+            "We have already created several ideas. Your objective is to take the ideas and code them ! \n\n"
+            f"The dataset columns are as follows: {data}\n\n"
+            f"The ideas are as follows: {ideas}\n\n"
             "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
+            "Make sure the number of plots you create matches the number of ideas, if it is impossible create more data science ideas from the columns! \n\n"
             "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
             "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
         )
-        human_prompt = (
-            f"Fix the code {code} from the previous step with these {error} erros in mind! Please make sure it runs and double,triple check it! \n\n "
-            "Only return Python Code. Thank you \n\n"
+    else:
+        prompt = (
+            "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
+            f"Code has already been generated for these several ideas {ideas} \n\n "
+            f"The following code was created for those above ideas{code} based on these data columns {data}\n\n"
+            f"However there were errors in the code. Here is the error {error}\n\n"
+            "Please fix the code and improve the clariy of any graphs that seems confusing, or axis that have long labels/uncertain, make the coloring more clear, etc.\n\n"
+            "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
+            "Make sure all the ideas are still coded for! Do not cut ideas because the code doesn't work. Instead fix the code slightly so the idea still works! \n\n"
+            "Make sure the number of plots you create matches the number of ideas, if it is impossible then create more data science like plots from the columns! \n\n"
+            "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
+            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
         )
-    '''  
     vis_agent = create_react_agent(
         model = "openai:gpt-4o",
-        tools = [sand_box],
+        tools = [],
         prompt = prompt,
         name = 'vis_agent',
         checkpointer=InMemorySaver()
     )
-    '''
-    config : Configurable= {"configurable": {"thread_id": "123"}}
-    code = vis_agent.invoke({'messages': [{'role': 'user', 'content' : human_prompt}]}, config = config)
-    print(f'This is the return code {code}\n\n')
-    pass_msg = True
-    '''
     return vis_agent
+
+def code_agent(state:State) -> Command[Literal[END, 'vis_ageent']]:
+    code = state['messages'][-1].content
+    print(f'\n\n this is the code {code} \n\n')
+    try:
+        generate_pdf_report(code, 'output.pdf')
+        return Command(
+            update = {'error': "No Errors!"},
+            goto= END
+        )
+    except Exception as e:
+        return Command(
+            update = {'error': e},
+            goto= 'vis_agent'
+        )
+
     
 
 
@@ -352,7 +347,14 @@ def create_swerm():
     return Swarm_Agent(State).compile()
 
 def create_vis():
-    return vis_a(State)
+    return (
+        StateGraph(State)
+        .add_node('vis_agent', vis_a)
+        .add_node('code_agent', code_agent, destinations=('vis_agent', END))
+        .add_edge(START, 'vis_agent')
+        .add_edge('vis_agent', 'code_agent')
+        .compile()
+    )
 
 def create_judge():
     return(
@@ -417,7 +419,8 @@ class Agent:
         state = self.initialize_state_from_csv()
         # invoke the workflow
         #output_state = self.workflow.invoke(state)
-        prompt= (f"You are given a tabular dataset. Here is the data {state["dataset_info"]} \n"
+        data = state['dataset_info']
+        prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
                 "Your goal to research novel data science and statistic ideas to perform on the data \n"
                 "Swarm all the agents until novel data science and statistic learning ideas are created based on the tabular dataset given above!\n"
                 "The ideas should be clearly labeled and readable \n\n"
@@ -430,15 +433,18 @@ class Agent:
                 "content": f"{prompt}"
             }
             ],
-            "dataset_info": state['dataset_info']
+            "dataset_info": state['dataset_info'],
+            "error": "",
+            "ideas": "",
+            'flag': True,
         }
         config :Configurable = {"thread_id": 1, "recursion_limit": 6}
-        print("Config has been created \n\n")
+       
         reflection_app = create_reflection_graph(self.swarm, self.judge, self.vis, State)
-        print('Reflection app has been created!')
+        
         for chunk in reflection_app.compile(cache=MemorySaver()).stream(input = dic, config = config):
             pretty_print_messages(chunk, last_message=True)
-        print(f"This is chunk {chunk} \n\n")
+        
         result = chunk['visualization']['messages'][-1].content
         '''
         for chunk in self.workflow.stream(input = dic): # Label this state better

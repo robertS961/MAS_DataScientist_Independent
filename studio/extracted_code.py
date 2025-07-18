@@ -11,7 +11,7 @@ import numpy as np
 
 # Load the dataset
 df = pd.read_csv('dataset.csv')
-
+'''
 # 1. Network Analysis of Author Collaborations
 def plot_author_collaboration_network(df):
     G = nx.Graph()
@@ -27,7 +27,7 @@ def plot_author_collaboration_network(df):
     plt.show()
 
 plot_author_collaboration_network(df)
-
+'''
 # 2. Trend Analysis of Research Topics
 def plot_research_trends(df):
     df['Year'] = pd.to_datetime(df['Year'], format='%Y')
@@ -183,5 +183,261 @@ plt.xticks(rotation=90)
 plt.title('Missing Data in Each Column')
 plt.ylabel('Number of Missing Values')
 plt.xlabel('Columns')
+plt.show()
+'''
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Data-Driven Conference Profiling: Citations and Downloads over Years
+plt.figure(figsize=(14, 6))
+sns.lineplot(data=df, x='Year', y='AminerCitationCount', hue='Conference', marker='o')
+plt.title('Conference Citations Over Years')
+plt.xlabel('Year')
+plt.ylabel('Aminer Citation Count')
+plt.legend(title='Conference', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True)
+plt.show()
+
+# Citation Network Analysis: Co-Citation Heatmap
+citation_matrix = df[['InternalReferences', 'AminerCitationCount']].dropna().corr()
+plt.figure(figsize=(8, 6))
+sns.heatmap(citation_matrix, annot=True, cmap='Blues')
+plt.title('Citation Network Heatmap')
+plt.show()
+
+# Keyword Evolution Study: Keyword Frequency Over Time
+df_exploded = df.assign(AuthorKeywords=df['AuthorKeywords'].str.split(',')).explode('AuthorKeywords')
+keyword_by_year = df_exploded.groupby(['Year', 'AuthorKeywords']).size().unstack(fill_value=0)
+plt.figure(figsize=(12, 8))
+sns.heatmap(keyword_by_year, cmap='YlGnBu')
+plt.title('Keyword Evolution Over Time')
+plt.xlabel('Keywords')
+plt.ylabel('Year')
+plt.show()
+
+# Replicability Analysis: Citations vs Graphics Replicability
+plt.figure(figsize=(10, 5))
+sns.boxplot(data=df, x='GraphicsReplicabilityStamp', y='AminerCitationCount')
+plt.title('Citations by Graphics Replicability Stamp')
+plt.xlabel('Graphics Replicability Stamp')
+plt.ylabel('Aminer Citation Count')
+plt.grid(True)
+plt.show()
+
+# Page Count Influence: Citations vs Page Count
+df['PageCount'] = df['LastPage'] - df['FirstPage']
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df, x='PageCount', y='AminerCitationCount', hue='Conference', style='Award')
+plt.title('Page Count Influence on Citations')
+plt.xlabel('Page Count')
+plt.ylabel('Aminer Citation Count')
+plt.legend(title='Conference | Award')
+plt.grid(True)
+plt.show()
+
+'''# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import networkx as nx
+import seaborn as sns
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Ensure 'AuthorNames-Deduped' is treated as string
+data['AuthorNames-Deduped'] = data['AuthorNames-Deduped'].astype(str)
+data['AuthorKeywords'] = data['AuthorKeywords'].astype(str)
+
+# Author Collaboration Network Analysis
+def plot_author_collaboration_network(data):
+    G = nx.Graph()
+    for index, row in data.iterrows():
+        authors = row['AuthorNames-Deduped'].split(', ')
+        G.add_nodes_from(authors)
+        for i in range(len(authors)):
+            for j in range(i + 1, len(authors)):
+                G.add_edge(authors[i], authors[j])
+
+    plt.figure(figsize=(12, 12))
+    pos = nx.spring_layout(G, k=0.3)
+    nx.draw_networkx_nodes(G, pos, node_size=50, node_color='skyblue')
+    nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray')
+    plt.title('Author Collaboration Network')
+    plt.show()
+
+plot_author_collaboration_network(data)
+
+# Research Trend Analysis using Author Keywords
+def plot_research_trends(data):
+    keywords = data['AuthorKeywords'].str.cat(sep=', ').lower().split(', ')
+    keyword_df = pd.DataFrame(keywords, columns=['Keyword'])
+    keyword_count = keyword_df['Keyword'].value_counts().head(20)
+
+    plt.figure(figsize=(12, 8))
+    sns.barplot(x=keyword_count.values, y=keyword_count.index, palette='viridis')
+    plt.title('Top 20 Research Keywords')
+    plt.xlabel('Frequency')
+    plt.ylabel('Keyword')
+    plt.tight_layout()
+    plt.show()
+
+plot_research_trends(data)
+
+# Temporal Analysis of Conference Impact
+def plot_temporal_conference_impact(data):
+    citation_count_by_year = data.groupby('Year')['CitationCount_CrossRef'].sum().reset_index()
+
+    plt.figure(figsize=(12, 6))
+    sns.lineplot(data=citation_count_by_year, x='Year', y='CitationCount_CrossRef', marker='o', color='c')
+    plt.title('Yearly Citation Count')
+    plt.xlabel('Year')
+    plt.ylabel('Total Citation Count')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+plot_temporal_conference_impact(data)
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.feature_extraction.text import CountVectorizer
+from wordcloud import WordCloud
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Sample data inspect:
+# data.head()
+
+# Idea 1: Author Influence Analysis - Visualizing Author Influence
+def plot_author_influence():
+    author_influence = data.groupby('AuthorNames-Deduped')['AminerCitationCount'].sum().reset_index()
+    top_authors = author_influence.sort_values(by='AminerCitationCount', ascending=False).head(10)
+    
+    plt.figure(figsize=(10, 6))
+    sns.barplot(x='AminerCitationCount', y='AuthorNames-Deduped', data=top_authors, palette="viridis")
+    plt.title('Top 10 Influential Authors by Aminer Citation Count')
+    plt.xlabel('Total Aminer Citation Count')
+    plt.ylabel('Author Names')
+    plt.show()
+
+plot_author_influence()
+
+# Idea 2: Topic Modeling on Abstracts - Visualizing topics using Word Clouds
+def plot_lda_wordclouds():
+    vectorizer = CountVectorizer(max_df=0.95, min_df=2, stop_words='english')
+    X = vectorizer.fit_transform(data['Abstract'].fillna(''))
+    lda = LatentDirichletAllocation(n_components=5, random_state=42)
+    lda.fit(X)
+    
+    for i, topic in enumerate(lda.components_):
+        plt.figure(figsize=(8, 8))
+        plt.imshow(WordCloud(background_color='white').fit_words({vectorizer.get_feature_names_out()[j]: topic[j] for j in topic.argsort()[:-15 - 1:-1]}))
+        plt.axis('off')
+        plt.title(f'Topic {i+1}')
+        plt.show()
+
+plot_lda_wordclouds()
+
+# Idea 5: Trend Analysis of Research Topics - Visualizing Trends Over Years
+def plot_research_trends():
+    keywords_trend = data['AuthorKeywords'].str.get_dummies(sep=';').sum()
+    keywords_trend = keywords_trend.sort_values(ascending=False).head(10)
+    years = data['Year'].unique()
+    
+    trends_over_years = {key: [] for key in keywords_trend.index}
+    for year in sorted(years):
+        yearly_data = data[data['Year'] == year]
+        keywords_yearly = yearly_data['AuthorKeywords'].str.get_dummies(sep=';').sum()
+        for key in trends_over_years:
+            trends_over_years[key].append(keywords_yearly.get(key, 0))
+    
+    plt.figure(figsize=(14, 8))
+    for key in trends_over_years:
+        plt.plot(sorted(years), trends_over_years[key], label=key)
+    
+    plt.title('Trend Analysis of Top Research Topics Over Years')
+    plt.xlabel('Year')
+    plt.ylabel('Keyword Appearance Count')
+    plt.legend(title='Keywords')
+    plt.show()
+
+plot_research_trends()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+
+# Load dataset
+df = pd.read_csv('dataset.csv')
+
+# Preprocess: Ensure NaN handling
+df.fillna({'Abstract': '', 'AuthorNames-Deduped': ''}, inplace=True)
+
+# 1. Predictive Citation Analysis
+plt.figure(figsize=(12, 7))
+sns.scatterplot(x='AminerCitationCount', y='CitationCount_CrossRef', size='PubsCited_CrossRef', hue='AuthorKeywords', data=df, palette="viridis", alpha=0.6)
+plt.title('Predictive Citation Analysis')
+plt.xlabel('Aminer Citation Count')
+plt.ylabel('CrossRef Citation Count')
+plt.legend(title='Author Keywords')
+plt.show()
+
+# 2. Author Collaboration Networks
+G = nx.Graph()
+for index, row in df.iterrows():
+    authors = row['AuthorNames-Deduped'].split(';')
+    for author in authors:
+        G.add_node(author.strip())
+    for i, author1 in enumerate(authors):
+        for author2 in authors[i+1:]:
+            G.add_edge(author1.strip(), author2.strip())
+
+plt.figure(figsize=(14, 14))
+pos = nx.spring_layout(G, k=0.1)
+nx.draw(G, pos, node_size=10, node_color="blue", edge_color="gray", with_labels=False, alpha=0.7)
+plt.title('Author Collaboration Network')
+plt.show()
+
+# 3. Text Analysis for Research Trends
+vectorizer = CountVectorizer(max_df=0.95, min_df=2, stop_words='english')
+X = vectorizer.fit_transform(df['Abstract'])
+
+lda = LatentDirichletAllocation(n_components=5, random_state=42)
+lda.fit(X)
+
+# Display the topic keywords
+terms = vectorizer.get_feature_names_out()
+for index, topic in enumerate(lda.components_):
+    print(f'Topic {index}:')
+    print([terms[i] for i in topic.argsort()[-10:]])
+
+# 4. Impact of Graphics on Paper Success
+plt.figure(figsize=(12, 7))
+sns.boxplot(x='GraphicsReplicabilityStamp', y='Downloads_Xplore', data=df, palette='coolwarm')
+plt.title('Impact of Graphics Replicability on Downloads')
+plt.xlabel('Graphics Replicability Stamp')
+plt.ylabel('Downloads in Xplore')
+plt.show()
+
+# 5. Award-winning Research Characteristics
+plt.figure(figsize=(12, 7))
+sns.countplot(x='PaperType', hue='Award', data=df, palette='Set2')
+plt.title('Award-winning Research Characteristics by PaperType')
+plt.xlabel('Paper Type')
+plt.ylabel('Count')
+plt.legend(title='Award Won')
 plt.show()
 
