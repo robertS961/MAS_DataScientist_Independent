@@ -17,6 +17,8 @@ from langchain_sandbox import PyodideSandboxTool
 from langgraph_swarm import create_swarm, create_handoff_tool
 from typing import List, Optional, Type, Any, get_type_hints, Literal
 from dotenv import load_dotenv
+from agents import Swarm_Agent, create_judge, create_vis
+from classes import State, Configurable
 load_dotenv()
 
 
@@ -26,10 +28,11 @@ import operator
 import numpy as np
 import json
 import pickle
-from helpers import get_llm
-from report_html import generate_html_report
-from report_pdf import generate_pdf_report
+from misc.helpers import get_llm
+from misc.report_html import generate_html_report
+from misc.report_pdf import generate_pdf_report
 
+'''
 class State(TypedDict):
     messages: List[str] # Might need to change to str
     feedback: List[str]
@@ -38,10 +41,11 @@ class State(TypedDict):
     ideas: str
     flag: bool
 
+
 class Configurable(TypedDict):
     tread_id: int
     recursion_limit: int
-
+'''
 
 class FinalState(TypedDict):
     final_report: str
@@ -135,7 +139,7 @@ def pretty_print_messages(update, last_message=False):
             pretty_print_message(m, indent=is_subgraph)
         print("\n")
 
-    
+'''    
 def WebSearch():
     """ This function searches the web for relevant research information! """
     web_search = TavilySearch(max_results=1)
@@ -195,6 +199,7 @@ def Research_DataScience_Agent(state:State):
             "You can web_search the internet to discover ideas! \n\n"
             "You can also transfer you knowledge to the statistican agent \n\n"
             "Once you discover interesting and novel ideas then list them! Make sure you use the feedback in the ideas if there is any! \n\n"
+            "Dont not generate any Network Analysis of Authors and Affiliations or Author Network Graphs. These are out of the scope\n\n!"
             "Come up with at least 5 ideas before you transfer the user to the stats agent. Thank you!!! \n\n"
         ),
         name="ds_assistant",
@@ -223,6 +228,7 @@ def Research_Stat_Agent(state:State):
             "You can web_search the internet to discover ideas! \n\n"
             "You can also call on the ds (Data science agent) \n\n"
             "Feel free to discover interesting ideas on your own, add to the ideas of the previous message, and search the web! \n\n!"
+            "Dont need come up with any Network Analysis of Authors and Affiliations or Network Graphs for Authors! \n\n"
             "If there is feedback make sure you use this to improve your results espeically adding onto other ideas and creating new ideas! \n\n"
             "Return all the ideas in a list. Make sure there is at least 6 ideas then transfer the user to the ds(data science) agent\n\n"
             "Thank you! \n\n"
@@ -238,6 +244,7 @@ def vis_a(state:State):
     data = state['dataset_info']
     code = state['messages'][-1].content 
     error = state['error']
+    print(f"\n\n This is the error {error} \n\n")
     if state['flag']: 
         state['ideas'] = state['messages'][-1].content
         state['flag'] = False
@@ -281,11 +288,13 @@ def code_agent(state:State) -> Command[Literal[END, 'vis_ageent']]:
     print(f'\n\n this is the code {code} \n\n')
     try:
         generate_pdf_report(code, 'output.pdf')
+        print('\n\n The code works!! \n\n')
         return Command(
             update = {'error': "No Errors!"},
             goto= END
         )
     except Exception as e:
+        print(f'\n\n This is the error {e} \n\n')
         return Command(
             update = {'error': e},
             goto= 'vis_agent'
@@ -341,20 +350,8 @@ def make_judge(state:State):
         return {"feedback": [{"role": "user", "content": str(response.content)}]}
 
 
-
-
 def create_swerm():
     return Swarm_Agent(State).compile()
-
-def create_vis():
-    return (
-        StateGraph(State)
-        .add_node('vis_agent', vis_a)
-        .add_node('code_agent', code_agent, destinations=('vis_agent', END))
-        .add_edge(START, 'vis_agent')
-        .add_edge('vis_agent', 'code_agent')
-        .compile()
-    )
 
 def create_judge():
     return(
@@ -365,6 +362,19 @@ def create_judge():
         .compile()
     )
 
+
+def create_vis():
+    return (
+        StateGraph(State)
+        .add_node('vis_agent', vis_a)
+        .add_node('code_agent', code_agent, destinations=('vis_agent', END))
+        .add_edge(START, 'vis_agent')
+        .add_edge('vis_agent', 'code_agent')
+        .compile()
+    )
+'''
+
+
     
 
 class Agent:
@@ -372,7 +382,7 @@ class Agent:
         self.workflow = None
 
     def initialize(self):
-        self.swarm = create_swerm()
+        self.swarm = Swarm_Agent()
         print('swarm created \n\n')
         self.judge = create_judge()
         print('judge created \n\n')

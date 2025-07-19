@@ -8,10 +8,10 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import numpy as np
-
+'''
 # Load the dataset
 df = pd.read_csv('dataset.csv')
-'''
+
 # 1. Network Analysis of Author Collaborations
 def plot_author_collaboration_network(df):
     G = nx.Graph()
@@ -27,7 +27,7 @@ def plot_author_collaboration_network(df):
     plt.show()
 
 plot_author_collaboration_network(df)
-'''
+
 # 2. Trend Analysis of Research Topics
 def plot_research_trends(df):
     df['Year'] = pd.to_datetime(df['Year'], format='%Y')
@@ -185,6 +185,7 @@ plt.ylabel('Number of Missing Values')
 plt.xlabel('Columns')
 plt.show()
 '''
+'''
 # ---- NEW BLOCK ---- # 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -239,7 +240,7 @@ plt.ylabel('Aminer Citation Count')
 plt.legend(title='Conference | Award')
 plt.grid(True)
 plt.show()
-
+'''
 '''# ---- NEW BLOCK ---- # 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -440,4 +441,314 @@ plt.xlabel('Paper Type')
 plt.ylabel('Count')
 plt.legend(title='Award Won')
 plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from wordcloud import WordCloud
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Fix potential issues with split by ensuring the column is strings
+df['AuthorNames-Deduped'] = df['AuthorNames-Deduped'].astype(str)
+
+# Idea 1: Conference Research Trends Over Time
+plt.figure(figsize=(14, 6))
+sns.countplot(data=df, x='Year', hue='Conference')
+plt.title('Research Paper Publication Trends by Conference Over Time')
+plt.xlabel('Year')
+plt.ylabel('Number of Papers')
+plt.xticks(rotation=45)
+plt.legend(title='Conference', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.show()
+
+# Idea 2: Author Collaboration Network Graph
+author_collab = nx.Graph()
+for i, row in df.iterrows():
+    authors = row['AuthorNames-Deduped'].split(',')
+    for author in authors:
+        author_collab.add_node(author.strip())
+    for j in range(len(authors)):
+        for k in range(j + 1, len(authors)):
+            author_collab.add_edge(authors[j].strip(), authors[k].strip())
+
+plt.figure(figsize=(12, 12))
+pos = nx.spring_layout(author_collab, k=0.1)
+nx.draw_networkx_edges(author_collab, pos, alpha=0.1)
+nx.draw_networkx_nodes(author_collab, pos, node_size=20)
+plt.title('Author Collaboration Network')
+plt.axis('off')
+plt.show()
+
+# Idea 3: Word Cloud of Author Keywords
+all_keywords = ' '.join(df['AuthorKeywords'].dropna().astype(str))
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_keywords)
+
+plt.figure(figsize=(10, 5))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.title('Word Cloud of Author Keywords')
+plt.axis('off')
+plt.show()
+
+# Idea 4: Distribution of Paper Types
+plt.figure(figsize=(8, 6))
+sns.countplot(data=df, x='PaperType')
+plt.title('Distribution of Paper Types')
+plt.xlabel('Paper Type')
+plt.ylabel('Count')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Idea 5: Award-winning Papers Based on Downloads
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=df, x='Award', y='Downloads_Xplore')
+plt.title('Distribution of Downloads for Award and Non-award Winning Papers')
+plt.xlabel('Award')
+plt.ylabel('Number of Downloads')
+plt.tight_layout()
+plt.show()
+
+# Ensure there are no plotting errors
+plt.close('all')
+'''
+
+
+# ---- NEW BLOCK ---- # 
+# Import necessary libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+import networkx as nx
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import NMF
+from wordcloud import WordCloud
+import seaborn as sns
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+'''
+# Idea 1: Network Analysis of Authors and Affiliations
+def plot_author_affiliation_network(df):
+    G = nx.Graph()
+    for _, row in df.iterrows():
+        if pd.notnull(row['AuthorNames']) and pd.notnull(row['AuthorAffiliation']):
+            authors = str(row['AuthorNames']).split(';')
+            affiliations = str(row['AuthorAffiliation']).split(';')
+            G.add_edges_from([(a, aff) for a in authors for aff in affiliations])
+    plt.figure(figsize=(12, 12))
+    nx.draw(G, with_labels=True, node_size=20, font_size=8)
+    plt.title('Author and Affiliation Network')
+    plt.show()
+'''
+# Idea 2: Topic Modeling in Abstracts
+def plot_topic_modeling(df, n_topics=5):
+    abstracts = df['Abstract'].dropna().astype(str)
+    tfidf_vectorizer = TfidfVectorizer(stop_words='english')
+    tfidf = tfidf_vectorizer.fit_transform(abstracts)
+    nmf = NMF(n_components=n_topics, random_state=1)
+    nmf.fit(tfidf)
+    feature_names = tfidf_vectorizer.get_feature_names_out()
+    fig, axes = plt.subplots(1, n_topics, figsize=(15, 5), sharex=True)
+    for topic_idx, topic in enumerate(nmf.components_):
+        wordcloud = WordCloud(background_color='white').generate_from_frequencies(
+            dict(zip(feature_names, topic)))
+        axes[topic_idx].imshow(wordcloud, interpolation='bilinear')
+        axes[topic_idx].axis('off')
+        axes[topic_idx].set_title(f'Topic {topic_idx}')
+    plt.show()
+
+# Idea 3: Predicting Citation Impact
+def plot_citation_impact(df):
+    sns.boxplot(data=df, x='Year', y='AminerCitationCount')
+    plt.title('Citation Count by Year')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+# Idea 4: Trend Analysis of Research Keywords
+def plot_keyword_trends(df):
+    keywords = df['AuthorKeywords'].dropna().str.split(';').explode()
+    trends = keywords.value_counts().head(10)
+    trends.plot(kind='bar', figsize=(10, 6))
+    plt.title('Top 10 Research Keywords')
+    plt.xlabel('Keywords')
+    plt.ylabel('Frequency')
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
+    plt.show()
+
+# Idea 5: Awards and Recognition Modeling
+def plot_award_downloads(df):
+    sns.scatterplot(data=df, x='Downloads_Xplore', y='Award', hue='Award', palette='viridis')
+    plt.title('Downloads vs Award Status')
+    plt.xlabel('Downloads')
+    plt.ylabel('Award (Yes/No)')
+    plt.tight_layout()
+    plt.show()
+
+# Execute the visualizations
+#plot_author_affiliation_network(df)
+plot_topic_modeling(df, n_topics=5)
+plot_citation_impact(df)
+plot_keyword_trends(df)
+plot_award_downloads(df)
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Visualization 1: Citation and Download Analysis
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df, x='AminerCitationCount', y='Downloads_Xplore', hue='PaperType')
+plt.title('Aminer Citation Count vs Downloads')
+plt.xlabel('Aminer Citation Count')
+plt.ylabel('Downloads in Xplore')
+plt.legend(title='Paper Type')
+plt.show()
+
+# Visualization 2: Conference Impact Evaluation
+award_count = df.groupby('Conference')['Award'].sum().reset_index()
+plt.figure(figsize=(12, 6))
+sns.barplot(data=award_count, x='Conference', y='Award')
+plt.xticks(rotation=45)
+plt.title('Number of Awards per Conference')
+plt.xlabel('Conference')
+plt.ylabel('Number of Awards')
+plt.show()
+
+# Visualization 3: Author and Affiliation Network Analysis (heatmap of collaborations)
+affiliation_network = df['AuthorAffiliation'].value_counts().head(10)
+plt.figure(figsize=(12, 6))
+sns.barplot(x=affiliation_network.index, y=affiliation_network.values)
+plt.xticks(rotation=45)
+plt.title('Top 10 Affiliation by Number of Papers')
+plt.xlabel('Affiliation')
+plt.ylabel('Number of Papers')
+plt.show()
+
+# Visualization 4: Abstract Text Mining for Trends (Word frequency)
+from wordcloud import WordCloud
+
+all_abstracts = ' '.join(df['Abstract'].dropna())
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(all_abstracts)
+
+plt.figure(figsize=(15, 8))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Wordcloud of Abstracts')
+plt.show()
+
+# Visualization 5: Historical Trends in Author Keywords
+keywords_year = df.explode('AuthorKeywords').groupby(['Year', 'AuthorKeywords']).size().reset_index(name='counts')
+top_keywords = keywords_year.groupby('AuthorKeywords')['counts'].sum().nlargest(10).index
+filtered_keywords = keywords_year[keywords_year['AuthorKeywords'].isin(top_keywords)]
+
+plt.figure(figsize=(12, 8))
+sns.lineplot(data=filtered_keywords, x='Year', y='counts', hue='AuthorKeywords', marker="o")
+plt.title('Trends of Top 10 Author Keywords Over Time')
+plt.xlabel('Year')
+plt.ylabel('Keyword Appearance Count')
+plt.legend(title='Author Keywords')
+plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from wordcloud import WordCloud
+import numpy as np
+from collections import Counter
+import re
+
+# Load dataset 
+data = pd.read_csv('dataset.csv')
+
+# Plot 1: Citation Prediction (Year vs. AminerCitationCount)
+plt.figure(figsize=(10,6))
+sns.lineplot(data=data, x='Year', y='AminerCitationCount', ci=None)
+plt.title('Trend of Aminer Citation Count Over Years')
+plt.xlabel('Year')
+plt.ylabel('Aminer Citation Count')
+plt.show()
+
+# Plot 2: Authorship Network (Dummy Visualization for Cohesion)
+# In a practical scenario, network plots might need libraries like NetworkX for detailed graphs.
+author_affiliation_counts = data['AuthorAffiliation'].value_counts().head(10)
+plt.figure(figsize=(8,6))
+sns.barplot(y=author_affiliation_counts.index, x=author_affiliation_counts.values, palette="viridis")
+plt.title('Top Author Affiliations by Paper Count')
+plt.xlabel('Number of Papers')
+plt.ylabel('Affiliation')
+plt.show()
+
+# Plot 3: Bayesian Analysis for Citations Prediction (Conference vs. CitationCount_CrossRef)
+conference_citation_counts = data.groupby('Conference')['CitationCount_CrossRef'].mean().sort_values(ascending=False).head(10)
+plt.figure(figsize=(10,6))
+sns.barplot(y=conference_citation_counts.index, x=conference_citation_counts.values, palette="Blues_d")
+plt.title('Mean Citation Count CrossRef by Conference')
+plt.xlabel('Mean Citation Count (CrossRef)')
+plt.ylabel('Conference')
+plt.show()
+
+# Plot 4: Word Cloud for Author Keywords
+author_keywords = ' '.join(data['AuthorKeywords'].dropna())
+word_cloud = WordCloud(width=1000, height=500, max_font_size=80, max_words=100, background_color='white').generate(author_keywords)
+plt.figure(figsize=(15, 7.5))
+plt.imshow(word_cloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud for Author Keywords')
+plt.show()
+
+# Plot 5: Temporal Trends in Research (AuthorKeywords over Years)
+# Extract common keywords to analyze
+keywords_sets = data['AuthorKeywords'].dropna().apply(lambda x: re.split('; |, |\*|\n', x))
+all_keywords = [keyword for sublist in keywords_sets for keyword in sublist]
+common_keywords = [item[0] for item in Counter(all_keywords).most_common(10)]
+
+years = sorted(data['Year'].unique())
+keyword_trends = pd.DataFrame(0, index=years, columns=common_keywords)
+
+for idx, row in data.iterrows():
+    if isinstance(row['AuthorKeywords'], str):
+        year = row['Year']
+        keywords = re.split('; |, |\*|\n', row['AuthorKeywords'])
+        for keyword in set(keywords):
+            if keyword in common_keywords:
+                keyword_trends.at[year, keyword] += 1
+
+plt.figure(figsize=(12,8))
+sns.heatmap(keyword_trends.T, cmap="YlGnBu", cbar_kws={'label': 'Frequency in Year'})
+plt.title('Temporal Trends in Research - Keyword Frequency per Year')
+plt.xlabel('Year')
+plt.ylabel('Keywords')
+plt.show()
+
+# Plot 6: Award vs Non-Award Papers comparison
+award_summary = data.groupby('Award')['AminerCitationCount'].mean()
+plt.figure(figsize=(6,6))
+sns.barplot(x=award_summary.index, y=award_summary.values, palette='pastel')
+plt.title('Average Aminer Citation Count: Awarded vs Non-Awarded Papers')
+plt.xlabel('Awarded')
+plt.ylabel('Average Aminer Citation Count')
+plt.show()
+
+# Plot 7: Graphics Replicability Stamp vs. Downloads
+graphics_replicability = data.groupby('GraphicsReplicabilityStamp')['Downloads_Xplore'].mean()
+plt.figure(figsize=(8,6))
+sns.barplot(x=graphics_replicability.index, y=graphics_replicability.values, palette='bright')
+plt.title('Average Downloads with Graphics Replicability Stamp')
+plt.xlabel('Graphics Replicability Stamp')
+plt.ylabel('Average Downloads (Xplore)')
+plt.show()
+
 

@@ -1,6 +1,6 @@
 # test.py
-from report_pdf import generate_pdf_report 
-from test_report_pdf import generate_pdf_with_code_and_plots
+from studio.misc.report_pdf import generate_pdf_report 
+from studio.misc.test_report_pdf import generate_pdf_with_code_and_plots
 
 
 # Read the entire contents of debug_output.txt
