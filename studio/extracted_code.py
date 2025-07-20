@@ -1,3 +1,4 @@
+'''
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -8,7 +9,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import numpy as np
-'''
+
 # Load the dataset
 df = pd.read_csv('dataset.csv')
 
@@ -515,7 +516,7 @@ plt.show()
 
 # Ensure there are no plotting errors
 plt.close('all')
-'''
+
 
 
 # ---- NEW BLOCK ---- # 
@@ -530,7 +531,7 @@ import seaborn as sns
 
 # Load the dataset
 df = pd.read_csv('dataset.csv')
-'''
+
 # Idea 1: Network Analysis of Authors and Affiliations
 def plot_author_affiliation_network(df):
     G = nx.Graph()
@@ -543,7 +544,7 @@ def plot_author_affiliation_network(df):
     nx.draw(G, with_labels=True, node_size=20, font_size=8)
     plt.title('Author and Affiliation Network')
     plt.show()
-'''
+
 # Idea 2: Topic Modeling in Abstracts
 def plot_topic_modeling(df, n_topics=5):
     abstracts = df['Abstract'].dropna().astype(str)
@@ -752,3 +753,194 @@ plt.ylabel('Average Downloads (Xplore)')
 plt.show()
 
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from wordcloud import WordCloud
+import plotly.express as px
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from textblob import TextBlob
+
+# Load dataset
+df = pd.read_csv('dataset.csv')
+
+# Idea 1: Author Collaboration Networks
+def plot_author_collaboration_network(df):
+    # Creating a network graph
+    G = nx.Graph()
+    for authors in df['AuthorNames-Deduped'].fillna(''):
+        author_list = authors.split(';')
+        for author in author_list:
+            G.add_node(author)
+        for i in range(len(author_list)):
+            for j in range(i+1, len(author_list)):
+                G.add_edge(author_list[i], author_list[j])
+    
+    plt.figure(figsize=(12, 10))
+    pos = nx.spring_layout(G, k=0.15, iterations=20)
+    nx.draw(G, pos, node_size=20, with_labels=False, edge_color='gray', alpha=0.7)
+    plt.title('Author Collaboration Network')
+    plt.show()
+
+plot_author_collaboration_network(df)
+
+# Idea 2: Sentiment Analysis of Abstracts
+def sentiment_analysis_of_abstracts(df):
+    df['Sentiment'] = df['Abstract'].dropna().apply(lambda text: TextBlob(str(text)).sentiment.polarity)
+    plt.figure(figsize=(12, 6))
+    sns.histplot(df['Sentiment'].dropna(), bins=30, kde=True, color='skyblue')
+    plt.title('Sentiment Analysis of Abstracts')
+    plt.xlabel('Sentiment Polarity')
+    plt.ylabel('Frequency')
+    plt.show()
+
+sentiment_analysis_of_abstracts(df)
+
+# Idea 3: Temporal Trends in Research Topics
+def plot_keyword_trends(df):
+    df['Year'] = pd.to_datetime(df['Year'], format='%Y')
+    all_keywords = df['AuthorKeywords'].dropna().str.get_dummies(sep=';').sum().reset_index()
+    all_keywords.columns = ['Keyword', 'Count']
+    most_frequent_keywords = all_keywords.nlargest(10, 'Count')['Keyword']
+
+    trend_data = pd.DataFrame(index=df['Year'].dropna().unique())
+    for keyword in most_frequent_keywords:
+        trend_data[keyword] = df[df['AuthorKeywords'].str.contains(keyword, na=False)]['Year'].value_counts()
+
+    trend_data = trend_data.fillna(0).sort_index()
+    trend_data.plot(figsize=(14, 8), marker='o')
+    plt.title('Trends of Research Topics Over Time')
+    plt.xlabel('Year')
+    plt.ylabel('Frequency')
+    plt.show()
+
+plot_keyword_trends(df)
+
+# Idea 4: Interactive Data Visualizations using Plotly
+def plot_interactive_visualization(df):
+    fig = px.scatter(df, x='Downloads_Xplore', y='AminerCitationCount',
+                     size='CitationCount_CrossRef', color='Year',
+                     hover_name='Title', log_x=True, size_max=60,
+                     title="Interactive Visualization: Downloads vs Citations")
+    fig.show()
+
+plot_interactive_visualization(df)
+
+# Idea 5: Clustering Research Fields
+def cluster_research_fields(df):
+    keywords = df['AuthorKeywords'].dropna().str.get_dummies(sep=';')
+    pca = PCA(n_components=2)
+    reduced_data = pca.fit_transform(keywords)
+    
+    kmeans = KMeans(n_clusters=5)
+    kmeans.fit(reduced_data)
+    df['Cluster'] = kmeans.labels_
+    
+    plt.figure(figsize=(10, 6))
+    plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=df['Cluster'], cmap='viridis', alpha=0.6)
+    plt.xlabel('PCA 1')
+    plt.ylabel('PCA 2')
+    plt.title('Clustering of Research Fields')
+    plt.colorbar(label='Cluster')
+    plt.show()
+
+cluster_research_fields(df)
+'''
+# New Block
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from wordcloud import WordCloud
+import plotly.express as px
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from textblob import TextBlob
+
+# Load dataset
+df = pd.read_csv('dataset.csv')
+
+# Idea 1: Author Collaboration Networks
+def plot_author_collaboration_network(df):
+    # Creating a network graph
+    G = nx.Graph()
+    for authors in df['AuthorNames-Deduped'].fillna(''):
+        author_list = authors.split(';')
+        for author in author_list:
+            G.add_node(author)
+        for i in range(len(author_list)):
+            for j in range(i+1, len(author_list)):
+                G.add_edge(author_list[i], author_list[j])
+    
+    plt.figure(figsize=(12, 10))
+    pos = nx.spring_layout(G, k=0.15, iterations=20)
+    nx.draw(G, pos, node_size=20, with_labels=False, edge_color='gray', alpha=0.7)
+    plt.title('Author Collaboration Network')
+    plt.show()
+
+plot_author_collaboration_network(df)
+
+# Idea 2: Sentiment Analysis of Abstracts
+def sentiment_analysis_of_abstracts(df):
+    df['Sentiment'] = df['Abstract'].dropna().apply(lambda text: TextBlob(str(text)).sentiment.polarity)
+    plt.figure(figsize=(12, 6))
+    sns.histplot(df['Sentiment'].dropna(), bins=30, kde=True, color='skyblue')
+    plt.title('Sentiment Analysis of Abstracts')
+    plt.xlabel('Sentiment Polarity')
+    plt.ylabel('Frequency')
+    plt.show()
+
+sentiment_analysis_of_abstracts(df)
+
+# Idea 3: Temporal Trends in Research Topics
+def plot_keyword_trends(df):
+    df['Year'] = pd.to_datetime(df['Year'], format='%Y')
+    all_keywords = df['AuthorKeywords'].dropna().str.get_dummies(sep=';').sum().reset_index()
+    all_keywords.columns = ['Keyword', 'Count']
+    most_frequent_keywords = all_keywords.nlargest(10, 'Count')['Keyword']
+
+    trend_data = pd.DataFrame(index=df['Year'].dropna().unique())
+    for keyword in most_frequent_keywords:
+        trend_data[keyword] = df[df['AuthorKeywords'].str.contains(keyword, na=False)]['Year'].value_counts()
+
+    trend_data = trend_data.fillna(0).sort_index()
+    trend_data.plot(figsize=(14, 8), marker='o')
+    plt.title('Trends of Research Topics Over Time')
+    plt.xlabel('Year')
+    plt.ylabel('Frequency')
+    plt.show()
+
+plot_keyword_trends(df)
+
+# Idea 4: Interactive Data Visualizations using Plotly
+def plot_interactive_visualization(df):
+    fig = px.scatter(df, x='Downloads_Xplore', y='AminerCitationCount',
+                     size='CitationCount_CrossRef', color='Year',
+                     hover_name='Title', log_x=True, size_max=60,
+                     title="Interactive Visualization: Downloads vs Citations")
+    fig.show()
+
+plot_interactive_visualization(df)
+
+# Idea 5: Clustering Research Fields
+def cluster_research_fields(df):
+    keywords = df['AuthorKeywords'].dropna().str.get_dummies(sep=';')
+    pca = PCA(n_components=2)
+    reduced_data = pca.fit_transform(keywords)
+    
+    kmeans = KMeans(n_clusters=5)
+    kmeans.fit(reduced_data)
+    df['Cluster'] = kmeans.labels_
+    
+    plt.figure(figsize=(10, 6))
+    plt.scatter(reduced_data[:, 0], reduced_data[:, 1], c=df['Cluster'], cmap='viridis', alpha=0.6)
+    plt.xlabel('PCA 1')
+    plt.ylabel('PCA 2')
+    plt.title('Clustering of Research Fields')
+    plt.colorbar(label='Cluster')
+    plt.show()
+
+cluster_research_fields(df)

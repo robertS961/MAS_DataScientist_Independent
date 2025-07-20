@@ -27,3 +27,4 @@ statsmodels
 textblob
 geopandas
 fpdf
+plotly

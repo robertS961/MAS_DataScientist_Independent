@@ -1,381 +1,16 @@
-from typing_extensions import TypedDict, Annotated
-from langchain_core.messages import HumanMessage, SystemMessage, convert_to_messages, AIMessage
-from langgraph.graph import StateGraph, START, END
-from langgraph.types import Command
-from langgraph.graph.state import CompiledStateGraph
-from langchain_tavily import TavilySearch
-from langgraph.managed import RemainingSteps
-from langchain_core.messages import HumanMessage
-from langgraph.prebuilt import create_react_agent, ToolNode
-from langgraph.cache.memory import InMemoryCache
-from langgraph.checkpoint.memory import MemorySaver, InMemorySaver
-from langgraph_supervisor import create_supervisor
-from langchain.chat_models import init_chat_model
-from langgraph.func import entrypoint
-from langchain_openai import ChatOpenAI
-from langchain_sandbox import PyodideSandboxTool
-from langgraph_swarm import create_swarm, create_handoff_tool
-from typing import List, Optional, Type, Any, get_type_hints, Literal
-from dotenv import load_dotenv
-from agents import Swarm_Agent, create_judge, create_vis
-from classes import State, Configurable
-load_dotenv()
-
 
 import re
 import csv
-import operator
 import numpy as np
-import json
-import pickle
-from misc.helpers import get_llm
-from misc.report_html import generate_html_report
+
+from langgraph.checkpoint.memory import MemorySaver
+from dotenv import load_dotenv
+from agents import Swarm_Agent, create_judge, create_vis
+from classes import State, Configurable
+from helper_functions import pretty_print_messages, create_reflection_graph
 from misc.report_pdf import generate_pdf_report
 
-'''
-class State(TypedDict):
-    messages: List[str] # Might need to change to str
-    feedback: List[str]
-    dataset_info: str
-    error: str
-    ideas: str
-    flag: bool
-
-
-class Configurable(TypedDict):
-    tread_id: int
-    recursion_limit: int
-'''
-
-class FinalState(TypedDict):
-    final_report: str
-    dataset_info: str
-
-class Finish(TypedDict):
-    """Tool for the judge to indicate the response is acceptable."""
-
-    finish: bool
-
-
-
-class MessagesWithSteps(State):
-    remaining_steps: RemainingSteps
-
-def end_or_reflect(state: MessagesWithSteps) -> Literal["visualization", "graph"]:
-    print(state["remaining_steps"], len(state["messages"]))
-    if state["remaining_steps"] <= 2:
-        return "visualization"
-    if len(state["messages"]) <= 0:
-        return "visualization"
-    return "graph"
-    
-
-
-def create_reflection_graph(
-    graph: CompiledStateGraph,
-    reflection: CompiledStateGraph,
-    visualization: CompiledStateGraph,
-    state_schema: Optional[Type[Any]] = None,
-    config_schema: Optional[Type[Any]] = None,
-) -> StateGraph:
-    _state_schema = state_schema or graph.builder.schema
-    
-    if "remaining_steps" in _state_schema.__annotations__:
-        raise ValueError(
-            "Has key 'remaining_steps' in state_schema, this shadows a built in key"
-        )
-    
-    if "messages" not in _state_schema.__annotations__:
-        raise ValueError("Missing required key 'messages' in state_schema")
-
-    class StateSchema(_state_schema):
-        remaining_steps: RemainingSteps
-
-    rgraph = StateGraph(StateSchema, config_schema=config_schema)
-    rgraph.add_node("graph", graph)
-    rgraph.add_node("reflection", reflection)
-    rgraph.add_node('visualization', visualization)
-    rgraph.add_edge(START, "graph")
-    rgraph.add_edge("graph", "reflection")
-    rgraph.add_conditional_edges("reflection", end_or_reflect)
-    return rgraph
-
-def pretty_print_message(message, indent=False):
-    pretty_message = message.pretty_repr(html=True)
-    if not indent:
-        print(pretty_message)
-        return
-
-    indented = "\n".join("\t" + c for c in pretty_message.split("\n"))
-    print(indented)
-
-
-def pretty_print_messages(update, last_message=False):
-    is_subgraph = False
-    if isinstance(update, tuple):
-        ns, update = update
-        # skip parent graph updates in the printouts
-        if len(ns) == 0:
-            return
-
-        graph_id = ns[-1].split(":")[0]
-        print(f"Update from subgraph {graph_id}:")
-        print("\n")
-        is_subgraph = True
-
-    for node_name, node_update in update.items():
-        update_label = f"Update from node {node_name}:"
-        if is_subgraph:
-            update_label = "\t" + update_label
-
-        print(update_label)
-        print("\n")
-
-        messages = convert_to_messages(node_update["messages"])
-        if last_message:
-            messages = messages[-1:]
-
-        for m in messages:
-            pretty_print_message(m, indent=is_subgraph)
-        print("\n")
-
-'''    
-def WebSearch():
-    """ This function searches the web for relevant research information! """
-    web_search = TavilySearch(max_results=1)
-    return web_search
-
-def transfer_to_ds_agent():
-    transfer_to_ds_agent = create_handoff_tool(
-        agent_name = 'ds_assistant',
-        description = (
-            'Transfer user to a data science agent! Capabale of coming up with novel data science ideas \n\n'
-            'It uses a websearch tool Tavily to help find research ideas for data science \n\n'
-        ),
-    )
-    return transfer_to_ds_agent
-
-def transfer_to_stats_agent():
-    transfer_to_stats_agent = create_handoff_tool(
-        agent_name = 'stats_assistant',
-        description = (
-            'Transfer user to a statistician agent! Capabale of coming up with novel statistical learning ideas \n\n'
-            'It uses a websearch tool Tavily to help find research ideas for statisticial learning and statistics \n\n'
-        ),
-    )
-    return transfer_to_stats_agent
-
-def transfer_to_vis_agent():
-    transfer_to_vis_agent = create_handoff_tool(
-        agent_name = 'vis_assistant',
-        description = (
-            'Transfer user to a visualization agent! Capabale of taking the previous ideas and turning them into computable python code! \n\n'
-            'It uses the LLM enginge to take those ideas and create clean, bug free, and simple python code! \n\n'
-        ),
-    )
-    return transfer_to_vis_agent
-
-
-    
-
-def Research_DataScience_Agent(state:State):
-    web_search = WebSearch()
-    stats_agent = transfer_to_stats_agent()
-    previous_message = state['messages']
-    previous_feedback = state['feedback']
-    data = state['dataset_info']
-    research_ds_agent = create_react_agent(
-        model="openai:gpt-4o",
-        tools=[web_search, stats_agent],
-        prompt=(
-            "You are a research data science agent.\n\n"
-            "INSTRUCTIONS:\n"
-            "Your goal is find novel data science ideas for a tabular dataset. These ideas should be able to be applied to tabular data .\n\n"
-            f"You might have a previous messaged from another agent it is: {previous_message}"
-            "You might also have feedback message from another agent to improve upon the previous_message and your soon to be future message. \n\n"
-            f"If there is feedback it is: {previous_feedback}\n\n"
-            f"These are the columns of the tabular data. Use them in the ideas by citing the column names: {data} \n\n"
-            "You have access to two different tools! \n\n"
-            "You can web_search the internet to discover ideas! \n\n"
-            "You can also transfer you knowledge to the statistican agent \n\n"
-            "Once you discover interesting and novel ideas then list them! Make sure you use the feedback in the ideas if there is any! \n\n"
-            "Dont not generate any Network Analysis of Authors and Affiliations or Author Network Graphs. These are out of the scope\n\n!"
-            "Come up with at least 5 ideas before you transfer the user to the stats agent. Thank you!!! \n\n"
-        ),
-        name="ds_assistant",
-    )
-    return research_ds_agent
-
-def Research_Stat_Agent(state:State):
-    web_search = WebSearch()
-    ds_agent = transfer_to_ds_agent()
-    previous_message = state['messages']
-    previous_feedback = state['feedback']
-    data = state['dataset_info']
-    #vis_agent = transfer_to_vis_agent()
-    research_stat_agent = create_react_agent(
-        model="openai:gpt-4o",
-        tools=[web_search, ds_agent],
-        prompt=(
-            "You are a research statistician agent.\n\n"
-            "INSTRUCTIONS:\n"
-            "Your goal is find novel statistical learning ideas for a tabular dataset."
-            f"You might have a previous messaged from another agent it is: {previous_message}"
-            "You might also have feedback message from another agent to improve upon the previous message and your soon to be future message. \n\n"
-            f"If there is feedback it is: {previous_feedback} \n\n"
-            f"These are the columns of the tabular data. Use them in the ideas by citing the column names: {data} \n\n"
-            "You have access to two different tools! \n\n"
-            "You can web_search the internet to discover ideas! \n\n"
-            "You can also call on the ds (Data science agent) \n\n"
-            "Feel free to discover interesting ideas on your own, add to the ideas of the previous message, and search the web! \n\n!"
-            "Dont need come up with any Network Analysis of Authors and Affiliations or Network Graphs for Authors! \n\n"
-            "If there is feedback make sure you use this to improve your results espeically adding onto other ideas and creating new ideas! \n\n"
-            "Return all the ideas in a list. Make sure there is at least 6 ideas then transfer the user to the ds(data science) agent\n\n"
-            "Thank you! \n\n"
-        ),
-        name="stats_assistant",
-    )
-    return research_stat_agent
-
-
-def vis_a(state:State):
-    tools = []
-    pass_msg = False
-    data = state['dataset_info']
-    code = state['messages'][-1].content 
-    error = state['error']
-    print(f"\n\n This is the error {error} \n\n")
-    if state['flag']: 
-        state['ideas'] = state['messages'][-1].content
-        state['flag'] = False
-    ideas = state['ideas']
-
-    if error == "":
-        prompt = (
-            "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
-            "We have already created several ideas. Your objective is to take the ideas and code them ! \n\n"
-            f"The dataset columns are as follows: {data}\n\n"
-            f"The ideas are as follows: {ideas}\n\n"
-            "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
-            "Make sure the number of plots you create matches the number of ideas, if it is impossible create more data science ideas from the columns! \n\n"
-            "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
-            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
-        )
-    else:
-        prompt = (
-            "You are a Python visualization expert. You generate stunning visualizations using matplotlib, seaborn, plotly, or any libraries you can think of!.\n\n"
-            f"Code has already been generated for these several ideas {ideas} \n\n "
-            f"The following code was created for those above ideas{code} based on these data columns {data}\n\n"
-            f"However there were errors in the code. Here is the error {error}\n\n"
-            "Please fix the code and improve the clariy of any graphs that seems confusing, or axis that have long labels/uncertain, make the coloring more clear, etc.\n\n"
-            "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
-            "Make sure all the ideas are still coded for! Do not cut ideas because the code doesn't work. Instead fix the code slightly so the idea still works! \n\n"
-            "Make sure the number of plots you create matches the number of ideas, if it is impossible then create more data science like plots from the columns! \n\n"
-            "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
-            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
-        )
-    vis_agent = create_react_agent(
-        model = "openai:gpt-4o",
-        tools = [],
-        prompt = prompt,
-        name = 'vis_agent',
-        checkpointer=InMemorySaver()
-    )
-    return vis_agent
-
-def code_agent(state:State) -> Command[Literal[END, 'vis_ageent']]:
-    code = state['messages'][-1].content
-    print(f'\n\n this is the code {code} \n\n')
-    try:
-        generate_pdf_report(code, 'output.pdf')
-        print('\n\n The code works!! \n\n')
-        return Command(
-            update = {'error': "No Errors!"},
-            goto= END
-        )
-    except Exception as e:
-        print(f'\n\n This is the error {e} \n\n')
-        return Command(
-            update = {'error': e},
-            goto= 'vis_agent'
-        )
-
-    
-
-
-    #return {'messages':[{"role": "user", "content": code['messages'][0].content}]}
-
-
-def Swarm_Agent(state:State):
-    
-    research_ds_agent = Research_DataScience_Agent(State)
-    print('created research_ds_agent\n\n')
-    research_stat_agent = Research_Stat_Agent(State)
-    #reserarch_vis_agent = Visualization_Agent()
-    swarm_agent = create_swarm(
-    agents=[research_ds_agent, research_stat_agent],
-    default_active_agent = 'ds_assistant',
-    )
-    return swarm_agent #create the swarm everytime and input the new state from the other graph
-
-
-def make_judge(state:State):
-    current_message = state['messages']
-    critique_prompt = (
-        
-        "-You are a senior data scientist. You have over 20 years of experience! \n\n"
-        "- You are going to be given data science and statistical learning ideas that can be applied to tabular data! \n\n"
-        "Use your experience to state if it uses modern day data science practices \n\n"
-        "If there is any room for improvement please suggest it back to the team of data scientist! \n\n"
-        "If the response meets the ALL the above criteria, return an empty string"
-        "If you find ANY issues with the response, do not return an empty string. Instead, provide specific and constructive feedback which should return as a string."
-        "Be detailed in your critique so the team can understand exactly how to improve."
-
-    )
-
-    """Evaluate the assistant's response using a separate judge model."""
-    model = ChatOpenAI(model = 'gpt-4o', temperature = 0, max_tokens = 4096)
-    response = model.invoke([
-        SystemMessage(content=critique_prompt),
-        HumanMessage(content=f"Here is the current message{current_message} \n\n. State wether this code meets the protocol. If false return a message so a string with all the improvements. If True return an empty string \n\n")
-    ])
-    print(f" \n\n These are the eval_result : {response} \n\n")
-
-    if response == "":
-        print("✅ Response approved by judge")
-        return
-    else:
-        # Otherwise, return the judge's critique as a new user message
-        print("⚠️ Judge requested improvements")
-        return {"feedback": [{"role": "user", "content": str(response.content)}]}
-
-
-def create_swerm():
-    return Swarm_Agent(State).compile()
-
-def create_judge():
-    return(
-        StateGraph(State)
-        .add_node('judge_agent', make_judge)
-        .add_edge(START, 'judge_agent')
-        .add_edge('judge_agent', END)
-        .compile()
-    )
-
-
-def create_vis():
-    return (
-        StateGraph(State)
-        .add_node('vis_agent', vis_a)
-        .add_node('code_agent', code_agent, destinations=('vis_agent', END))
-        .add_edge(START, 'vis_agent')
-        .add_edge('vis_agent', 'code_agent')
-        .compile()
-    )
-'''
-
-
-    
+load_dotenv()
 
 class Agent:
     def __init__(self):
@@ -420,104 +55,62 @@ class Agent:
 
         generate_pdf_report(output, "output.pdf")
         # generate_html_report(output, "output.html")
-    def process(self):
-
-        if self.swarm is None or self.vis is None or self.judge is None:
-            raise RuntimeError("Agent not initialised. Call initialize() first.")
-        
-        # initialize the state & read the dataset
-        state = self.initialize_state_from_csv()
-        # invoke the workflow
-        #output_state = self.workflow.invoke(state)
-        data = state['dataset_info']
+    
+    def define_variables(self, thread: int, loop_limit: int, data:str):
+        #Define the Prompt to insert into the LLM
         prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
                 "Your goal to research novel data science and statistic ideas to perform on the data \n"
                 "Swarm all the agents until novel data science and statistic learning ideas are created based on the tabular dataset given above!\n"
                 "The ideas should be clearly labeled and readable \n\n"
                 "This data will be passed on for evulation so please make it the best you can! Thank you \n\n"
         )
-
-        dic = {"messages": [
+        #Orginal State Variables for Invoke
+        dic: State = {"messages": [
             {
                 "role": "user",
                 "content": f"{prompt}"
             }
             ],
-            "dataset_info": state['dataset_info'],
+            "dataset_info": data,
             "error": "",
             "ideas": "",
             'flag': True,
         }
-        config :Configurable = {"thread_id": 1, "recursion_limit": 6}
+        #Orginal Configurations for our graph
+        config :Configurable = {"thread_id": thread, "recursion_limit": loop_limit}
+        return dic, config
+
+    def process(self):
+
+        #Return error if any of the graphs didn't build
+        if self.swarm is None or self.vis is None or self.judge is None:
+            raise RuntimeError("Agent not initialised. Call initialize() first.")
+        
+        # initialize the state & read the dataset
+        state = self.initialize_state_from_csv()
+
+        # invoke the workflow
+        data = state['dataset_info']
+
+        #Define the Class variables
+        dic, config = self.define_variables(thread = 1, loop_limit = 6, data = data)
        
+        # Create a reflection step from the swarm to repeating itself
         reflection_app = create_reflection_graph(self.swarm, self.judge, self.vis, State)
         
+        #Stream the Output
         for chunk in reflection_app.compile(cache=MemorySaver()).stream(input = dic, config = config):
             pretty_print_messages(chunk, last_message=True)
         
+        #Find the last message
         result = chunk['visualization']['messages'][-1].content
-        '''
-        for chunk in self.workflow.stream(input = dic): # Label this state better
-            pretty_print_messages(chunk, last_message=True)
-        # Hold the final message from supervisor
-        '''
-        #final_message_history = chunk['vis_assistant']['messages'][-1].content
-        '''
-        with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(str(result))
-        '''
-
+       
         #Put the output in a python file 
         code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
         with open("extracted_code.py", "a", encoding="utf-8") as f:
             f.write("# ---- NEW BLOCK ---- # \n")
             for block in code:
                 f.write(block + "\n\n")
-        
-        # Let's say your huge dict is called `result_dict`
-        # result_text = final_message_history["stats_assistant"]["messages"]['HumanMessage'].content
-        '''
-        # Extract everything that looks like code inside triple backticks
-        code_blocks = re.findall(r"```(?:python)?\n(.*?)```", result_text, re.DOTALL)
-        '''
-        # Write each block to a separate file or combine into one
-        '''
-        with open("extracted_code.py", "w", encoding="utf-8") as f:
-            for block in matches:
-                f.write(block + "\n\n")
-        '''
-        '''
-        # Write the entire block to a file for debugging purposes
-        with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(result_text)
-        '''
-        '''
-        final_state = {
-            'final_report': final_message_history,
-            'dataset_info': state['dataset_info']
-        }
-        final = create_finalReport()
-        output_state = final.invoke(final_state)
-        print(output_state)
-        '''
-        
-        '''with open("debug_output.txt", "w", encoding="utf-8") as f:
-            f.write(values)'''
-        #create_output(supervisor)
-
-   
-        # Flatten the output since Langraph outputs AIMessage(content = " content here")
-        '''
-        def _flatten(value):
-            return getattr(value, "content", value)
-
-        result = {key: _flatten(field_value) for key, field_value in output_state.items()}
-        '''
-        '''
-        print("----- Generated Code Output -----")
-        print(result['final_report'])  
-        print("---------------------------------")
-        '''
         
         # decode the output
         self.decode_output(result)
