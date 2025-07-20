@@ -23,7 +23,7 @@ def vis_a(state:State):
             "Respond ONLY with Python code that creates meaningful and aesthetic data visualizations. Do not explain anything. Thank you \n\n"
             "Make sure the number of plots you create matches the number of ideas, if it is impossible create more data science ideas from the columns! \n\n"
             "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
-            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
+            "Also Sklearn is depreciated use scikit-learn! \n\n"
         )
     else:
         prompt = (
@@ -36,7 +36,7 @@ def vis_a(state:State):
             "Make sure all the ideas are still coded for! Do not cut ideas because the code doesn't work. Instead fix the code slightly so the idea still works! \n\n"
             "Make sure the number of plots you create matches the number of ideas, if it is impossible then create more data science like plots from the columns! \n\n"
             "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
-            "Lastly double , triple, quad check the code to make sure there isn't any errors when it compiles! \n\n"
+            "Also Sklearn is depreciated use scikit-learn! \n\n"
         )
     vis_agent = create_react_agent(
         model = "openai:gpt-4o",

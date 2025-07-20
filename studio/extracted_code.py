@@ -847,7 +847,7 @@ def cluster_research_fields(df):
     plt.show()
 
 cluster_research_fields(df)
-'''
+
 # New Block
 
 import pandas as pd
@@ -943,4 +943,459 @@ def cluster_research_fields(df):
     plt.colorbar(label='Cluster')
     plt.show()
 
-cluster_research_fields(df)
+cluster_research_fields(df)# ---- NEW BLOCK ---- # 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+import plotly.express as px
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# 1. Exploratory Data Analysis on Publication Trends
+
+plt.figure(figsize=(10, 6))
+sns.countplot(data=df, x='PaperType', order=df['PaperType'].value_counts().index)
+plt.title('Publication Trends by Paper Type')
+plt.xlabel('Paper Type')
+plt.ylabel('Count')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# 2. Citation Network Analysis
+
+yearly_citations = df.groupby('Year')['CitationCount_CrossRef'].sum()
+
+plt.figure(figsize=(10, 6))
+plt.plot(yearly_citations.index, yearly_citations.values, marker='o')
+plt.title('Trend of Citations Over the Years')
+plt.xlabel('Year')
+plt.ylabel('Total Citations')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# 3. Text Mining and Topic Modeling (using PCA on keywords for illustrative purposes)
+
+author_keywords = df['AuthorKeywords'].dropna().str.split(';')
+keyword_matrix = author_keywords.str.join(sep=' ').str.get_dummies(sep=' ')
+pca = PCA(n_components=2)
+pca_result = pca.fit_transform(keyword_matrix)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(pca_result[:, 0], pca_result[:, 1])
+plt.title('PCA of Author Keywords')
+plt.xlabel('PCA 1')
+plt.ylabel('PCA 2')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# 4. Predictive Analysis for Award-Winning Papers
+
+award_papers = df[df['Award'] == True]
+non_award_papers = df[df['Award'] == False]
+
+plt.figure(figsize=(10, 6))
+sns.kdeplot(award_papers['Downloads_Xplore'], label='Awarded Papers', shade=True)
+sns.kdeplot(non_award_papers['Downloads_Xplore'], label='Non-Awarded Papers', shade=True)
+plt.title('Downloads Distribution for Award vs Non-Award Papers')
+plt.xlabel('Downloads_Xplore')
+plt.ylabel('Density')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# 5. Bibliometric Analysis Using Clustering (KMeans on PCA of author keywords)
+
+kmeans = KMeans(n_clusters=3, random_state=0).fit(pca_result)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(pca_result[:, 0], pca_result[:, 1], c=kmeans.labels_)
+plt.title('KMeans Clustering on PCA of Author Keywords')
+plt.xlabel('PCA 1')
+plt.ylabel('PCA 2')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# 6. Network Dynamics of Author Collaborations Over the Years
+
+author_collaborations = df['AuthorNames-Deduped'].dropna().apply(lambda x: x.split(';'))
+author_collabs_flat = [item for sublist in author_collaborations for item in sublist]
+
+author_df = pd.DataFrame(author_collabs_flat, columns=['Author'])
+author_year_count = author_df.value_counts().groupby(df['Year']).count()
+
+plt.figure(figsize=(10, 6))
+plt.plot(author_year_count.index, author_year_count.values, marker='o')
+plt.title('Author Collaborations Over the Years')
+plt.xlabel('Year')
+plt.ylabel('Number of Collaborations')
+plt.grid()
+plt.tight_layout()
+plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from wordcloud import WordCloud
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+import numpy as np
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Handle missing values in the target column
+data['CitationCount_CrossRef'] = data['CitationCount_CrossRef'].fillna(data['CitationCount_CrossRef'].mean())
+
+# --- Predictive Analytics for Conference Impact Assessment ---
+features = ['Award', 'PaperType']
+target = 'CitationCount_CrossRef'
+
+# Encode categorical variables
+data['Award'] = data['Award'].astype('category').cat.codes
+data['PaperType'] = data['PaperType'].astype('category').cat.codes
+
+X = pd.get_dummies(data[features], drop_first=True)
+y = data[target]
+
+# Split the data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Fit the Linear Regression Model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict and evaluate
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+# Plot
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred, alpha=0.7)
+plt.plot([y.min(), y.max()], [y.min(), y.max()], 'k--', lw=2)
+plt.xlabel('Actual Citation Counts')
+plt.ylabel('Predicted Citation Counts')
+plt.title(f'Predicted vs Actual Citation Counts\nMSE: {mse:.2f}, R^2: {r2:.2f}')
+plt.show()
+
+# --- Analysis of Research Trends via Bibliometrics ---
+years = data['Year'].value_counts().sort_index()
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=years)
+plt.title('Research Publication Trends Over Years')
+plt.xlabel('Year')
+plt.ylabel('Number of Publications')
+plt.show()
+
+# --- Textual Analysis of Abstracts and Titles ---
+abstracts = ' '.join(data['Abstract'].dropna().tolist())
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(abstracts)
+plt.figure(figsize=(12, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('Word Cloud of Abstract Themes')
+plt.show()
+
+# --- Graphics and Replicability Assessment ---
+plt.figure(figsize=(10, 6))
+sns.violinplot(x='GraphicsReplicabilityStamp', y='CitationCount_CrossRef', data=data)
+plt.title('Impact of Graphics Replicability Stamp on Citations')
+plt.show()
+
+# --- Network Analysis of Author Collaboration ---
+G = nx.Graph()
+author_connections = data['AuthorNames-Deduped'].dropna().str.split('; ')
+
+for authors in author_connections:
+    for i in range(len(authors)):
+        for j in range(i + 1, len(authors)):
+            G.add_edge(authors[i].strip(), authors[j].strip())
+
+plt.figure(figsize=(10, 10))
+pos = nx.spring_layout(G, k=0.3)
+nx.draw(G, pos, with_labels=False, node_size=20, font_size=8, width=0.5)
+plt.title("Author Collaboration Network")
+plt.show()
+
+# --- Enhanced Tabular Data Analysis with Multi-representation DeepInsight ---
+plt.title('Placeholder for Multi-representation DeepInsight Analysis')
+plt.text(0.5, 0.5, 'DeepInsight Analysis Here', horizontalalignment='center', verticalalignment='center')
+plt.axis('off')
+plt.show()
+'''
+
+# New Code Block
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import networkx as nx
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Ensure that empty or non-string AuthorNames-Deduped field do not cause a split error
+df['AuthorNames-Deduped'] = df['AuthorNames-Deduped'].fillna('')
+
+# 1. Temporal Citation Trend Analysis
+plt.figure(figsize=(10, 6))
+sns.lineplot(data=df, x='Year', y='AminerCitationCount', label='Aminer')
+sns.lineplot(data=df, x='Year', y='CitationCount_CrossRef', label='CrossRef')
+plt.title('Temporal Citation Trend Analysis')
+plt.ylabel('Citation Count')
+plt.xlabel('Year')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# 2. Author Collaboration Network Analysis
+G = nx.Graph()
+for idx, row in df.iterrows():
+    authors = row['AuthorNames-Deduped'].split(';')
+    for a in authors:
+        G.add_node(a)
+    for i in range(len(authors)):
+        for j in range(i + 1, len(authors)):
+            G.add_edge(authors[i], authors[j])
+plt.figure(figsize=(12, 12))
+nx.draw(G, with_labels=True, node_color='lightblue', edge_color='grey', node_size=25, font_size=8)
+plt.title('Author Collaboration Network')
+plt.tight_layout()
+plt.show()
+
+# 3. Predictive Model for Award-Winning Papers
+df_encoded = df.copy()
+df_encoded['Award'] = df_encoded['Award'].fillna(0)
+X = df_encoded[['Downloads_Xplore', 'PubsCited_CrossRef']].fillna(0)
+y = df_encoded['Award'].apply(lambda x: 1 if x else 0)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred))
+
+# 4. Graphics Influence Study
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=df, x='GraphicsReplicabilityStamp', y='Downloads_Xplore', palette='Set2')
+plt.title('Graphics Influence on Downloads')
+plt.tight_layout()
+plt.show()
+
+# 5. Keyword Evolution Mapping
+# Use safe fillna value to prevent split issues
+df['AuthorKeywords'] = df['AuthorKeywords'].fillna('')
+
+pivot_table = df.pivot_table(index='AuthorKeywords', columns='Year', aggfunc='size').fillna(0)
+plt.figure(figsize=(12, 8))
+sns.heatmap(pivot_table, cmap="YlGnBu", linewidths=.5)
+plt.title('Keyword Evolution Mapping')
+plt.tight_layout()
+plt.show()
+
+# 6. Citation and Internal Reference Correlation
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=df, x='InternalReferences', y='CitationCount_CrossRef', hue='Year', palette='viridis')
+plt.title('Correlation between Internal References and Citation Count')
+plt.tight_layout()
+plt.show()
+
+# 7. Author Diversity Impact on Research Quality
+def count_unique_affiliations(affiliations):
+    try:
+        return len(set(affiliations.split(';')))
+    except AttributeError:
+        return 0
+
+plt.figure(figsize=(10, 6))
+author_diversity = df['AuthorAffiliation'].apply(count_unique_affiliations)
+plt.scatter(author_diversity, df['AminerCitationCount'], alpha=0.5)
+plt.title('Author Diversity vs. Citation Count')
+plt.xlabel('Author Diversity (Unique Affiliations)')
+plt.ylabel('Aminer Citation Count')
+plt.tight_layout()
+plt.show()
+ # ---- NEW BLOCK ---- # 
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Extract relevant columns
+authors_affiliations = data[['AuthorNames-Deduped', 'AuthorAffiliation']]
+
+# Create a collaboration network
+G = nx.Graph()
+
+for _, row in authors_affiliations.iterrows():
+    authors = row['AuthorNames-Deduped'].split(';')
+    affiliations = row['AuthorAffiliation'].split(';')
+    for i, author in enumerate(authors):
+        author_affiliation = f"{author} ({affiliations[i]})"
+        for coauthor in authors:
+            if author != coauthor:
+                coauthor_affiliation = f"{coauthor} ({affiliations[i]})"
+                G.add_edge(author_affiliation, coauthor_affiliation)
+
+# Plot the network
+plt.figure(figsize=(12, 8))
+nx.draw(G, with_labels=True, node_size=50, font_size=8)
+plt.title('Collaboration Network')
+plt.show()
+
+import seaborn as sns
+
+# Aggregate data by year and conference
+conference_trends = data.groupby(['Year', 'Conference']).size().reset_index(name='PaperCount')
+
+# Plot the trend over time
+plt.figure(figsize=(14, 6))
+sns.lineplot(data=conference_trends, x='Year', y='PaperCount', hue='Conference', marker='o')
+plt.title('Conference Trends Over Time')
+plt.xlabel('Year')
+plt.ylabel('Number of Papers')
+plt.legend(title='Conference')
+plt.show()
+
+# Analyze impact of awards on citation counts
+award_data = data[['Award', 'AminerCitationCount', 'CitationCount_CrossRef']].dropna()
+
+# Boxplot for citations based on awards
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Award', y='AminerCitationCount', data=award_data)
+plt.title('Impact of Awards on Aminer Citation Count')
+plt.xlabel('Award Received')
+plt.ylabel('Aminer Citation Count')
+plt.show()
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+
+# Prepare predictive model dataset
+features = data[['Year', 'PaperType', 'GraphicsReplicabilityStamp']]
+features = pd.get_dummies(features, drop_first=True)
+target = data['Downloads_Xplore'].fillna(0)
+
+X_train, X_test, y_train, y_test = train_test_split(features, target, test_size=0.2, random_state=42)
+
+# Train a Random Forest model
+model = RandomForestRegressor()
+model.fit(X_train, y_train)
+predictions = model.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, predictions)
+print(f'Mean Squared Error: {mse}')
+
+from wordcloud import WordCloud
+
+# Extract keywords by year
+keywords_by_year = data[['Year', 'AuthorKeywords']].dropna()
+
+# Plot a word cloud for each year
+unique_years = keywords_by_year['Year'].unique()
+
+plt.figure(figsize=(20, 15))
+for i, year in enumerate(unique_years, 1):
+    year_keywords = ' '.join(keywords_by_year[keywords_by_year['Year'] == year]['AuthorKeywords'].tolist())
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(year_keywords)
+    
+    plt.subplot(len(unique_years)//2, 2, i)
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.title(f'Keywords in {year}')
+plt.tight_layout()
+plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import NMF
+import networkx as nx
+import numpy as np
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Idea 1: Citation Network Analysis
+plt.figure(figsize=(10, 6))
+citation_matrix = np.zeros((len(df), len(df)))
+# Assume 'InternalReferences' column contains IDs that refer to other papers in the same dataset
+for i, refs in enumerate(df['InternalReferences'].fillna('')):
+    for ref in refs.split(','):
+        if ref and int(ref) < len(df):
+            citation_matrix[i, int(ref)] = 1
+G = nx.from_numpy_matrix(citation_matrix, create_using=nx.DiGraph)
+pos = nx.spring_layout(G, seed=42)
+nx.draw(G, pos, node_size=20, node_color='blue', with_labels=False, arrowsize=8)
+plt.title('Citation Network Analysis')
+plt.show()
+
+# Idea 2: Predictive Modeling for Conference Awards
+award_features = ['Year', 'Conference', 'PaperType', 'Downloads_Xplore', 'GraphicsReplicabilityStamp']
+sns.pairplot(df, vars=award_features, hue='Award')
+plt.suptitle('Predictive Modeling for Conference Awards', y=1.02)
+plt.show()
+
+# Idea 3: Temporal Analysis of Research Impact
+plt.figure(figsize=(10, 6))
+df.groupby('Year')['CitationCount_CrossRef'].mean().plot()
+plt.title('Temporal Analysis of Research Impact')
+plt.xlabel('Year')
+plt.ylabel('Average Citation Count')
+plt.show()
+
+# Idea 4: Topic Modeling on Abstracts and Keywords
+abstracts = df['Abstract'].fillna('')
+tfidf = TfidfVectorizer(max_features=1000, stop_words='english')
+tfidf_matrix = tfidf.fit_transform(abstracts)
+nmf = NMF(n_components=5, random_state=42)
+nmf_topics = nmf.fit_transform(tfidf_matrix)
+plt.figure(figsize=(10, 6))
+for topic_idx, topic in enumerate(nmf.components_):
+    plt.bar([f'Topic {i}' for i in range(len(topic))], topic, label=f'Topic {topic_idx}')
+plt.title('Topic Modeling on Abstracts and Keywords')
+plt.xticks(rotation=45)
+plt.ylabel('Weight')
+plt.legend()
+plt.show()
+
+# Idea 5: Author Collaboration Patterns
+authors = df['AuthorNames-Deduped'].apply(lambda x: x.split(','))
+collab_edges = [(author, other_author) for row in authors for author in row for other_author in row if author != other_author]
+G_authors = nx.Graph()
+G_authors.add_edges_from(set(collab_edges))
+plt.figure(figsize=(10, 6))
+pos = nx.spring_layout(G_authors, seed=42)
+nx.draw(G_authors, pos, node_size=20, node_color='green', with_labels=False)
+plt.title('Author Collaboration Patterns')
+plt.show()
+
+# Idea 6: Download and Citation Correlation Analysis
+plt.figure(figsize=(10, 6))
+sns.regplot(x='Downloads_Xplore', y='CitationCount_CrossRef', data=df)
+plt.title('Download and Citation Correlation Analysis')
+plt.xlabel('Downloads in Xplore')
+plt.ylabel('Citation Count in CrossRef')
+plt.show()
+

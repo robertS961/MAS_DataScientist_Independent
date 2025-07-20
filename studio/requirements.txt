@@ -11,6 +11,7 @@ langgraph-swarm
 langchain-tavily
 langchain-anthropic
 langchain-sandbox
+langchain_experimental
 notebook
 tavily-python
 trustcall
@@ -28,3 +29,4 @@ textblob
 geopandas
 fpdf
 plotly
+pandas
