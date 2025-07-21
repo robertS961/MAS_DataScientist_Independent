@@ -1,4 +1,5 @@
 from langchain_core.messages import convert_to_messages
+from langchain_core.messages import AIMessage
 
 def pretty_print_message(message, indent=False):
     pretty_message = message.pretty_repr(html=True)
@@ -10,8 +11,11 @@ def pretty_print_message(message, indent=False):
     print(indented)
 
 
-def pretty_print_messages(update, last_message=False):
+def pretty_print_messages(update, state, last_message=False):
     is_subgraph = False
+    if isinstance(update, AIMessage):
+        state['last_ai_message_content'] = update.content
+
     if isinstance(update, tuple):
         ns, update = update
         # skip parent graph updates in the printouts

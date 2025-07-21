@@ -5,10 +5,11 @@ import numpy as np
 
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
-from agents import Swarm_Agent, create_judge, create_vis
-from classes import State, Configurable
+from agents import Swarm_Agent, create_judge, create_vis, supervisor
+from classes import State, Configurable, TempState
 from helper_functions import pretty_print_messages, create_reflection_graph
 from misc.report_pdf import generate_pdf_report
+from langchain.schema import AIMessage
 
 load_dotenv()
 
@@ -17,8 +18,8 @@ class Agent:
         self.workflow = None
 
     def initialize(self):
-        self.swarm = Swarm_Agent()
-        print('swarm created \n\n')
+        self.supervisor= supervisor(State)
+        print('supervisor created \n\n')
         self.judge = create_judge()
         print('judge created \n\n')
         self.vis = create_vis()
@@ -60,7 +61,8 @@ class Agent:
         #Define the Prompt to insert into the LLM
         prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
                 "Your goal to research novel data science and statistic ideas to perform on the data \n"
-                "Swarm all the agents until novel data science and statistic learning ideas are created based on the tabular dataset given above!\n"
+                f"Please come up with at least 6 unique and novel data science and statistical learning ideas to apply on tabular data based on these columns {data}!\n"
+                "Make sure a few ideas come from the statistical learning research agent and a few from the data science research agent \n"
                 "The ideas should be clearly labeled and readable \n\n"
                 "This data will be passed on for evulation so please make it the best you can! Thank you \n\n"
         )
@@ -75,15 +77,16 @@ class Agent:
             "error": "",
             "ideas": "",
             'flag': True,
+            "last_ai_message_content": ""
         }
         #Orginal Configurations for our graph
-        config :Configurable = {"thread_id": thread, "recursion_limit": loop_limit}
+        config :Configurable = {"thread_id": thread, "recursion_limit": 6}
         return dic, config
 
     def process(self):
 
         #Return error if any of the graphs didn't build
-        if self.swarm is None or self.vis is None or self.judge is None:
+        if self.supervisor is None or self.vis is None or self.judge is None:
             raise RuntimeError("Agent not initialised. Call initialize() first.")
         
         # initialize the state & read the dataset
@@ -96,14 +99,27 @@ class Agent:
         dic, config = self.define_variables(thread = 1, loop_limit = 6, data = data)
        
         # Create a reflection step from the swarm to repeating itself
-        reflection_app = create_reflection_graph(self.swarm, self.judge, self.vis, State)
+        reflection_app = create_reflection_graph(self.supervisor, self.judge, self.vis, State)
         
         #Stream the Output
         for chunk in reflection_app.compile(cache=MemorySaver()).stream(input = dic, config = config):
-            pretty_print_messages(chunk, last_message=True)
+            pretty_print_messages(chunk, dic, last_message=True)
         
+        def get_last_ai_message(messages):
+            # Iterate backwards to find the last AIMessage
+            for msg in reversed(messages):
+                if isinstance(msg, AIMessage):
+                    return msg.content  # or return the whole msg if you want more than content
+            return None  # if no AIMessage found
+
+        # Example usage
+        last_ai_content = get_last_ai_message(chunk['reflection']['messages'])
+        print(f"\n\n {last_ai_content}\n\n ")
+
         #Find the last message
-        result = chunk['visualization']['messages'][-1].content
+        print(f"\n\n {chunk} \n\n")
+
+        #result = chunk['visualization']['messages'][-1].content
        
         #Put the output in a python file 
         code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
