@@ -15,7 +15,8 @@ def make_supervisor_node(llm: BaseChatModel, members: list[str]) -> str:
         f" following workers: {members}. Given the following user request,"
         " respond with the worker to act next. Each worker will perform a"
         " task and respond with their results and status. When finished,"
-        " respond with FINISH."
+        " respond with FINISH. Do not call each worker more than once! So each worker will only be called once! \n"
+        " Make sure you call the other workers except FINISH first, then call FINISH! \n"
     )
 
     class Router(TypedDict):

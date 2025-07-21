@@ -1,12 +1,23 @@
-from agents import create_supervisor
+from agents import supervisor
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
-supervisor = create_supervisor()
+supervisor = supervisor()
 print("Supervisor is compiled \n\n")
 
 for chunk in supervisor.stream(
-    {"messages": [("user", "when is Taylor Swift's next tour?")]}
+    {
+    "messages": [
+        {
+            "role": "user",
+            "content": "what's the combined headcount of the FAANG companies in 2024?"
+        }
+    ]
+}
 ):
     print(chunk)
+    print("\n ------ \n")
 
 

@@ -9,3 +9,4 @@ class State(TypedDict):
     error: str
     ideas: str
     flag: bool
+    next: str
