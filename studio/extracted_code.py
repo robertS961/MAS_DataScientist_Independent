@@ -1399,3 +1399,90 @@ plt.xlabel('Downloads in Xplore')
 plt.ylabel('Citation Count in CrossRef')
 plt.show()
 
+# ---- NEW BLOCK ---- # 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+import networkx as nx
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Idea 1: Advanced Topic Modeling
+def topic_modeling():
+    vectorizer = CountVectorizer(max_df=0.95, min_df=2, stop_words='english')
+    X = vectorizer.fit_transform(df['Abstract'].fillna(''))
+    
+    lda = LatentDirichletAllocation(n_components=5, random_state=42)
+    lda.fit(X)
+    
+    feature_names = vectorizer.get_feature_names_out()
+    for topic_idx, topic in enumerate(lda.components_):
+        print(f"Topic {topic_idx}: ", [feature_names[i] for i in topic.argsort()[:-6:-1]])
+
+topic_modeling()
+
+# Idea 2: Author Network Analysis
+def author_network():
+    G = nx.Graph()
+
+    for index, row in df.iterrows():
+        authors = str(row['AuthorNames']).split(';')
+        for i in range(len(authors)):
+            for j in range(i + 1, len(authors)):
+                G.add_edge(authors[i].strip(), authors[j].strip())
+
+    plt.figure(figsize=(12, 12))
+    nx.draw(G, node_size=5, with_labels=False, edge_color="b", alpha=0.2)
+    plt.title("Co-authorship Network")
+    plt.show()
+
+author_network()
+
+# Idea 3: Citation Impact Prediction
+def citation_prediction():
+    sns.regplot(x='Downloads_Xplore', y='AminerCitationCount', data=df)
+    plt.title('Downloads vs. Citation Count')
+    plt.xlabel('Downloads')
+    plt.ylabel('Aminer Citation Count')
+    plt.show()
+
+citation_prediction()
+
+# Idea 4: Sequential Pattern Analysis
+def sequential_pattern():
+    citations_year = df.groupby('Year')['InternalReferences'].count()
+    plt.plot(citations_year.index, citations_year.values, marker='o')
+    plt.title('Internal References Over Years')
+    plt.xlabel('Year')
+    plt.ylabel('Number of Internal References')
+    plt.grid(True)
+    plt.show()
+
+sequential_pattern()
+
+# Idea 5: Topic Evolution Mapping
+def topic_evolution():
+    keywords_by_year = df.groupby('Year')['AuthorKeywords'].apply(lambda x: ';'.join(x.dropna()))
+    sns.barplot(x=keywords_by_year.index, y=keywords_by_year.apply(lambda x: len(set(x.split(';')))))
+    plt.title('Unique Keywords by Year')
+    plt.xlabel('Year')
+    plt.ylabel('Unique Keywords Count')
+    plt.xticks(rotation=45)
+    plt.show()
+
+topic_evolution()
+
+# Idea 6: Replicability and Award Analysis
+def replicability_award():
+    sns.boxplot(x='Award', y='CitationCount_CrossRef', hue='GraphicsReplicabilityStamp', data=df)
+    plt.title('Citation Count by Award and Graphics Replicability Stamp')
+    plt.xlabel('Award Status')
+    plt.ylabel('CrossRef Citation Count')
+    plt.show()
+
+replicability_award()
+
