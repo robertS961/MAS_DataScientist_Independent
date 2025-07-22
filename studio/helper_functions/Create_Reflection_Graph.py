@@ -23,7 +23,6 @@ def end_or_reflect(state: MessagesWithSteps) -> Literal["__end__", "graph"]:
 def create_reflection_graph(
     graph: CompiledStateGraph,
     reflection: CompiledStateGraph,
-    visualization: CompiledStateGraph,
     state_schema: Optional[Type[Any]] = None,
     config_schema: Optional[Type[Any]] = None,
 ) -> StateGraph:
@@ -44,7 +43,6 @@ def create_reflection_graph(
     rgraph = StateGraph(StateSchema, config_schema=config_schema)
     rgraph.add_node("graph", graph)
     rgraph.add_node("reflection", reflection)
-    rgraph.add_node('visualization', visualization)
     rgraph.add_edge(START, "graph")
     rgraph.add_edge("graph", "reflection")
     rgraph.add_conditional_edges("reflection", end_or_reflect)
