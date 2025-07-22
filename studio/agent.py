@@ -5,7 +5,7 @@ import numpy as np
 
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
-from agents import Swarm_Agent, create_judge, create_vis, supervisor, create_research_team
+from agents import Swarm_Agent, create_judge, create_vis, create_research_team
 from classes import State, Configurable, TempState
 from helper_functions import pretty_print_messages, create_reflection_graph, initialize_state_from_csv, define_variables
 from misc.report_pdf import generate_pdf_report
