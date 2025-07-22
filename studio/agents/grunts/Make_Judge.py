@@ -21,14 +21,14 @@ def make_judge(state:State):
     model = ChatOpenAI(model = 'gpt-4o', temperature = 0, max_tokens = 4096)
     response = model.invoke([
         SystemMessage(content=critique_prompt),
-        HumanMessage(content=f"Here is the current message{current_message} \n\n. State wether this code meets the protocol. If false return a message so a string with all the improvements. If True return an empty string \n\n")
+        HumanMessage(content=f"Here is the current message{current_message} \n\n. State wether the message meets the protocol. If false return a message so a string with all the improvements. If True return the string True \n\n")
     ])
-    print(f" \n\n These are the eval_result : {response} \n\n")
+    print(f"\n\nThis is the content {response.content} \n\n")
 
-    if response == "":
+    if response.content == "True":
         print("✅ Response approved by judge")
-        return
+        return {'revise': True}
     else:
         # Otherwise, return the judge's critique as a new user message
         print("⚠️ Judge requested improvements")
-        return {"messages": [{"role": "user", "content": str(response.content)}]}
+        return {"messages": [{"role": "system", "content": str(response.content)}]}

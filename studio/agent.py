@@ -77,6 +77,7 @@ class Agent:
             "error": "",
             "ideas": "",
             'flag': True,
+            'revise':False,
             "last_ai_message_content": ""
         }
         #Orginal Configurations for our graph
@@ -121,15 +122,18 @@ class Agent:
 
         #result = chunk['visualization']['messages'][-1].content
        
-        #Put the output in a python file 
+        #Put the output in a python file
+        '''
         code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
         with open("extracted_code.py", "a", encoding="utf-8") as f:
             f.write("# ---- NEW BLOCK ---- # \n")
             for block in code:
                 f.write(block + "\n\n")
-        
+        '''
+        with open('written.txt', 'a', encoding= "utf-8" ) as f:
+            f.write(last_ai_content + '\n \n')
         # decode the output
-        self.decode_output(result)
+        #self.decode_output(result)
 
         # return the result
-        return result
+        return last_ai_content

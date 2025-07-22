@@ -15,6 +15,7 @@ def end_or_reflect(state: MessagesWithSteps) -> Literal["__end__", "graph"]:
         return "__end__"
     if len(state["messages"]) <= 0:
         return "__end__"
+    if state['revise']: return "__end__"
     return "graph"
     
 

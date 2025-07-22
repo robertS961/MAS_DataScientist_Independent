@@ -12,3 +12,4 @@ class State(TypedDict):
     ideas: str
     flag: bool
     last_ai_message_content: str
+    revise: bool
