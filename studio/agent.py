@@ -48,7 +48,7 @@ class Agent:
     
         #Stream the Output
         for chunk in self.research_team.compile(cache=MemorySaver()).stream(input = dic, config = config):
-            pretty_print_messages(chunk, dic, last_message=True)
+            pretty_print_messages(chunk, last_message=True)
         
         def get_last_ai_message(messages):
             # Iterate backwards to find the last AIMessage

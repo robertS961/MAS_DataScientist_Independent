@@ -11,10 +11,8 @@ def pretty_print_message(message, indent=False):
     print(indented)
 
 
-def pretty_print_messages(update, state, last_message=False):
+def pretty_print_messages(update, last_message=False):
     is_subgraph = False
-    if isinstance(update, AIMessage):
-        state['last_ai_message_content'] = update.content
 
     if isinstance(update, tuple):
         ns, update = update

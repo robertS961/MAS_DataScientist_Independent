@@ -2,7 +2,7 @@ from helper_functions import make_supervisor_node
 from langchain_openai import ChatOpenAI
 from classes import TempState
 from langgraph.graph import StateGraph, START
-from agents import search_node, web_scraper_node, vis_a, Research_Stat_Agent, Research_DataScience_Agent
+from agents import web_scraper_node, vis_a, Research_Stat_Agent, Research_DataScience_Agent
 from dotenv import load_dotenv
 from classes import State
 load_dotenv()
