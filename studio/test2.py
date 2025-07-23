@@ -10,7 +10,6 @@ dic, config = define_variables(thread = 1, loop_limit = 6, data = data)
 
 
 compiled_graph = chain(3, state)
-print(dic)
 for chunk in compiled_graph.stream(input = dic, config= config):
     pretty_print_messages(chunk)
 
