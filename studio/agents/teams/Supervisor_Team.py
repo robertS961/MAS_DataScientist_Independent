@@ -12,7 +12,7 @@ load_dotenv()
 from langgraph_supervisor import create_supervisor
 llm =  ChatOpenAI(model="gpt-4o")
 def supervisor_team(state:State, name = "team_supervisor" ):
-    supervisor_graph = supervisor(state, agent = 1)
+    supervisor_graph = supervisor(state, agent = 1, name = "lead_supervisor")
     print("\n supervisor_Graph created\n ")
     chain_graph = chain(3, state)
     print("\n Chain graph created \n")
@@ -34,7 +34,7 @@ def supervisor_team(state:State, name = "team_supervisor" ):
         prompt = prompt,
         supervisor_name = name,
     )
-    return workflow.compile(name = "supervisor_team")
+    return workflow
 
 '''
 llm = ChatOpenAI(model="gpt-4o")

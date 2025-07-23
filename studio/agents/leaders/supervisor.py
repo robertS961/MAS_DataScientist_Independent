@@ -9,7 +9,7 @@ load_dotenv()
 
 from langgraph_supervisor import create_supervisor
 llm =  ChatOpenAI(model="gpt-4o")
-def supervisor(state:State, agent: int = 0 ):
+def supervisor(state:State, agent: int = 0, name = "lead_supervisor"):
     if agent == 0:
         agents = [Research_Stat_Agent(State), Research_DataScience_Agent(State)]
         prompt=(
@@ -37,7 +37,7 @@ def supervisor(state:State, agent: int = 0 ):
         agents = agents,
         model = llm,
         prompt = prompt,
-        supervisor_name= "lead_supervisor"
+        supervisor_name= name,
     )
     return workflow.compile(name = 'lead_supervisor')
 
