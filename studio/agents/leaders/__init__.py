@@ -1,7 +1,7 @@
 from .swarm import Swarm_Agent
 from .judge import create_judge
 from .Coder import create_code
-from .Supervisor import supervisor
+from .lead_supervisor import supervisor
 from .Chain import chain
 
 
