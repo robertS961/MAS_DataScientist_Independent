@@ -1,6 +1,6 @@
 from .state import State
 from .configurable import Configurable
-from .temp_state import TempState
+from .finalstate import FinalState
 
-__all__ = ["State", "Configurable","TempState"]
+__all__ = ["State", "Configurable","FinalState"]
 

@@ -30,3 +30,4 @@ geopandas
 fpdf
 plotly
 pandas
+lifelines

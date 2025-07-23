@@ -8,8 +8,7 @@ from langgraph.graph.message import add_messages
 class State(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages] # Might need to change to str
     dataset_info: str
-    error: str
-    ideas: str
-    flag: bool
-    last_ai_message_content: str
     revise: bool
+    ideas: str
+    code: str
+    errors: str

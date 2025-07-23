@@ -5,8 +5,10 @@ from .Vis_Agent import vis_a
 from .Code_Agnet import code_agent
 from .Create_Search_Nodes import create_search_nodes
 from .Web_Scraper import web_scraper_node
+from .Reducer_Agent import reducer_agent
 
 
 __all__ = ["Research_Stat_Agent", "Research_DataScience_Agent", "make_judge", "vis_a", 
-           "code_agent", "create_search_nodes", "web_scraper_node"
+           "code_agent", "create_search_nodes", "web_scraper_node", "reducer_agent",
+           
         ]
