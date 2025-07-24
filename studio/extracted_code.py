@@ -2094,3 +2094,238 @@ citation_impact_analysis()
 citation_trend_analysis()
 predictive_modeling_for_awards()
 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Lasso
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Fill or drop NaN values for numeric computations
+imputer = SimpleImputer(strategy='constant', fill_value=0)
+data['Downloads_Xplore'] = imputer.fit_transform(data[['Downloads_Xplore']])
+data['AminerCitationCount'] = data['AminerCitationCount'].fillna(0)
+data['PubsCited_CrossRef'] = imputer.fit_transform(data[['PubsCited_CrossRef']])
+
+# Ensure categorical variables are strings
+data['Conference'] = data['Conference'].fillna('Unknown').astype(str)
+data['PaperType'] = data['PaperType'].fillna('Unknown').astype(str)
+data['GraphicsReplicabilityStamp'] = data['GraphicsReplicabilityStamp'].fillna('Unknown').astype(str)
+data['Award'] = data['Award'].fillna(0).apply(lambda x: 1 if x else 0)  # Binary classification
+
+# Visualization 1: Linear Regression for Citation Count Prediction
+X_predict = data[['Conference', 'Year', 'PaperType', 'AuthorKeywords', 'Downloads_Xplore']].copy()
+le = LabelEncoder()
+X_predict['Conference'] = le.fit_transform(X_predict['Conference'])
+X_predict['PaperType'] = le.fit_transform(X_predict['PaperType'])
+tfidf = TfidfVectorizer(stop_words='english', max_features=100)
+X_predict_keywords = tfidf.fit_transform(X_predict['AuthorKeywords'].fillna('')).toarray()
+X_predict_tfidf = pd.DataFrame(X_predict_keywords, columns=tfidf.get_feature_names_out())
+X_predict.drop('AuthorKeywords', axis=1, inplace=True)
+X_predict = pd.concat([X_predict, X_predict_tfidf], axis=1)
+y_predict = data['AminerCitationCount']
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(X_predict, y_predict, test_size=0.2, random_state=42)
+
+# Train linear regression model
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+
+# Plot actual vs predicted citation counts
+y_pred = lr.predict(X_test)
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_pred, alpha=0.7)
+plt.xlabel("Actual Citation Counts")
+plt.ylabel("Predicted Citation Counts")
+plt.title("Actual vs Predicted Citation Counts")
+plt.grid(True)
+plt.show()
+
+# Visualization 2: Random Forest Classification for Award Prediction
+X_award = data[['GraphicsReplicabilityStamp', 'AuthorKeywords', 'Downloads_Xplore', 'PubsCited_CrossRef']].copy()
+X_award['GraphicsReplicabilityStamp'] = le.fit_transform(X_award['GraphicsReplicabilityStamp'])
+X_award_keywords = tfidf.fit_transform(X_award['AuthorKeywords'].fillna('')).toarray()
+X_award_tfidf = pd.DataFrame(X_award_keywords, columns=tfidf.get_feature_names_out())
+X_award = pd.concat([X_award.drop('AuthorKeywords', axis=1), X_award_tfidf], axis=1)
+y_award = data['Award']  # Binary labels
+
+X_train_award, X_test_award, y_train_award, y_test_award = train_test_split(X_award, y_award, test_size=0.2, random_state=42)
+rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_clf.fit(X_train_award, y_train_award)
+
+# Plot Feature Importance for Random Forest
+importance = rf_clf.feature_importances_
+indices = importance.argsort()[-10:][::-1]
+features = X_train_award.columns
+plt.figure(figsize=(10, 7))
+plt.title('Random Forest Feature Importance for Award Prediction')
+plt.barh(range(len(indices)), importance[indices], color='b', align='center')
+plt.yticks(range(len(indices)), [features[i] for i in indices])
+plt.xlabel('Relative Importance')
+plt.show()
+
+# Visualization 3: LASSO Regression for Keyword Relevance
+lasso = Lasso(alpha=0.1)
+lasso.fit(X_train.drop(columns=['Downloads_Xplore']), y_train)
+
+# Plot non-zero coefficients
+coef = pd.Series(lasso.coef_, index=X_train.drop(columns=['Downloads_Xplore']).columns)
+coef = coef.sort_values()
+important_coef = coef[coef != 0]
+plt.figure(figsize=(10, 8))
+important_coef.plot(kind="barh")
+plt.title("LASSO Model - Keyword Relevance in Citation Prediction")
+plt.xlabel('Coefficient Value')
+plt.show()
+
+# Visualization 4: Semantic Analysis using TF-IDF and Linear Regression
+X_semantic = data['Abstract'].fillna('')
+X_semantic_tfidf = tfidf.fit_transform(X_semantic).toarray()
+y_semantic = data['AminerCitationCount']
+
+X_train_sem, X_test_sem, y_train_sem, y_test_sem = train_test_split(X_semantic_tfidf, y_semantic, test_size=0.2, random_state=42)
+lr_sem = LinearRegression()
+lr_sem.fit(X_train_sem, y_train_sem)
+
+# Plot predicted vs actual values for semantic analysis
+y_pred_sem = lr_sem.predict(X_test_sem)
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test_sem, y_pred_sem, alpha=0.7)
+plt.xlabel("Actual Citation Counts from Semantic Analysis")
+plt.ylabel("Predicted Citation Counts from Semantic Analysis")
+plt.title("Actual vs Predicted Citation Counts from Semantic Analysis Using TF-IDF")
+plt.grid(True)
+plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+from textblob import TextBlob
+
+# Load dataset
+df = pd.read_csv('dataset.csv')
+
+# Handle missing values by filling them with appropriate replacements
+df.fillna({
+    'Abstract': '',
+    'AuthorKeywords': '',
+    'Downloads_Xplore': 0,
+    'CitationCount_CrossRef': 0,
+    'PubsCited_CrossRef': 0
+}, inplace=True)
+
+# 1. Topic Modeling on Abstracts using LDA from sklearn
+def topic_modeling_lda(df, num_topics=5):
+    # Prepare data
+    documents = df['Abstract'].tolist()
+    vectorizer = CountVectorizer(stop_words='english', max_features=5000)
+    X = vectorizer.fit_transform(documents)
+    
+    # Build LDA model
+    lda_model = LatentDirichletAllocation(n_components=num_topics, random_state=42)
+    lda_model.fit(X)
+    
+    # Display topics
+    for i, topic in enumerate(lda_model.components_):
+        topic_terms = [vectorizer.get_feature_names_out()[index] for index in topic.argsort()[-10:]]
+        print(f"Topic {i}: {' '.join(topic_terms)}")
+
+# 2. Classification of PaperType
+def classify_paper_type(df):
+    # Prepare data
+    features = df[['Year', 'Downloads_Xplore']]
+    labels = df['PaperType']
+    
+    # Use TF-IDF for AuthorKeywords
+    keywords_vectorizer = TfidfVectorizer(max_features=100)
+    keywords = keywords_vectorizer.fit_transform(df['AuthorKeywords'])
+    
+    # Concatenate features
+    features = pd.concat([features, pd.DataFrame(keywords.toarray())], axis=1)
+    
+    # Split the data
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
+    
+    # Train RandomForest
+    rf = RandomForestClassifier()
+    rf.fit(X_train, y_train)
+    y_pred = rf.predict(X_test)
+    
+    # Print classification report
+    print(classification_report(y_test, y_pred))
+
+# 3. Sentiment Analysis
+def sentiment_analysis(df):
+    # Calculate sentiment using TextBlob
+    df['Sentiment'] = df['Abstract'].apply(lambda x: TextBlob(x).sentiment.polarity)
+    
+    # Determine sentiment labels
+    conditions = [
+        (df['Sentiment'] > 0),
+        (df['Sentiment'] == 0),
+        (df['Sentiment'] < 0)
+    ]
+    sentiments = ['positive', 'neutral', 'negative']
+    df['SentimentLabel'] = pd.cut(df['Sentiment'], bins=3, labels=sentiments)
+    print("Sentiment Analysis Labels:\n", df['SentimentLabel'].value_counts())
+
+# 4. Principal Component Analysis (PCA)
+def apply_pca(df):
+    # Prepare data
+    features = df[['CitationCount_CrossRef', 'PubsCited_CrossRef', 'Downloads_Xplore']]
+    
+    # Standardize features
+    scaler = StandardScaler()
+    features_scaled = scaler.fit_transform(features)
+    
+    # Apply PCA
+    pca = PCA(n_components=2)
+    pca_result = pca.fit_transform(features_scaled)
+    df_pca = pd.DataFrame(pca_result, columns=['PCA1', 'PCA2'])
+    
+    # Plot results
+    sns.scatterplot(x='PCA1', y='PCA2', data=df_pca)
+    plt.title('PCA of Numerical Features')
+    plt.xlabel('PCA1')
+    plt.ylabel('PCA2')
+    plt.show()
+
+# 5. Trends in Paper Topics
+def analyze_trends(df):
+    # Calculate trends over years
+    df['Year'] = df['Year'].astype(int)
+    unique_keywords_per_year = df.groupby('Year')['AuthorKeywords'].apply(lambda x: x.str.split(';').explode().nunique())
+    
+    # Plot trends
+    plt.figure(figsize=(10,5))
+    unique_keywords_per_year.plot(kind='line', marker='o')
+    plt.title('Trends in Paper Topics Over Years')
+    plt.xlabel('Year')
+    plt.ylabel('Unique Topics')
+    plt.grid(True)
+    plt.show()
+
+# Example function calls
+# topic_modeling_lda(df)
+# classify_paper_type(df)
+# sentiment_analysis(df)
+# apply_pca(df)
+# analyze_trends(df)
+

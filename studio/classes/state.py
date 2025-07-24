@@ -12,3 +12,4 @@ class State(TypedDict):
     ideas: str
     code: str
     errors: str
+    data_info: str

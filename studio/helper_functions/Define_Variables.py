@@ -1,6 +1,6 @@
 from classes import State, Configurable
 
-def define_variables(thread: int, loop_limit: int, data:str, name:str = "research", input:str = None ):
+def define_variables(thread: int, loop_limit: int, data:str, data_info:str , name:str = "research", input:str = None ):
     if name == "research":
     #Define the Prompt to insert into the LLM
         prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
@@ -19,6 +19,13 @@ def define_variables(thread: int, loop_limit: int, data:str, name:str = "researc
         "It should contain zero bugs and run without issues. Please test you code before returning it\n"
         "Thank you! Lets COOK, return this python Code! \n"
         )
+    elif name == "ml":
+        prompt = (
+            f"You are given a tabular dataset. Here is the data \n {data} \n"
+            "Your goal is to come up with novel machine learning techniques to apply to the above columns \n"
+            "Return a list of ideas in a neat format! \n"
+            "Thank you !"
+        )
 
     dic: State = {'messages': [
         {
@@ -27,6 +34,7 @@ def define_variables(thread: int, loop_limit: int, data:str, name:str = "researc
         }
     ],
         "dataset_info": data,
+        "data_info": data_info,
         'revise': False,
         "ideas": "",
         "code": "",
