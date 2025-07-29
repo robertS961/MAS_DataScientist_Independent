@@ -1,122 +1,120 @@
+# ---- NEW BLOCK ---- # 
 import pandas as pd
-from sklearn.decomposition import LatentDirichletAllocation
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report
-import seaborn as sns
 import matplotlib.pyplot as plt
-from textblob import TextBlob
+import seaborn as sns
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.cluster import KMeans
+import numpy as np
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 
-# Load dataset
+# Load the dataset
 df = pd.read_csv('dataset.csv')
 
-# Handle missing values by filling them with appropriate replacements
-df.fillna({
-    'Abstract': '',
-    'AuthorKeywords': '',
-    'Downloads_Xplore': 0,
-    'CitationCount_CrossRef': 0,
-    'PubsCited_CrossRef': 0
-}, inplace=True)
+# Fill NaN values for numerical columns with median
+numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
+df[numerical_cols] = df[numerical_cols].apply(lambda col: col.fillna(col.median()), axis=0)
 
-# 1. Topic Modeling on Abstracts using LDA from sklearn
-def topic_modeling_lda(df, num_topics=5):
-    # Prepare data
-    documents = df['Abstract'].tolist()
-    vectorizer = CountVectorizer(stop_words='english', max_features=5000)
-    X = vectorizer.fit_transform(documents)
-    
-    # Build LDA model
-    lda_model = LatentDirichletAllocation(n_components=num_topics, random_state=42)
-    lda_model.fit(X)
-    
-    # Display topics
-    for i, topic in enumerate(lda_model.components_):
-        topic_terms = [vectorizer.get_feature_names_out()[index] for index in topic.argsort()[-10:]]
-        print(f"Topic {i}: {' '.join(topic_terms)}")
+# Fill NaN values for categorical columns with mode
+categorical_cols = df.select_dtypes(include=['object']).columns
+df[categorical_cols] = df[categorical_cols].apply(lambda col: col.fillna(col.mode()[0]), axis=0)
 
-# 2. Classification of PaperType
-def classify_paper_type(df):
-    # Prepare data
-    features = df[['Year', 'Downloads_Xplore']]
-    labels = df['PaperType']
-    
-    # Use TF-IDF for AuthorKeywords
-    keywords_vectorizer = TfidfVectorizer(max_features=100)
-    keywords = keywords_vectorizer.fit_transform(df['AuthorKeywords'])
-    
-    # Concatenate features
-    features = pd.concat([features, pd.DataFrame(keywords.toarray())], axis=1)
-    
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.3, random_state=42)
-    
-    # Train RandomForest
-    rf = RandomForestClassifier()
-    rf.fit(X_train, y_train)
-    y_pred = rf.predict(X_test)
-    
-    # Print classification report
-    print(classification_report(y_test, y_pred))
+# Function 1: Trend Analysis in Conference Topics
+def trend_analysis_conference_topics():
+    trend_data = df.groupby(['Year', 'Conference']).size().unstack().fillna(0)
+    trend_data.plot(kind='line', figsize=(14, 8))
+    plt.title('Trend Analysis of Conference Topics Over the Years')
+    plt.xlabel('Year')
+    plt.ylabel('Number of Papers')
+    plt.legend(title='Conference', bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+    plt.show()
 
-# 3. Sentiment Analysis
-def sentiment_analysis(df):
-    # Calculate sentiment using TextBlob
-    df['Sentiment'] = df['Abstract'].apply(lambda x: TextBlob(x).sentiment.polarity)
-    
-    # Determine sentiment labels
-    conditions = [
-        (df['Sentiment'] > 0),
-        (df['Sentiment'] == 0),
-        (df['Sentiment'] < 0)
-    ]
-    sentiments = ['positive', 'neutral', 'negative']
-    df['SentimentLabel'] = pd.cut(df['Sentiment'], bins=3, labels=sentiments)
-    print("Sentiment Analysis Labels:\n", df['SentimentLabel'].value_counts())
+# Function 2: Impact of Awards on Citations
+def impact_awards_on_citations():
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='Award', y='AminerCitationCount', data=df)
+    plt.title('Impact of Awards on Aminer Citation Count')
+    plt.show()
 
-# 4. Principal Component Analysis (PCA)
-def apply_pca(df):
-    # Prepare data
-    features = df[['CitationCount_CrossRef', 'PubsCited_CrossRef', 'Downloads_Xplore']]
-    
-    # Standardize features
+    plt.figure(figsize=(12, 6))
+    sns.boxplot(x='Award', y='CitationCount_CrossRef', data=df)
+    plt.title('Impact of Awards on CrossRef Citation Count')
+    plt.show()
+
+# Function 3: Regression Analysis on Download Counts
+def regression_analysis_download_counts():
+    features = df[['Year', 'PubsCited_CrossRef', 'GraphicsReplicabilityStamp']]
+    features = pd.get_dummies(features, drop_first=True)
+    target = df['Downloads_Xplore']
+
+    # Scaling and fitting the model
     scaler = StandardScaler()
     features_scaled = scaler.fit_transform(features)
-    
-    # Apply PCA
-    pca = PCA(n_components=2)
-    pca_result = pca.fit_transform(features_scaled)
-    df_pca = pd.DataFrame(pca_result, columns=['PCA1', 'PCA2'])
-    
-    # Plot results
-    sns.scatterplot(x='PCA1', y='PCA2', data=df_pca)
-    plt.title('PCA of Numerical Features')
-    plt.xlabel('PCA1')
-    plt.ylabel('PCA2')
+
+    model = LinearRegression()
+    model.fit(features_scaled, target)
+    coefficients = pd.DataFrame(model.coef_, features.columns, columns=['Coefficient'])
+
+    coefficients.plot(kind='barh', figsize=(8, 6))
+    plt.title('Feature Coefficients for Predicting Downloads')
+    plt.xlabel('Coefficient Value')
+    plt.ylabel('Feature')
     plt.show()
 
-# 5. Trends in Paper Topics
-def analyze_trends(df):
-    # Calculate trends over years
-    df['Year'] = df['Year'].astype(int)
-    unique_keywords_per_year = df.groupby('Year')['AuthorKeywords'].apply(lambda x: x.str.split(';').explode().nunique())
-    
-    # Plot trends
-    plt.figure(figsize=(10,5))
-    unique_keywords_per_year.plot(kind='line', marker='o')
-    plt.title('Trends in Paper Topics Over Years')
-    plt.xlabel('Year')
-    plt.ylabel('Unique Topics')
-    plt.grid(True)
+# Function 4: Text Mining for Topic Modeling
+def text_mining_topic_modeling():
+    abstracts = df['Abstract'].fillna('')
+    tfidf_vectorizer = TfidfVectorizer(max_df=0.95, min_df=2, stop_words='english')
+    tfidf_matrix = tfidf_vectorizer.fit_transform(abstracts)
+
+    lda = LatentDirichletAllocation(n_components=5, random_state=0)
+    lda.fit(tfidf_matrix)
+
+    feature_names = tfidf_vectorizer.get_feature_names_out()
+    for index, topic in enumerate(lda.components_):
+        print(f'Top 10 words for topic #{index + 1}:')
+        print([feature_names[i] for i in topic.argsort()[-10:]])
+        print('\n')
+
+# Function 5: Keyword Frequency and Topic Clustering
+def keyword_frequency_topic_clustering():
+    all_keywords = df['AuthorKeywords'].dropna().str.split(';').explode()
+    keyword_counts = all_keywords.value_counts()
+
+    # Plot top keywords by frequency
+    top_keywords = keyword_counts.head(10)
+    top_keywords.plot(kind='bar', figsize=(10, 6))
+    plt.title('Top 10 Keywords by Frequency')
+    plt.xlabel('Keywords')
+    plt.ylabel('Frequency')
     plt.show()
 
-# Example function calls
-# topic_modeling_lda(df)
-# classify_paper_type(df)
-# sentiment_analysis(df)
-# apply_pca(df)
-# analyze_trends(df)
+    # Clustering
+    tfidf_vectorizer = TfidfVectorizer()
+    keyword_embeddings = tfidf_vectorizer.fit_transform(all_keywords.dropna().unique()).toarray()
+    keyword_clusters = KMeans(n_clusters=5, random_state=0)
+    keyword_clusters.fit(keyword_embeddings)
+
+    plt.scatter(keyword_embeddings[:, 0], keyword_embeddings[:, 1], c=keyword_clusters.labels_, cmap='viridis')
+    plt.title('Keyword Topic Clustering')
+    plt.xlabel('Embedding Dimension 1')
+    plt.ylabel('Embedding Dimension 2')
+    plt.show()
+
+# Execute the defined functions
+trend_analysis_conference_topics()
+impact_awards_on_citations()
+regression_analysis_download_counts()
+text_mining_topic_modeling()
+keyword_frequency_topic_clustering()
+
+
+
+
+
 
 

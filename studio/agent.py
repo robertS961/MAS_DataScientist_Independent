@@ -2,9 +2,9 @@
 import re
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
-from agents import create_research_team, supervisor_team, create_code
+from agents import create_research_team, supervisor_team, create_code, machinelearning_agent
 from classes import State
-from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message
+from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message, get_datainfo
 from misc.report_pdf import generate_pdf_report
 
 
@@ -16,12 +16,14 @@ class Agent:
         self.workflow = None
 
     def initialize(self):
+        self.ml_team = machinelearning_agent(State)
+        print("Machine Learning Team Created \n")
         self.research_team = create_research_team(State)
         print("Research Team Created \n")
         self.supervisor_team = supervisor_team(State)
         print("Supervisor Team is Created! \n")
         self.code_team = create_code(State)
-        print(" Coding Team is Created! \n")
+        print("Coding Team is Created! \n")
         
 
     
@@ -34,17 +36,21 @@ class Agent:
     def process(self):
 
         #Return error if any of the graphs didn't build
-        if self.research_team is None or self.supervisor_team is None or self.code_team is None:
+        if self.research_team is None or self.supervisor_team is None or self.code_team is None or self.ml_team is None:
             raise RuntimeError("Agent not initialised. Call initialize() first.")
         
         # initialize the state & read the dataset
         state = initialize_state_from_csv()
-
-        # invoke the workflow
+        data_info = get_datainfo("dataset.csv")
         data = state['dataset_info']
 
+        dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "ml")
+        
+        result = self.ml_team.invoke(dic, config)
+        ideas_3 = get_last_ai_message(result['messages'])
+
         #Define the Class variables
-        dic, config = define_variables(thread = 1, loop_limit = 10, data = data, name = "research")
+        dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "research")
     
         #Stream the Output for Generating Research Ideas from the Web
         for chunk in self.research_team.compile(cache=MemorySaver()).stream(input = dic, config = config):
@@ -59,7 +65,7 @@ class Agent:
         ideas_2 = get_last_ai_message(chunk['team_supervisor']['messages'])
 
         # Combine the above output to feed into a Reducer Agent which picks the best ideas then code + reflects til the code works!
-        dic, config = define_variables(thread = 1, loop_limit = 25, data = data, name = "code", input = "\n".join([ideas_1, ideas_2]))
+        dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info = data_info, name = "code", input = "\n".join([ideas_1, ideas_2, ideas_3 ]))
 
         #Generate the Output for Reducing the ideas and then generating code plus solving errors
         for chunk in self.code_team.stream(input = dic, config = config):

@@ -24,6 +24,7 @@ print("Graph for Visualization Created! \n")
 for chunk in graph.stream(input = dic, config = config):
     pretty_print_messages(chunk)
 
+
 print(f"This is the chunk \n {chunk} \n")
 result = chunk['code_agent']['messages'][-1]['content']
 

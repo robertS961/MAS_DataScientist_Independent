@@ -18,7 +18,7 @@ def vis_a(state:State):
             f"The dataset columns are as follows: \n{data}\n\n"
             f"The ideas are as follows: \n{ideas}\n\n"
             f"The data columns are the following Dtype and contain the following Non-Null Count \n{data_info}\n"
-            "Please first take out all the NaN values with writing the correct python code to do so! \n"
+            "Please first fill in all the NaN values. Do this using the most modern methods. Do not drop them! \n"
             "Next write PYthon code that creates meaningful and aesthetic data visualizations.\n"
             "Check the code to make sure the dtypes are correct, and change any categorical variables if needed so that the code runs smoothly! \n"
             "Make sure the number of plots you create matches the number of ideas, if it is impossible then create more data science ideas from the columns! \n\n"
@@ -36,7 +36,7 @@ def vis_a(state:State):
             f" The code is going to be run on a dataset with this information \n {data_info} \n"
             "Please fix the code and make sure it runs correctly!\n\n"
             "Return the fixed code in place of the faulty code in what was given to you along with the previous code that was correct \n"
-            "You should return the coded ideas in the same format as they were given to you above! Thank you \n"
+            "You should return the code with the bugs fixed! Do not return just fixed code! Return all the old code with the fixes made! Thank you \n"
         )
     
     vis_agent = create_react_agent(
