@@ -30,5 +30,5 @@ def make_judge(state:State):
         return {'revise': True}
     else:
         # Otherwise, return the judge's critique as a new user message
-        print("⚠️ Judge requested improvements")
+        print("⚠️ Judge requested improvements.")
         return {"messages": [{"role": "system", "content": str(response.content)}]}

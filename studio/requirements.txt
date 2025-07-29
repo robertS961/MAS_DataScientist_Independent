@@ -31,3 +31,5 @@ fpdf
 plotly
 pandas
 lifelines
+mlxtend
+gensim
