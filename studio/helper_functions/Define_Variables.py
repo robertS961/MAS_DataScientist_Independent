@@ -1,6 +1,6 @@
 from classes import State, Configurable
 
-def define_variables(thread: int, loop_limit: int, data:str, data_info:str , name:str = "research", input:str = None ):
+def define_variables(thread: int, loop_limit: int, data:str, data_info:str , name:str = "research", input:str = None, code:str= None ):
     if name == "research":
     #Define the Prompt to insert into the LLM
         prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
@@ -27,6 +27,14 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
             "Return a list of ideas in a neat format! \n"
             "Thank you !"
         )
+    elif name == "fix-vis":
+        prompt = (
+            f"You are given a pdf. It is in bytes format. Here it is \n {code} \n"
+            "Your goal is to evulate this pdf and make sure each visualization is clear to understand!\n"
+            "Focus on clear titles, axis, correct sizes, colors, and keys for uncertain figures \n"
+            "Thank you !"
+        )
+
 
     dic: State = {'messages': [
         {

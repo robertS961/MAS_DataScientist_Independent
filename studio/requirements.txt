@@ -33,3 +33,5 @@ pandas
 lifelines
 mlxtend
 gensim
+prophet
+xgboost

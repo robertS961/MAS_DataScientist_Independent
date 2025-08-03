@@ -2878,3 +2878,518 @@ regression_analysis_download_counts()
 text_mining_topic_modeling()
 keyword_frequency_topic_clustering()
 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import accuracy_score
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+import numpy as np
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Data Cleaning: Convert to correct dtypes
+numeric_columns = [
+    'Year', 'FirstPage', 'LastPage',
+    'AminerCitationCount', 'CitationCount_CrossRef',
+    'PubsCited_CrossRef', 'Downloads_Xplore'
+]
+
+# Force numeric columns to be numeric and fill NAs
+data[numeric_columns] = data[numeric_columns].apply(pd.to_numeric, errors='coerce').fillna(0)
+
+# Convert categorical to suitable format
+data['Award'] = data['Award'].notnull().astype('int')
+
+# Visual Helper Function
+def show_feature_importance(model, X, title):
+    sns.barplot(x=model.feature_importances_, y=X.columns)
+    plt.title(title)
+    plt.show()
+
+# 1. Temporal Analysis of Citations using Holt-Winters method (without seasonality)
+def temporal_analysis(data):
+    df_citations = data.groupby('Year').agg({'CitationCount_CrossRef': 'sum'}).reset_index()
+    model = ExponentialSmoothing(df_citations['CitationCount_CrossRef'], trend='add')
+    model_fit = model.fit()
+    
+    forecast = model_fit.forecast(steps=5)
+    
+    plt.plot(df_citations['Year'], df_citations['CitationCount_CrossRef'], label='Observed', marker='o')
+    plt.plot(range(df_citations['Year'].max() + 1, df_citations['Year'].max() + 6), forecast, label='Forecast', marker='o')
+    plt.title('Temporal Analysis of Citations using Exponential Smoothing')
+    plt.xlabel('Year')
+    plt.ylabel('Citations')
+    plt.legend()
+    plt.show()
+
+temporal_analysis(data)
+
+# 2. Predictive Modeling for Award-Winning Papers
+def award_prediction(data):
+    features = ['Year', 'PaperType', 'CitationCount_CrossRef', 'AuthorAffiliation', 'Downloads_Xplore']
+    X = pd.get_dummies(data[features], drop_first=True)
+    y = data['Award']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X_train, y_train)
+    
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    
+    print(f"Award Prediction Accuracy: {acc}")
+    show_feature_importance(model, X, "Feature Importance for Award Prediction")
+
+award_prediction(data)
+
+# 3. Latent Semantic Analysis on Abstracts
+def latent_semantic_analysis(data):
+    vectorizer = TfidfVectorizer(max_features=500)
+    X_abstract = vectorizer.fit_transform(data['Abstract'].fillna(''))
+    
+    svd = TruncatedSVD(n_components=5)
+    topics = svd.fit_transform(X_abstract)
+    
+    sns.heatmap(topics, cmap='viridis', cbar_kws={'label': 'Topic Weights'})
+    plt.title("Latent Semantic Analysis on Abstracts")
+    plt.xlabel('Topics')
+    plt.show()
+
+latent_semantic_analysis(data)
+
+# 4. Classification for Paper Type
+def paper_type_classification(data):
+    features = ['Conference', 'Year', 'AminerCitationCount', 'CitationCount_CrossRef', 'Downloads_Xplore']
+    X = pd.get_dummies(data[features], drop_first=True)
+    y = data['PaperType']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X_train, y_train)
+    
+    y_pred = model.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    
+    print(f"Paper Type Classification Accuracy: {acc}")
+    show_feature_importance(model, X, "Feature Importance in Paper Type Classification")
+
+paper_type_classification(data)
+
+# 5. RandomForest for Download Prediction
+def boosting_for_download_prediction(data):
+    features = ['Year', 'Conference', 'CitationCount_CrossRef', 'Award', 'GraphicsReplicabilityStamp']
+    X = pd.get_dummies(data[features], drop_first=True)
+    y = data['Downloads_Xplore']
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestRegressor(random_state=42)
+    model.fit(X_train, y_train)
+    
+    y_pred = model.predict(X_test)
+    mse = np.mean((y_pred - y_test) ** 2)
+    
+    print(f"Mean Squared Error for Download Prediction: {mse}")
+    show_feature_importance(model, X, "Feature Importance in Download Prediction")
+
+boosting_for_download_prediction(data)
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.decomposition import LatentDirichletAllocation as LDA
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Load the dataset
+data = pd.read_csv('dataset.csv')
+
+# Fill NaN values
+data.fillna(method='ffill', inplace=True)
+
+### Encode Categorical Columns ###
+# Encoding categorical features for models
+# An example of encoding 'Conference' as it might be used numerically:
+data['Conference_encoded'] = LabelEncoder().fit_transform(data['Conference'])
+
+### Idea 1: Text Classification ###
+# Visualize the distribution of PaperType
+plt.figure(figsize=(10, 6))
+sns.countplot(x='PaperType', data=data, order=data['PaperType'].value_counts().index)
+plt.title('Distribution of Paper Types')
+plt.xticks(rotation=45)
+plt.show()
+
+# Simple text classification with Naive Bayes
+vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
+X_text = vectorizer.fit_transform(data['Abstract'].astype(str) + " " + data['Title'].astype(str))
+y_type = data['PaperType']
+X_train, X_test, y_train, y_test = train_test_split(X_text, y_type, test_size=0.3, random_state=42)
+
+clf = MultinomialNB()
+clf.fit(X_train, y_train)
+y_pred = clf.predict(X_test)
+
+print("Classification Report for PaperType Prediction:")
+print(classification_report(y_test, y_pred))
+
+### Idea 2: Citation Count Prediction ###
+# Plot correlations
+plt.figure(figsize=(10, 6))
+sns.heatmap(data[['Year', 'PubsCited_CrossRef', 'Downloads_Xplore', 'AminerCitationCount', 'Conference_encoded']].corr(), annot=True)
+plt.title('Correlation Heatmap')
+plt.show()
+
+# Random Forest Regression for AminerCitationCount
+features = ['Year', 'PubsCited_CrossRef', 'Downloads_Xplore', 'Conference_encoded']
+X_features = data[features].fillna(0)
+y_citation = data['AminerCitationCount'].fillna(0)
+X_train, X_test, y_train, y_test = train_test_split(X_features, y_citation, test_size=0.3, random_state=42)
+
+regressor = RandomForestRegressor(n_estimators=100, random_state=42)
+regressor.fit(X_train, y_train)
+y_pred = regressor.predict(X_test)
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_pred, alpha=0.5)
+plt.title('Citation Count Prediction')
+plt.xlabel('Actual Citation Counts')
+plt.ylabel('Predicted Citation Counts')
+plt.show()
+
+### Idea 3: Recommendation System for Papers ###
+# Content-based filtering using TF-IDF for Title and Keywords
+vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
+content_matrix = vectorizer.fit_transform(data['Title'].astype(str) + " " + data['AuthorKeywords'].astype(str))
+cosine_sim = cosine_similarity(content_matrix, content_matrix)
+
+def get_recommendations(title, cosine_sim=cosine_sim):
+    indices = data[data['Title'].str.contains(title, case=False, na=False)].index
+    if indices.size > 0:
+        idx = indices[0]
+        sim_scores = list(enumerate(cosine_sim[idx]))
+        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+        sim_scores = sim_scores[1:6]
+        paper_indices = [i[0] for i in sim_scores]
+        return data['Title'].iloc[paper_indices]
+    else:
+        return "No recommendations found. Please ensure the title exists."
+
+# Example Recommendation
+example_title = data['Title'].iloc[0]  # Use the first title for demonstration
+print(f"Recommendations for the paper titled: '{example_title}'")
+print(get_recommendations(example_title))
+
+### Idea 4: Predictive Modelling for Awards ###
+# Logistic Regression predicting Award based on attributes (skipping due to low Award count but plotting)
+plt.figure(figsize=(10, 6))
+sns.heatmap(data[['Year', 'Downloads_Xplore', 'Conference_encoded']].corr(), annot=True)
+plt.title('Correlation Heatmap for Award Prediction Attributes')
+plt.show()
+
+### Idea 5: Keyword Trend Analysis ###
+# Example: Count the usage of a keyword over the years
+
+def plot_keyword_trend(keyword):
+    keyword_data = data[data['AuthorKeywords'].str.contains(keyword, na=False, case=False)]
+    keyword_trend = keyword_data.groupby('Year').size()
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(keyword_trend.index, keyword_trend.values, marker='o')
+    plt.title(f'Trend of "{keyword}" over Years')
+    plt.xlabel('Year')
+    plt.ylabel('Number of Papers')
+    plt.grid(True)
+    plt.show()
+
+# Plot trend for an example keyword
+plot_keyword_trend('machine learning')
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LinearRegression
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Fill NaN values with modern methods
+df['AminerCitationCount'].fillna(df['AminerCitationCount'].median(), inplace=True)
+df['CitationCount_CrossRef'].fillna(df['CitationCount_CrossRef'].median(), inplace=True)
+df['Downloads_Xplore'].fillna(df['Downloads_Xplore'].median(), inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+df['Award'] = df['Award'].fillna('No Award')
+df['GraphicsReplicabilityStamp'] = df['GraphicsReplicabilityStamp'].fillna('No Stamp')
+df['InternalReferences'] = df['InternalReferences'].fillna('')
+
+# Convert categorical variables
+df['Conference'] = df['Conference'].astype('category')
+df['PaperType'] = df['PaperType'].astype('category')
+df['Award'] = df['Award'].astype('category')
+
+# Enhanced Trend Analysis on Citation Counts
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=df, x='Year', y='AminerCitationCount', hue='Conference', ci=None)
+sns.lineplot(data=df, x='Year', y='CitationCount_CrossRef', hue='PaperType', ci=None, linestyle='--')
+plt.title('Citation Trends Over the Years by Conference and Paper Type')
+plt.xlabel('Year')
+plt.ylabel('Citation Count')
+plt.legend(title='Legend', fontsize='small')
+plt.show()
+
+# Machine Learning to Predict Awards
+X = df[['PaperType', 'Downloads_Xplore', 'Year', 'Conference', 'AuthorKeywords']].copy()
+X['Conference'] = LabelEncoder().fit_transform(X['Conference'])
+X['PaperType'] = LabelEncoder().fit_transform(X['PaperType'])
+X['AuthorKeywords'] = X['AuthorKeywords'].apply(lambda x: len(x.split(',')))
+
+y = df['Award']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier.fit(X_train, y_train)
+y_pred = rf_classifier.predict(X_test)
+
+# Display tree feature importance
+importances = rf_classifier.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+plt.figure(figsize=(10, 5))
+plt.title("Feature Importance from RandomForest")
+sns.barplot(x=[X.columns[i] for i in indices], y=importances[indices])
+plt.show()
+
+# Convert InternalReferences from strings of DOIs to counts of references
+df['InternalReferencesCount'] = df['InternalReferences'].apply(lambda x: len(x.split(';')) if x else 0)
+
+# Regression Analysis for Download Prediction
+predictors = ['AminerCitationCount', 'GraphicsReplicabilityStamp', 'InternalReferencesCount', 'Year', 'Conference']
+X = df[predictors].copy()
+X['Conference'] = LabelEncoder().fit_transform(X['Conference'])
+X['GraphicsReplicabilityStamp'] = X['GraphicsReplicabilityStamp'].apply(lambda x: 1 if x == 'Has Stamp' else 0)
+
+y = df['Downloads_Xplore']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+lr = LinearRegression()
+lr.fit(X_train, y_train)
+y_pred = lr.predict(X_test)
+
+# Visualization of the actual vs predicted download values
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_pred, alpha=0.5)
+plt.title('Actual vs Predicted Downloads')
+plt.xlabel('Actual Downloads')
+plt.ylabel('Predicted Downloads')
+plt.show()
+
+# Keyword Trend Analysis
+all_keywords = df['AuthorKeywords'].str.cat(sep=', ')
+wordcloud = WordCloud(width=800, height=400, max_words=150, background_color='white').generate(all_keywords)
+
+plt.figure(figsize=(12, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.title('Keyword Frequency WordCloud')
+plt.axis('off')
+plt.show()
+
+# Impact of Awards on Citations
+award_citations = df[df['Award'] != 'No Award']['CitationCount_CrossRef']
+no_award_citations = df[df['Award'] == 'No Award']['CitationCount_CrossRef']
+
+plt.figure(figsize=(12, 6))
+sns.boxplot(data=[award_citations, no_award_citations], palette='pastel')
+plt.xticks([0, 1], ['Awarded Papers', 'Non Awarded Papers'])
+plt.title('Impact of Awards on Citation Count')
+plt.ylabel('CitationCount_CrossRef')
+plt.show()
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from wordcloud import WordCloud
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LinearRegression
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Fill NaN values with modern methods
+df['AminerCitationCount'].fillna(df['AminerCitationCount'].median(), inplace=True)
+df['CitationCount_CrossRef'].fillna(df['CitationCount_CrossRef'].median(), inplace=True)
+df['Downloads_Xplore'].fillna(df['Downloads_Xplore'].median(), inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+df['Award'] = df['Award'].fillna('No Award')
+df['GraphicsReplicabilityStamp'] = df['GraphicsReplicabilityStamp'].fillna('No Stamp')
+df['InternalReferences'] = df['InternalReferences'].fillna('')
+
+# Convert categorical variables
+df['Conference'] = df['Conference'].astype('category')
+df['PaperType'] = df['PaperType'].astype('category')
+df['Award'] = df['Award'].astype('category')
+
+# ---------------------------
+# Enhanced Trend Analysis
+# ---------------------------
+plt.figure(figsize=(14, 6))
+
+# Subplot 1: AminerCitationCount by Conference
+plt.subplot(1, 2, 1)
+sns.lineplot(
+    data=df,
+    x='Year', y='AminerCitationCount',
+    hue='Conference',
+    marker='o',
+    palette='tab10',
+    ci=None
+)
+plt.title('Aminer Citation Trends by Conference', fontsize=14)
+plt.xlabel('Publication Year', fontsize=12)
+plt.ylabel('Aminer Citation Count', fontsize=12)
+plt.legend(title='Conference', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
+plt.grid(alpha=0.3)
+
+# Subplot 2: CrossRef Citations by Paper Type
+plt.subplot(1, 2, 2)
+sns.lineplot(
+    data=df,
+    x='Year', y='CitationCount_CrossRef',
+    hue='PaperType',
+    style='PaperType',
+    markers=True,
+    dashes=True,
+    palette='Set2',
+    ci=None
+)
+plt.title('CrossRef Citation Trends by Paper Type', fontsize=14)
+plt.xlabel('Publication Year', fontsize=12)
+plt.ylabel('CrossRef Citation Count', fontsize=12)
+plt.legend(title='Paper Type', bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
+plt.grid(alpha=0.3)
+
+plt.tight_layout()
+plt.show()
+
+# ---------------------------
+# Feature Importance Plot
+# ---------------------------
+# Machine Learning to Predict Awards
+X = df[['PaperType', 'Downloads_Xplore', 'Year', 'Conference', 'AuthorKeywords']].copy()
+X['Conference'] = LabelEncoder().fit_transform(X['Conference'])
+X['PaperType']   = LabelEncoder().fit_transform(X['PaperType'])
+X['AuthorKeywords'] = X['AuthorKeywords'].apply(lambda x: len(x.split(',')))
+y = df['Award']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_classifier.fit(X_train, y_train)
+
+importances = rf_classifier.feature_importances_
+indices = np.argsort(importances)[::-1]
+feat_names = [X.columns[i] for i in indices]
+
+plt.figure(figsize=(8, 5))
+sns.barplot(x=importances[indices], y=feat_names, palette='viridis')
+plt.title('Random Forest Feature Importances', fontsize=14)
+plt.xlabel('Importance', fontsize=12)
+plt.ylabel('Feature', fontsize=12)
+plt.xlim(0, max(importances)*1.1)
+plt.tight_layout()
+plt.show()
+
+# ---------------------------
+# Regression: Actual vs Predicted Downloads
+# ---------------------------
+# Prepare data
+df['InternalReferencesCount'] = df['InternalReferences'].apply(lambda x: len(x.split(';')) if x else 0)
+predictors = ['AminerCitationCount', 'GraphicsReplicabilityStamp', 'InternalReferencesCount', 'Year', 'Conference']
+Xr = df[predictors].copy()
+Xr['Conference'] = LabelEncoder().fit_transform(Xr['Conference'])
+Xr['GraphicsReplicabilityStamp'] = Xr['GraphicsReplicabilityStamp'].apply(lambda x: 1 if x == 'Has Stamp' else 0)
+yr = df['Downloads_Xplore']
+
+Xr_train, Xr_test, yr_train, yr_test = train_test_split(Xr, yr, test_size=0.3, random_state=42)
+lr = LinearRegression()
+lr.fit(Xr_train, yr_train)
+yr_pred = lr.predict(Xr_test)
+
+# Compute R^2 for annotation
+from sklearn.metrics import r2_score
+r2 = r2_score(yr_test, yr_pred)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(yr_test, yr_pred, alpha=0.6, edgecolor='k', color='teal')
+lims = [min(yr_test.min(), yr_pred.min()), max(yr_test.max(), yr_pred.max())]
+plt.plot(lims, lims, 'r--', linewidth=1)
+plt.title('Actual vs. Predicted Downloads', fontsize=14)
+plt.xlabel('Actual Downloads_Xplore', fontsize=12)
+plt.ylabel('Predicted Downloads_Xplore', fontsize=12)
+plt.text(
+    0.05, 0.95,
+    f'$R^2$ = {r2:.2f}',
+    transform=plt.gca().transAxes,
+    fontsize=12, verticalalignment='top',
+    bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.7)
+)
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+# ---------------------------
+# Keyword Trend Analysis (WordCloud)
+# ---------------------------
+all_keywords = df['AuthorKeywords'].str.cat(sep=', ')
+wordcloud = WordCloud(
+    width=800, height=400,
+    max_words=150, background_color='white',
+    colormap='plasma'
+).generate(all_keywords)
+
+plt.figure(figsize=(12, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.title('WordCloud of Author Keywords', fontsize=16)
+plt.tight_layout()
+plt.show()
+
+# ---------------------------
+# Impact of Awards on Citations (Boxplot)
+# ---------------------------
+award_cit = df[df['Award'] != 'No Award']['CitationCount_CrossRef']
+no_award_cit = df[df['Award'] == 'No Award']['CitationCount_CrossRef']
+
+plt.figure(figsize=(8, 6))
+sns.boxplot(
+    data=[award_cit, no_award_cit],
+    palette=['#66c2a5', '#fc8d62']
+)
+plt.xticks([0, 1], ['Awarded Papers', 'Non-Awarded Papers'], fontsize=12)
+plt.title('Effect of Awards on CrossRef Citation Counts', fontsize=14)
+plt.ylabel('CitationCount_CrossRef', fontsize=12)
+plt.grid(axis='y', alpha=0.3)
+plt.tight_layout()
+plt.show()
+

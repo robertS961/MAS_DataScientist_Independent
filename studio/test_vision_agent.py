@@ -1,5 +1,5 @@
 import re
-from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, generate_pdf_report
+from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, generate_pdf_report, get_datainfo
 from agents import vis_a, create_code
 from classes import State, Configurable
 from langchain.schema import AIMessage
@@ -78,7 +78,8 @@ This comprehensive approach will harness both data science and statistical metho
 state = initialize_state_from_csv()
 
 data = state['dataset_info']
-dic, config = define_variables(thread = 1, loop_limit = 25, data = data, name = "code", input = previous)
+data_info = get_datainfo("dataset.csv")
+dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info=data_info, name = "code", input = previous)
 
 graph = create_code(State)
 print("Graph for Visualization Created! \n")
