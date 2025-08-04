@@ -18,7 +18,7 @@ def code_agent(state:State) -> Command[Literal[END, 'vis_agent']]:
         # Regex to extract content inside triple single quotes
         #py_code = re.findall(r"```python\n(.*?)```", code, re.DOTALL)
         #print(f'\n\n this is the code {py_code[0]} \n\n')
-        #result = repl.run(py_code[0])
+        #result = repl.run(py_code[0]) , maybe should join them all together
         #print(f"\n\n The code worked part 1! \n\n This is the result {result }\n\n")
         generate_pdf_report(code, 'output.pdf')
         print("✅ The Code Works!")
