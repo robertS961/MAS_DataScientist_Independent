@@ -18,6 +18,7 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         "Even if the result can be printed, please instead make a visualization to show the result!\n "
         "The code should be simple and clean \n"
         "It should contain zero bugs and run without issues. Please test you code before returning it\n"
+        "Make sure in the code you replace NaN values first based on the data info\n"
         "Thank you! Lets COOK, return this python Code! \n"
         )
     elif name == "ml":

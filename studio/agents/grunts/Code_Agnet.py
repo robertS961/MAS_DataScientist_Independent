@@ -30,6 +30,7 @@ def code_agent(state:State) -> Command[Literal[END, 'vis_agent']]:
                         f"You are given code for a pdf.  Here it is \n {code} \n"
                         "Your goal is to evaluate this pdf and make sure each visualization is clear to understand!\n"
                         "Focus on clear titles, axis, correct sizes figures/designs, colors, and keys for uncertain figures \n"
+                        "Make sure the Code doesn't contain any print statements. Instead incorporate these into the figures! \n"
                         "Make sure all the figures are to scale so they aren't too small and appear blank \n"
                         "Make sure all the figures have the correct keys and axis titles so they are easy to understand \n"
                         "Make sure all the figures have relevant information like R squared value for linear regression plot \n"
