@@ -13,5 +13,5 @@ def create_code(state:State):
         .add_edge(START, 'reducer_agent')
         .add_edge('reducer_agent', 'vis_agent')
         .add_edge('vis_agent', 'code_agent')
-        .compile()
+        .compile(name = 'lead_create_code')
     )

@@ -24,7 +24,12 @@ def code_agent(state:State) -> Command[Literal[END, 'vis_agent']]:
             update = {"messages":[
                 {
                     "role": "user",
-                    "content": f"{code}"
+                    "content": (
+                        f"You are given code for a pdf.  Here it is \n {code} \n"
+                        "Your goal is to evulate this pdf and make sure each visualization is clear to understand!\n"
+                        "Focus on clear titles, axis, correct sizes figures/designs, colors, and keys for uncertain figures \n"
+                        "Thank you !"
+                    )
                 }
             ]},
             goto= END

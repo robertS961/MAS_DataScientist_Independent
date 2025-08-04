@@ -5,7 +5,7 @@ from classes import State
 def pdf_checker_agent(state: State):
     prompt = (
         "You are a data visualization expert with over 20 years of experience! \n" 
-        "Your goal is to imporve data visualizations that are written in python code! \n "
+        "Your goal is to improve data visualizations that are written in python code! \n "
         "You want to check the code and see if there is anyway to improve the visualizations!\n "
         "Check all the to be created images produced by the code especially the titles, axis, and clarity of the images \n"
         "If any of the above is unclear or the figure itself then fix the code.\n"

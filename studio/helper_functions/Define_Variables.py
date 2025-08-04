@@ -1,6 +1,6 @@
 from classes import State, Configurable
 
-def define_variables(thread: int, loop_limit: int, data:str, data_info:str , name:str = "research", input:str = None, code:str= None ):
+def define_variables(thread: int, loop_limit: int, data:str, data_info:str , name:str = "research", input:str = "", code:str= "" ):
     if name == "research":
     #Define the Prompt to insert into the LLM
         prompt= (f"You are given a tabular dataset. Here is the data {data} \n"
@@ -29,9 +29,9 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         )
     elif name == "fix-vis":
         prompt = (
-            f"You are given a pdf. It is in bytes format. Here it is \n {code} \n"
+            f"You are given code for a pdf.  Here it is \n {code} \n"
             "Your goal is to evulate this pdf and make sure each visualization is clear to understand!\n"
-            "Focus on clear titles, axis, correct sizes, colors, and keys for uncertain figures \n"
+            "Focus on clear titles, axis, correct sizes figures/designs, colors, and keys for uncertain figures \n"
             "Thank you !"
         )
 
@@ -45,8 +45,8 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         "dataset_info": data,
         "data_info": data_info,
         'revise': False,
-        "ideas": "",
-        "code": "",
+        "ideas": input,
+        "code": code,
         "errors": "",
     }
     #Orginal State Variables for Invoke

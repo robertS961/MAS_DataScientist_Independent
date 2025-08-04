@@ -36,7 +36,9 @@ def vis_a(state:State):
             f" The code is going to be run on a dataset with this information \n {data_info} \n"
             "Please fix the code and make sure it runs correctly!\n\n"
             "Return the fixed code in place of the faulty code in what was given to you along with the previous code that was correct \n"
-            "You should return the code with the bugs fixed! Do not return just fixed code! Return all the old code with the fixes made! Thank you \n"
+            "You should return the code with the bugs fixed! Do not return just fixed code! Return all the old code with the fixes made!\n"
+            "The return code should be sandwhiched between triple single quotes like ''' CODE ''' \n"
+            "Thank you \n"
         )
     
     vis_agent = create_react_agent(
