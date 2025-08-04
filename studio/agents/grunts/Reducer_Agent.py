@@ -4,7 +4,7 @@ from classes import State
 
 def reducer_agent(state: State, ideas:int = 5):
     data = state['dataset_info']
-    message = state['messages']
+    message = state['ideas']
     prompt = (
         "You are a machine learning expert with over 25 years of experience! \n" 
         "You are given a list of several data science, statistical learning, and machine learning ideas \n"
@@ -15,6 +15,7 @@ def reducer_agent(state: State, ideas:int = 5):
         "Remove any ideas that are duplicates in the list or extremely similar! \n"
         #"Remove any ideas that are too complex, we want fast run time!"
         f"Then take the best {ideas} ideas from the remaining ones! \n"
+        "DO NOT WRITE ANY CODE, OTHER AGENTS WILL DO THAT! Just pick the BEST IDEAS from the list \n"
         f"Return the those ideas in the same format! \n"
     )
     #websearch = WebSearch()

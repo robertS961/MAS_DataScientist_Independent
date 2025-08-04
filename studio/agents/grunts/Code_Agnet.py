@@ -9,8 +9,10 @@ from langchain_experimental.utilities import PythonREPL
 
 def code_agent(state:State) -> Command[Literal[END, 'vis_agent']]:
     #repl = PythonREPL()
-    code = get_last_ai_message(state['messages'])
-    state['code'] = code
+    last_ai = get_last_ai_message(state['messages'])
+    #code = re.findall(r"```python\n(.*?)\n```", last_ai, re.DOTALL)
+    state['code'] = last_ai
+    code = state['code']
     #print(f"\n This is the code \n {code} \n")
     try:
         # Regex to extract content inside triple single quotes
@@ -26,8 +28,11 @@ def code_agent(state:State) -> Command[Literal[END, 'vis_agent']]:
                     "role": "user",
                     "content": (
                         f"You are given code for a pdf.  Here it is \n {code} \n"
-                        "Your goal is to evulate this pdf and make sure each visualization is clear to understand!\n"
+                        "Your goal is to evaluate this pdf and make sure each visualization is clear to understand!\n"
                         "Focus on clear titles, axis, correct sizes figures/designs, colors, and keys for uncertain figures \n"
+                        "Make sure all the figures are to scale so they aren't too small and appear blank \n"
+                        "Make sure all the figures have the correct keys and axis titles so they are easy to understand \n"
+                        "Make sure all the figures have relevant information like R squared value for linear regression plot \n"
                         "Thank you !"
                     )
                 }

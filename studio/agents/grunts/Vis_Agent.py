@@ -21,6 +21,7 @@ def vis_a(state:State):
             "Please first fill in all the NaN values. Do this using the most modern methods. Do not drop them! \n"
             "Next write PYthon code that creates meaningful and aesthetic data visualizations.\n"
             "Check the code to make sure the dtypes are correct, and change any categorical variables if needed so that the code runs smoothly! \n"
+            "The return code should ALL be sandwhiched between ONE SET of triple single quotes like ''' CODE ''' \n"
             "Make sure the number of plots you create matches the number of ideas, if it is impossible then create more data science ideas from the columns! \n\n"
             "Make sure the Python code runs and there isn't any bugs. Also write it in simple python code so the users can easily understand it \n\n"
             "Also Sklearn is depreciated use scikit-learn! \n\n"
@@ -37,7 +38,8 @@ def vis_a(state:State):
             "Please fix the code and make sure it runs correctly!\n\n"
             "Return the fixed code in place of the faulty code in what was given to you along with the previous code that was correct \n"
             "You should return the code with the bugs fixed! Do not return just fixed code! Return all the old code with the fixes made!\n"
-            "The return code should be sandwhiched between triple single quotes like ''' CODE ''' \n"
+            "The return code should ALL be sandwhiched between ONE SET of triple single quotes like ''' CODE ''' \n"
+            "Lastly make sure the number of code ideas/blocks given to you is returned with the same amount. 5 code block ideas in then 5 out! \n"
             "Thank you \n"
         )
     

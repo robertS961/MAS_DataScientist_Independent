@@ -1,5 +1,5 @@
 import re
-from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, generate_pdf_report, get_datainfo
+from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, generate_pdf_report, get_datainfo, get_last_human_message
 from agents import create_code, pdf_checker_agent, code_enhancer, create_output_team
 from classes import State, Configurable
 from langchain.schema import AIMessage
@@ -91,13 +91,12 @@ for chunk in output_team.stream(dic, config):
 print(f"This is the chunk \n {chunk} \n")
 #result = chunk['code_agent']['messages'][-1]['content']
 
-print(f"This is the code \n {dic['code'] } \n")
-
-code = re.findall(r"```python\n(.*?)\n```", dic['code'], re.DOTALL)
+msg = get_last_human_message(chunk['revised_code']['messages'])
+code = re.findall(r"```python\n(.*?)\n```", msg, re.DOTALL)
 print(f"This is the code ! \n {code} \n")
 with open("extracted_code.py", "a", encoding="utf-8") as f:
     f.write("# ---- NEW BLOCK ---- # \n")
     for block in code:
         f.write(block + "\n\n")
 
-generate_pdf_report(dic['code'], 'output.pdf')
+generate_pdf_report(msg, 'output.pdf')
