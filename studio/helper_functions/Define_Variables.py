@@ -37,16 +37,29 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         )
     elif name == "plotly":
         prompt = (
+            f"You are given ideas to perform on a tabular data set. Here are the ideas \n {input} \n"
+            "Pick the best 5 ideas from the list! \n"
+            f"These ideas use column names from the data set which has the following columns \n {data} \n"
+            f"The column types are \n {data_info} \n, so make sure to take out NaN values and fill them with the mean or median \n"
+            "You shall take these ideas and turn them into python code that creates beautiful graphs and visualizations \n"
+            "These results hould be displayed with plotly and should be interactive \n"
+            "Lastly take the code and add HTML/Javascript Code at the end to display all the figures and print it to output.html file so it can be run on online servers! \n"
+            "Please test the code and make sure it runs without errors and bugs! \n"
+            "Return all the code only! Thank you!"
+        )
+    '''
+    elif name == "plotly":
+        prompt = (
             f"Here is the code for a pdf.  Here it is \n {code} \n"
             f"The code is based on a tabular data set. Here are the data columns \n{data} \n"
             f"The columns are \n {data_info} \n"
             "Your goal is to turn this code into interactive and beautiful plotly graphs! \n"
-            "Make sure that none of the figures are blank and that the axis's are to scale to not appear blank! \n"
-            "Keep the same axis title,axis,  graph title, and colors as the original code . So keep the exact same graph, just turn it into PLOTLY!\n"
+            "Keep all the orginal graphs and displays, just turn them into plotly graphs \n"
             "Also add html/javascript code at the end to display all the figures and print it to output.html file so it can be run on online servers! \n"
             "Make sure the code runs without errors and bugs! \n"
             "Thank you! \n"
         )
+    '''
 
 
     dic: State = {'messages': [
