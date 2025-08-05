@@ -1,3 +1,9 @@
+from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, get_last_ai_message, generate_pdf_report, get_datainfo
+from agents import ploty_agent
+from classes import State, Configurable
+import re
+
+code = """"
 # ---- NEW BLOCK ---- # 
 import pandas as pd
 import numpy as np
@@ -138,3 +144,32 @@ plt.ylabel('Density', fontsize=12)
 plt.legend(title='Award', labels=['No', 'Yes'], loc='upper right')
 plt.tight_layout()
 plt.show()
+
+"""
+
+state = initialize_state_from_csv()
+data = state['dataset_info']
+data_info = get_datainfo("dataset.csv")
+dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "plotly", code = code)
+dic['revise'] = True
+plotly_ag = ploty_agent(State)
+for chunk in plotly_ag.stream(input = dic, config = config):
+    pretty_print_messages(chunk)
+ 
+
+print(f"This is the chunk \n {chunk} \n")
+result = chunk['agent']['messages'][-1].content
+
+code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
+print(f"This is the code ! \n {code} \n")
+with open("extracted_code.py", "a", encoding="utf-8") as f:
+    f.write("# ---- NEW BLOCK ---- # \n")
+    for block in code:
+        f.write(block + "\n\n")
+
+with open("test_plotly_code.py", "w", encoding="utf-8") as f:
+    f.write("# ---- NEW BLOCK ---- # \n")
+    for block in code:
+        f.write(block + "\n\n")
+
+

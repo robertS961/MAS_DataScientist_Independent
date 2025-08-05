@@ -35,6 +35,18 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
             "Focus on clear titles, axis, correct sizes figures/designs, colors, and keys for uncertain figures \n"
             "Thank you !"
         )
+    elif name == "plotly":
+        prompt = (
+            f"Here is the code for a pdf.  Here it is \n {code} \n"
+            f"The code is based on a tabular data set. Here are the data columns \n{data} \n"
+            f"The columns are \n {data_info} \n"
+            "Your goal is to turn this code into interactive and beautiful plotly graphs! \n"
+            "Make sure that none of the figures are blank and that they are all to scale \n"
+            "Keep the same axis, titles, and colors as the original code \n"
+            "Also add html/javascript code at the end to display all the figures and print it to output.html file so it can be run on online servers! \n"
+            "Make sure the code runs without errors and bugs! \n"
+            "Thank you! \n"
+        )
 
 
     dic: State = {'messages': [
