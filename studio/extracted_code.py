@@ -7008,3 +7008,871 @@ with open('output.html', 'w', encoding='utf-8') as f:
 
 print("All figures have been saved to output.html")
 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_squared_error, r2_score
+
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+
+# 0. PREPROCESSING & IMPUTATION
+# -----------------------------
+
+# Load the dataset
+df = pd.read_csv('dataset.csv')
+
+# Fill NaNs in numeric columns
+for col in ['FirstPage', 'LastPage', 'AminerCitationCount', 'Downloads_Xplore']:
+    df[col].fillna(df[col].mean(), inplace=True)
+
+# Fill NaNs in text columns
+df['Abstract'].fillna('', inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+# GraphicsReplicabilityStamp: assume 'Yes'/'No'
+df['GraphicsReplicabilityStamp'].fillna('No', inplace=True)
+
+# Convert categorical/binary columns
+df['Award'] = df['Award'].notna().astype(int)
+df['GraphicsReplicabilityStamp'] = (df['GraphicsReplicabilityStamp'] == 'Yes').astype(int)
+
+# Reusable imputer for feature matrices
+imputer = SimpleImputer(strategy='mean')
+
+
+# 1. Trend of Aminer Citation Counts by Conference
+# ------------------------------------------------
+fig1 = px.line(
+    df,
+    x='Year',
+    y='AminerCitationCount',
+    color='Conference',
+    title='Citation Trend Over Time by Conference',
+    color_discrete_sequence=px.colors.qualitative.T10,
+    labels={'Year': 'Year', 'AminerCitationCount': 'Aminer Citation Count'}
+)
+fig1.update_layout(
+    legend_title_text='Conference',
+    legend=dict(
+        y=1, x=1.02,
+        xanchor='left',
+        yanchor='top'
+    ),
+    margin=dict(l=50, r=150, t=50, b=50)
+)
+
+
+# 2. Feature Importance for Award Prediction (Logistic Regression)
+# ----------------------------------------------------------------
+X_award = df[['PaperType', 'Downloads_Xplore', 'Year', 'Conference']]
+X_award = pd.get_dummies(X_award, drop_first=True)
+y_award = df['Award']
+
+X_award_imp = imputer.fit_transform(X_award)
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X_award_imp, y_award, test_size=0.2, random_state=42
+)
+
+logreg = LogisticRegression(max_iter=1000)
+logreg.fit(X_tr, y_tr)
+
+coefs = pd.Series(logreg.coef_[0], index=X_award.columns).sort_values()
+
+fig2 = go.Figure(
+    go.Bar(
+        x=coefs.values,
+        y=coefs.index,
+        orientation='h',
+        marker_color='steelblue'
+    )
+)
+fig2.update_layout(
+    title='Logistic Regression Feature Importance',
+    xaxis_title='Coefficient Value',
+    yaxis_title='Feature',
+    margin=dict(l=150, r=50, t=50, b=50)
+)
+
+
+# 3. Regression Analysis for Download Prediction
+# ----------------------------------------------
+X_dl = df[['AminerCitationCount', 'GraphicsReplicabilityStamp', 'Year']]
+y_dl = df['Downloads_Xplore']
+
+X_dl_imp = imputer.fit_transform(X_dl)
+Xtr, Xte, ytr, yte = train_test_split(
+    X_dl_imp, y_dl, test_size=0.2, random_state=42
+)
+
+lr = LinearRegression()
+lr.fit(Xtr, ytr)
+y_pred = lr.predict(Xte)
+
+mse = mean_squared_error(yte, y_pred)
+r2 = r2_score(yte, y_pred)
+
+lims = [min(yte.min(), y_pred.min()), max(yte.max(), y_pred.max())]
+
+fig3 = go.Figure()
+fig3.add_trace(
+    go.Scatter(
+        x=yte,
+        y=y_pred,
+        mode='markers',
+        marker=dict(color='teal', line=dict(width=1, color='black'), size=8),
+        name='Data'
+    )
+)
+fig3.add_trace(
+    go.Scatter(
+        x=lims,
+        y=lims,
+        mode='lines',
+        line=dict(color='red', dash='dash'),
+        name='45° line'
+    )
+)
+fig3.update_layout(
+    title='Download Prediction: True vs. Predicted',
+    xaxis_title='True Download Count',
+    yaxis_title='Predicted Download Count',
+    margin=dict(l=50, r=50, t=50, b=50),
+    annotations=[
+        dict(
+            x=0.05, y=0.95,
+            xref='paper', yref='paper',
+            text=f"MSE: {mse:.2f}<br>R²: {r2:.2f}",
+            showarrow=False,
+            align='left',
+            bordercolor='black',
+            borderwidth=1,
+            bgcolor='white',
+            opacity=0.8
+        )
+    ]
+)
+
+
+# 4. Top 20 Author Keywords
+# -------------------------
+df['AuthorKeywords'] = df['AuthorKeywords'].str.lower().str.split(',\s*')
+all_kw = [kw for sub in df['AuthorKeywords'] for kw in sub if kw]
+kw_counts = pd.Series(all_kw).value_counts().head(20)
+
+fig4 = go.Figure(
+    go.Bar(
+        x=kw_counts.values,
+        y=kw_counts.index,
+        orientation='h',
+        marker=dict(color=kw_counts.values, colorscale='Viridis'),
+    )
+)
+fig4.update_layout(
+    title='Top 20 Author Keywords',
+    xaxis_title='Frequency',
+    yaxis_title='Keyword',
+    margin=dict(l=150, r=50, t=50, b=50)
+)
+
+
+# 5. Impact of Awards on Citation Count (CrossRef)
+# ------------------------------------------------
+fig5 = go.Figure()
+for award_val, color, label in [(0, 'lightgray', 'No'), (1, 'goldenrod', 'Yes')]:
+    sub = df[df['Award'] == award_val]
+    fig5.add_trace(
+        go.Histogram(
+            x=sub['CitationCount_CrossRef'],
+            histnorm='density',
+            name=label,
+            opacity=0.7,
+            marker_color=color,
+            nbinsx=40
+        )
+    )
+fig5.update_layout(
+    barmode='overlay',
+    title='Citation Distribution by Award Status',
+    xaxis_title='Citation Count (CrossRef)',
+    yaxis_title='Density',
+    legend_title_text='Award',
+    margin=dict(l=50, r=50, t=50, b=50)
+)
+
+# Combine figures in subplot
+from plotly.subplots import make_subplots
+
+combined_fig = make_subplots(rows=5, cols=1, subplot_titles=(
+    'Citation Trend Over Time by Conference',
+    'Logistic Regression Feature Importance',
+    'Download Prediction: True vs. Predicted',
+    'Top 20 Author Keywords',
+    'Citation Distribution by Award Status'
+))
+
+# Layout the graphs in subplots
+for idx, fig in enumerate([fig1, fig2, fig3, fig4, fig5], start=1):
+    for data in fig['data']:
+        combined_fig.add_trace(data, row=idx, col=1)
+
+combined_fig.update_layout(title="Combined Interactive Figures", showlegend=False, height=2500)
+
+# SAVE ALL FIGURES TO output.html
+pio.write_html(
+    combined_fig,
+    file='output.html',
+    include_plotlyjs='cdn',
+    full_html=True,
+    auto_open=False
+)
+
+print("output.html has been generated with all interactive Plotly figures.")
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_squared_error, r2_score
+
+import plotly.express as px
+import plotly.graph_objects as go
+
+# 0. PREPROCESSING & IMPUTATION
+# ----------------------------
+df = pd.read_csv('dataset.csv')
+
+df['FirstPage'].fillna(df['FirstPage'].mean(), inplace=True)
+df['LastPage'].fillna(df['LastPage'].mean(), inplace=True)
+df['AminerCitationCount'].fillna(df['AminerCitationCount'].mean(), inplace=True)
+df['Downloads_Xplore'].fillna(df['Downloads_Xplore'].mean(), inplace=True)
+
+df['Abstract'].fillna('', inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+df['GraphicsReplicabilityStamp'].fillna('No', inplace=True)
+
+df['Award'] = df['Award'].notna().astype(int)
+df['GraphicsReplicabilityStamp'] = (df['GraphicsReplicabilityStamp'] == 'Yes').astype(int)
+
+imputer = SimpleImputer(strategy='mean')
+
+
+# 1. Citation Trend Over Time by Conference
+# -----------------------------------------
+fig1 = px.line(
+    df,
+    x='Year',
+    y='AminerCitationCount',
+    color='Conference',
+    title='Citation Trend Over Time by Conference',
+    labels={'Year': 'Year', 'AminerCitationCount': 'Aminer Citation Count'},
+    color_discrete_sequence=px.colors.qualitative.T10
+)
+fig1.update_layout(
+    legend=dict(title='Conference', x=1.02, y=1, xanchor='left'),
+    margin=dict(l=50, r=200, t=50, b=50),
+    title_font_size=14,
+    xaxis_title_font_size=12,
+    yaxis_title_font_size=12
+)
+
+
+# 2. Feature Importance for Award Prediction (Logistic Regression)
+# ----------------------------------------------------------------
+X_award = df[['PaperType', 'Downloads_Xplore', 'Year', 'Conference']]
+X_award = pd.get_dummies(X_award, drop_first=True)
+y_award = df['Award']
+
+X_award_imp = imputer.fit_transform(X_award)
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X_award_imp, y_award, test_size=0.2, random_state=42
+)
+
+logreg = LogisticRegression(max_iter=1000)
+logreg.fit(X_tr, y_tr)
+
+coefs = pd.Series(logreg.coef_[0], index=X_award.columns).sort_values()
+
+fig2 = go.Figure(go.Bar(
+    x=coefs.values,
+    y=coefs.index,
+    orientation='h',
+    marker_color='steelblue'
+))
+fig2.update_layout(
+    title='Logistic Regression Feature Importance',
+    xaxis_title='Coefficient Value',
+    yaxis_title='Feature',
+    height=600,
+    width=800,
+    title_font_size=14,
+    xaxis_title_font_size=12,
+    yaxis_title_font_size=12,
+    margin=dict(l=150, r=50, t=50, b=50)
+)
+
+
+# 3. Regression Analysis for Download Prediction
+# ----------------------------------------------
+X_dl = df[['AminerCitationCount', 'GraphicsReplicabilityStamp', 'Year']]
+y_dl = df['Downloads_Xplore']
+
+X_dl_imp = imputer.fit_transform(X_dl)
+Xtr, Xte, ytr, yte = train_test_split(X_dl_imp, y_dl, test_size=0.2, random_state=42)
+
+lr = LinearRegression()
+lr.fit(Xtr, ytr)
+y_pred = lr.predict(Xte)
+
+mse = mean_squared_error(yte, y_pred)
+r2 = r2_score(yte, y_pred)
+
+lims = [
+    min(yte.min(), y_pred.min()),
+    max(yte.max(), y_pred.max())
+]
+
+fig3 = go.Figure()
+# scatter
+fig3.add_trace(go.Scatter(
+    x=yte,
+    y=y_pred,
+    mode='markers',
+    marker=dict(color='rgba(0,128,128,0.6)', size=10),
+    name='Data'
+))
+# 45° line
+fig3.add_trace(go.Scatter(
+    x=lims,
+    y=lims,
+    mode='lines',
+    line=dict(color='red', dash='dash', width=1.5),
+    name='45° line'
+))
+# annotation
+fig3.add_annotation(
+    xref='paper', yref='paper',
+    x=0.05, y=0.95,
+    text=f"MSE: {mse:.2f}<br>R²: {r2:.2f}",
+    showarrow=False,
+    bgcolor='white',
+    bordercolor='black',
+    borderwidth=1,
+    opacity=0.7,
+    align='left'
+)
+fig3.update_layout(
+    title='Download Prediction: True vs. Predicted',
+    xaxis_title='True Download Count',
+    yaxis_title='Predicted Download Count',
+    height=700,
+    width=700,
+    title_font_size=14,
+    xaxis_title_font_size=12,
+    yaxis_title_font_size=12,
+    margin=dict(l=50, r=50, t=50, b=50)
+)
+
+
+# 4. Top 20 Author Keywords
+# -------------------------
+# lowercase, split, flatten
+df['AuthorKeywords'] = df['AuthorKeywords'].str.lower().str.split(r',\s*')
+all_kw = [kw for sub in df['AuthorKeywords'] for kw in sub if kw]
+kw_counts = pd.Series(all_kw).value_counts().head(20)
+
+fig4 = px.bar(
+    x=kw_counts.values,
+    y=kw_counts.index,
+    orientation='h',
+    title='Top 20 Author Keywords',
+    labels={'x': 'Frequency', 'y': 'Keyword'},
+    color=kw_counts.values,
+    color_continuous_scale='Viridis'
+)
+fig4.update_layout(
+    height=500,
+    width=1100,
+    title_font_size=14,
+    xaxis_title_font_size=12,
+    yaxis_title_font_size=12,
+    margin=dict(l=150, r=50, t=50, b=50),
+    showlegend=False
+)
+
+
+# 5. Impact of Awards on Citation Count (CrossRef)
+# ------------------------------------------------
+no_award = df[df['Award'] == 0]['CitationCount_CrossRef']
+yes_award = df[df['Award'] == 1]['CitationCount_CrossRef']
+
+fig5 = go.Figure()
+fig5.add_trace(go.Histogram(
+    x=no_award,
+    histnorm='density',
+    name='No',
+    marker_color='lightgray',
+    opacity=0.7
+))
+fig5.add_trace(go.Histogram(
+    x=yes_award,
+    histnorm='density',
+    name='Yes',
+    marker_color='goldenrod',
+    opacity=0.7
+))
+fig5.update_layout(
+    barmode='overlay',
+    title='Citation Distribution by Award Status',
+    xaxis_title='Citation Count (CrossRef)',
+    yaxis_title='Density',
+    legend=dict(title='Award', x=1, y=1, xanchor='right', yanchor='top'),
+    height=500,
+    width=1100,
+    title_font_size=14,
+    xaxis_title_font_size=12,
+    yaxis_title_font_size=12,
+    margin=dict(l=50, r=200, t=50, b=50)
+)
+
+
+# 6. EXPORT ALL FIGURES TO ONE SINGLE HTML
+# ----------------------------------------
+# We will load Plotly.js once and then embed each figure's div
+html_parts = [
+    "<html>",
+    "<head>",
+    "  <title>Interactive Plotly Figures</title>",
+    "  <meta charset='utf-8'/>",
+    "  <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>",
+    "</head>",
+    "<body>",
+    "  <h1>Interactive Plotly Visualizations</h1>"
+]
+
+for fig in (fig1, fig2, fig3, fig4, fig5):
+    # embed each figure; do not include the <head> script again
+    html_parts.append(fig.to_html(full_html=False, include_plotlyjs=False))
+
+html_parts.append("</body>")
+html_parts.append("</html>")
+
+html_str = "\n".join(html_parts)
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html_str)
+
+print("All figures have been written to output.html")
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+import plotly.express as px
+import plotly.graph_objects as go
+
+# 0. LOAD & PREPROCESS
+# --------------------
+df = pd.read_csv('dataset.csv')
+
+# Numeric imputation
+df['FirstPage'].fillna(df['FirstPage'].mean(), inplace=True)
+df['LastPage'].fillna(df['LastPage'].mean(), inplace=True)
+df['AminerCitationCount'].fillna(df['AminerCitationCount'].mean(), inplace=True)
+df['Downloads_Xplore'].fillna(df['Downloads_Xplore'].mean(), inplace=True)
+
+# Text imputation
+df['Abstract'].fillna('', inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+df['GraphicsReplicabilityStamp'].fillna('No', inplace=True)
+
+# Binary/categorical conversions
+df['Award'] = df['Award'].notna().astype(int)
+df['GraphicsReplicabilityStamp'] = (df['GraphicsReplicabilityStamp'] == 'Yes').astype(int)
+df['AwardLabel'] = df['Award'].map({0: 'No', 1: 'Yes'})
+
+# Shared imputer
+imputer = SimpleImputer(strategy='mean')
+
+# 1. Trend of Aminer Citation Counts by Conference
+# ------------------------------------------------
+fig1 = px.line(
+    df,
+    x='Year', y='AminerCitationCount',
+    color='Conference',
+    title='Citation Trend Over Time by Conference',
+    color_discrete_sequence=px.colors.qualitative.T10
+)
+fig1.update_layout(
+    xaxis_title='Year',
+    yaxis_title='Aminer Citation Count',
+    legend_title='Conference',
+    template='simple_white',
+    margin=dict(l=40, r=200, t=50, b=40)
+)
+
+# 2. Feature Importance for Award Prediction (Logistic Regression)
+# ----------------------------------------------------------------
+# Prepare features & target
+X_award = pd.get_dummies(
+    df[['PaperType', 'Downloads_Xplore', 'Year', 'Conference']],
+    drop_first=True
+)
+y_award = df['Award']
+
+# Impute & split
+X_award_imp = imputer.fit_transform(X_award)
+Xtr_aw, Xte_aw, ytr_aw, yte_aw = train_test_split(
+    X_award_imp, y_award, test_size=0.2, random_state=42
+)
+
+# Train logistic regression
+logreg = LogisticRegression(max_iter=1000)
+logreg.fit(Xtr_aw, ytr_aw)
+
+# Extract & sort coefficients
+coefs = pd.Series(logreg.coef_[0], index=X_award.columns).sort_values()
+
+# Build horizontal bar chart
+fig2 = go.Figure()
+fig2.add_trace(go.Bar(
+    x=coefs.values,
+    y=coefs.index,
+    orientation='h',
+    marker_color='steelblue'
+))
+fig2.update_layout(
+    title='Logistic Regression Feature Importance',
+    xaxis_title='Coefficient Value',
+    yaxis_title='Feature',
+    template='simple_white',
+    margin=dict(l=150, r=40, t=50, b=40)
+)
+
+# 3. Regression Analysis for Download Prediction
+# ----------------------------------------------
+X_dl = df[['AminerCitationCount', 'GraphicsReplicabilityStamp', 'Year']]
+y_dl = df['Downloads_Xplore']
+
+# Impute & split
+X_dl_imp = imputer.fit_transform(X_dl)
+Xtr_dl, Xte_dl, ytr_dl, yte_dl = train_test_split(
+    X_dl_imp, y_dl, test_size=0.2, random_state=42
+)
+
+# Train linear regression & predict
+lr = LinearRegression()
+lr.fit(Xtr_dl, ytr_dl)
+y_pred = lr.predict(Xte_dl)
+
+mse = mean_squared_error(yte_dl, y_pred)
+r2 = r2_score(yte_dl, y_pred)
+
+# Scatter plot with 45° line
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(
+    x=yte_dl,
+    y=y_pred,
+    mode='markers',
+    marker=dict(color='teal', line=dict(color='black', width=1), size=8),
+    name='Predicted vs True'
+))
+# 45° reference line
+lims = [min(yte_dl.min(), y_pred.min()), max(yte_dl.max(), y_pred.max())]
+fig3.add_trace(go.Scatter(
+    x=lims, y=lims,
+    mode='lines',
+    line=dict(color='red', dash='dash'),
+    showlegend=False
+))
+# Annotation
+fig3.add_annotation(
+    x=0.05, y=0.95, xref='paper', yref='paper',
+    text=f"MSE: {mse:.2f}<br>R²: {r2:.2f}",
+    showarrow=False, bgcolor='white', bordercolor='black', borderwidth=1
+)
+fig3.update_layout(
+    title='Download Prediction: True vs. Predicted',
+    xaxis_title='True Download Count',
+    yaxis_title='Predicted Download Count',
+    template='simple_white',
+    margin=dict(l=60, r=40, t=50, b=60)
+)
+
+# 4. Top 20 Author Keywords
+# -------------------------
+# Split, flatten, count
+kw_lists = df['AuthorKeywords'].str.lower().str.split(',\s*', regex=True)
+all_kw = [kw for sub in kw_lists.dropna() for kw in sub if kw]
+kw_counts = pd.Series(all_kw).value_counts().head(20)
+
+fig4 = px.bar(
+    x=kw_counts.values,
+    y=kw_counts.index,
+    orientation='h',
+    title='Top 20 Author Keywords',
+    color_discrete_sequence=px.colors.sequential.Viridis
+)
+fig4.update_layout(
+    xaxis_title='Frequency',
+    yaxis_title='Keyword',
+    template='simple_white',
+    margin=dict(l=150, r=40, t=50, b=40)
+)
+
+# 5. Impact of Awards on Citation Count (CrossRef)
+# ------------------------------------------------
+fig5 = px.histogram(
+    df,
+    x='CitationCount_CrossRef',
+    color='AwardLabel',
+    barmode='overlay',
+    histnorm='density',
+    opacity=0.7,
+    color_discrete_map={'No': 'lightgray', 'Yes': 'goldenrod'},
+    title='Citation Distribution by Award Status'
+)
+fig5.update_layout(
+    xaxis_title='Citation Count (CrossRef)',
+    yaxis_title='Density',
+    legend_title='Award',
+    template='simple_white',
+    margin=dict(l=60, r=40, t=50, b=60)
+)
+
+# SAVE ALL FIGURES TO AN HTML FILE
+# --------------------------------
+html_parts = [
+    "<!DOCTYPE html>",
+    "<html><head><meta charset='utf-8'><title>Interactive Dashboard</title></head><body>"
+]
+
+for fig in [fig1, fig2, fig3, fig4, fig5]:
+    # include_plotlyjs='cdn' ensures we load Plotly once
+    html_parts.append(fig.to_html(full_html=False, include_plotlyjs='cdn'))
+    html_parts.append("<br><hr><br>")
+
+html_parts.append("</body></html>")
+
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write("\n".join(html_parts))
+
+print("All interactive Plotly figures have been saved to output.html")
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_squared_error, r2_score
+
+import plotly.express as px
+import plotly.graph_objects as go
+
+# 0. LOAD & PREPROCESS
+# --------------------
+df = pd.read_csv('dataset.csv')
+
+# Fill numeric NaNs
+for col in ['FirstPage','LastPage','AminerCitationCount','Downloads_Xplore']:
+    df[col].fillna(df[col].mean(), inplace=True)
+
+# Fill text NaNs
+df['Abstract'].fillna('', inplace=True)
+df['AuthorKeywords'].fillna('', inplace=True)
+df['GraphicsReplicabilityStamp'].fillna('No', inplace=True)
+
+# Binary/categorical transforms
+df['Award'] = df['Award'].notna().astype(int)
+df['GraphicsReplicabilityStamp'] = (df['GraphicsReplicabilityStamp']=='Yes').astype(int)
+
+# We will need an "AwardLabel" for plotting
+df['AwardLabel'] = df['Award'].map({0:'No',1:'Yes'})
+
+imputer = SimpleImputer(strategy='mean')
+
+
+# 1. Citation Trend Over Time by Conference
+# -----------------------------------------
+fig1 = px.line(
+    df,
+    x='Year', y='AminerCitationCount',
+    color='Conference',
+    title='Citation Trend Over Time by Conference',
+    color_discrete_sequence=px.colors.qualitative.Plotly
+)
+fig1.update_layout(
+    xaxis_title='Year',
+    yaxis_title='Aminer Citation Count',
+    legend_title='Conference',
+    margin={'r':200}
+)
+
+
+# 2. Feature Importance for Award Prediction
+# ------------------------------------------
+# Prepare data
+X_award = df[['PaperType','Downloads_Xplore','Year','Conference']]
+X_award = pd.get_dummies(X_award, drop_first=True)
+y_award = df['Award']
+
+X_award_imp = imputer.fit_transform(X_award)
+X_tr, X_te, y_tr, y_te = train_test_split(X_award_imp, y_award, test_size=0.2, random_state=42)
+
+logreg = LogisticRegression(max_iter=1000)
+logreg.fit(X_tr, y_tr)
+
+coefs = pd.Series(logreg.coef_[0], index=X_award.columns).sort_values()
+
+fig2 = go.Figure(
+    go.Bar(
+        x=coefs.values,
+        y=coefs.index,
+        orientation='h',
+        marker_color='steelblue'
+    )
+)
+fig2.update_layout(
+    title='Logistic Regression Feature Importance',
+    xaxis_title='Coefficient Value',
+    yaxis_title='Feature',
+    margin={'l':200}
+)
+
+
+# 3. Regression Analysis for Download Prediction
+# ----------------------------------------------
+X_dl = df[['AminerCitationCount','GraphicsReplicabilityStamp','Year']]
+y_dl = df['Downloads_Xplore']
+
+X_dl_imp = imputer.fit_transform(X_dl)
+Xtr, Xte, ytr, yte = train_test_split(X_dl_imp, y_dl, test_size=0.2, random_state=42)
+
+lr = LinearRegression()
+lr.fit(Xtr, ytr)
+y_pred = lr.predict(Xte)
+
+mse = mean_squared_error(yte, y_pred)
+r2  = r2_score(yte, y_pred)
+
+lims = [ min(yte.min(), y_pred.min()), max(yte.max(), y_pred.max()) ]
+
+fig3 = go.Figure()
+# scatter
+fig3.add_trace(
+    go.Scatter(
+        x=yte,
+        y=y_pred,
+        mode='markers',
+        marker=dict(color='teal', size=8, opacity=0.6, line=dict(color='black', width=1)),
+        name='Pred vs True'
+    )
+)
+# 45° line
+fig3.add_trace(
+    go.Scatter(
+        x=lims, y=lims,
+        mode='lines',
+        line=dict(color='red', dash='dash', width=1.5),
+        showlegend=False
+    )
+)
+# annotation
+fig3.add_annotation(
+    x=0.05, y=0.95,
+    xref='paper', yref='paper',
+    text=f"MSE: {mse:.2f}<br>R²: {r2:.2f}",
+    showarrow=False,
+    align='left',
+    bgcolor='white',
+    bordercolor='black'
+)
+fig3.update_layout(
+    title='Download Prediction: True vs. Predicted',
+    xaxis_title='True Download Count',
+    yaxis_title='Predicted Download Count',
+    margin={'l':80,'r':80,'t':80,'b':80}
+)
+
+
+# 4. Top 20 Author Keywords
+# -------------------------
+# explode & count
+df['AuthorKeywords'] = df['AuthorKeywords'].str.lower().str.split(',\s*')
+all_kw = [kw for sub in df['AuthorKeywords'] for kw in sub if kw]
+kw_counts = pd.Series(all_kw).value_counts().head(20)
+
+fig4 = go.Figure(
+    go.Bar(
+        x=kw_counts.values,
+        y=kw_counts.index,
+        orientation='h',
+        marker=dict(color=px.colors.sequential.Viridis[:20])
+    )
+)
+fig4.update_layout(
+    title='Top 20 Author Keywords',
+    xaxis_title='Frequency',
+    yaxis_title='Keyword',
+    margin={'l':200}
+)
+
+
+# 5. Citation Distribution by Award Status
+# ----------------------------------------
+fig5 = px.histogram(
+    df,
+    x='CitationCount_CrossRef',
+    color='AwardLabel',
+    histnorm='density',
+    barmode='overlay',
+    opacity=0.7,
+    color_discrete_map={'No':'lightgray','Yes':'goldenrod'},
+    title='Citation Distribution by Award Status'
+)
+fig5.update_traces(marker_line_width=1.5)
+fig5.update_layout(
+    xaxis_title='Citation Count (CrossRef)',
+    yaxis_title='Density',
+    legend_title='Award',
+    margin={'l':80,'r':80,'t':80,'b':80}
+)
+
+
+# WRITE TO A SINGLE HTML FILE
+# ---------------------------
+html_parts = []
+# First figure includes plotly.js
+html_parts.append(fig1.to_html(full_html=False, include_plotlyjs='cdn'))
+# Subsequent figures do not re‐include the library
+for fig in [fig2, fig3, fig4, fig5]:
+    html_parts.append(fig.to_html(full_html=False, include_plotlyjs=False))
+
+html_body = "\n<hr/>\n".join(html_parts)
+
+html_page = f"""
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Interactive Plots</title>
+  </head>
+  <body>
+    {html_body}
+  </body>
+</html>
+"""
+
+with open('output.html', 'w', encoding='utf-8') as f:
+    f.write(html_page)
+
+print("All figures have been written to output.html")
+

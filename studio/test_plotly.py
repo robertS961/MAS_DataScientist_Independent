@@ -1,5 +1,5 @@
 from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, get_last_ai_message, generate_pdf_report, get_datainfo
-from agents import ploty_agent
+from agents import ploty_agent, plotly_leader
 from classes import State, Configurable
 import re
 
@@ -152,13 +152,13 @@ data = state['dataset_info']
 data_info = get_datainfo("dataset.csv")
 dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "plotly", code = code)
 dic['revise'] = True
-plotly_ag = ploty_agent(State)
-for chunk in plotly_ag.stream(input = dic, config = config):
+plotly_lead = plotly_leader(state)
+for chunk in plotly_lead.stream(input = dic, config = config):
     pretty_print_messages(chunk)
  
 
 print(f"This is the chunk \n {chunk} \n")
-result = chunk['agent']['messages'][-1].content
+result = chunk['code_plotly']['messages'][-1]['content']
 
 code = re.findall(r"```python\n(.*?)\n```", result, re.DOTALL)
 print(f"This is the code ! \n {code} \n")
