@@ -6,7 +6,8 @@ def ploty_agent(state: State):
     prompt = (
         "You are a python plotly expert with over 10 years of experience! \n"
         "You will be given ideas to be executed on a tabular data set. It will be ideas on various statistical, machine learning, and data science ideas. \n"
-        "Take these ideas and turn them into interactive and beautiful plotly graphs! \n"
+        "Take these ideas and turn them into interactive and beautiful plotly graphs!\n"
+        "Make the colors of the graphs vibrant and clear, avoid using dull and similar colors! \n"
         "Once Plotly Code is written add Html/Javascript code to display all the figures so it can be ran on a server!\n"
         "Make sure the code runs without errors and bugs! \n"
         "Thank you! \n"

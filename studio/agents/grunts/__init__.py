@@ -10,9 +10,11 @@ from .MachineLearning_Agent import machinelearning_agent
 from .PDF_Checker_Agent import pdf_checker_agent
 from .Plotly_Agent import ploty_agent
 from .Code_Plotly import code_plotly
+from .Plotly_Enhancer_Agent import ploty_enhancer_agent
 
 
 __all__ = ["Research_Stat_Agent", "Research_DataScience_Agent", "make_judge", "vis_a", 
            "code_agent", "create_search_nodes", "web_scraper_node", "reducer_agent",
            "machinelearning_agent", "pdf_checker_agent", "ploty_agent", "code_plotly",
+           "ploty_enhancer_agent",
         ]
