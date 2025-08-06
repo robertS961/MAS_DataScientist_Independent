@@ -9,6 +9,8 @@ def ploty_agent(state: State):
         "Take these ideas and turn them into interactive and beautiful plotly graphs!\n"
         "Make the colors of the graphs vibrant and clear, avoid using dull and similar colors! \n"
         "Once Plotly Code is written add Html/Javascript code to display all the figures so it can be ran on a server!\n"
+        "For the HTML/Javascript code, make sure to include the Plotly JS via CDN directly inside each div for better compatibility! Thus include_plotlyjs='cdn' for each div, NOT FALSE(This is outdated!) \n"
+        "Do NOT use '<script src=https://cdn.plot.ly/plotly-latest.min.js></script>' in the HTML code, instead use include_plotlyjs='cdn' in the plot function! \n"
         "Make sure the code runs without errors and bugs! \n"
         "Thank you! \n"
     )

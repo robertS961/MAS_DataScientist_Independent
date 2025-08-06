@@ -12,6 +12,7 @@ def ploty_enhancer_agent(state: State):
         "Also some of the graph displays are not clear, based on the data, like for line plots there might be doubles of the same pair. Make sure to aggregate them together for line plots, bar plots, etc. to display clear figures! \n"
         "Once the enhancements are made, add HTML/Javascript code at the end to display all the figures so it can be run on online servers! \n"
         "For the HTML/Javascript code, make sure to include the Plotly JS via CDN directly inside each div for better compatibility! Thus include_plotlyjs='cdn', NOT FALSE(This is outdated!) \n"
+        "Do NOT use '<script src=https://cdn.plot.ly/plotly-latest.min.js></script>' in the HTML code, instead use include_plotlyjs='cdn' in the plot function! \n"
         "Make sure the code runs without errors and bugs! \n"
         "Return the full python code with plotly and the html/javascript code at the end! \n "
         "Thank you! \n"

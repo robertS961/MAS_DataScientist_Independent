@@ -10823,3 +10823,651 @@ with open("output.html","w",encoding="utf-8") as f:
 
 print("output.html generated successfully in dark mode.")
 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+
+# ML & stats
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.metrics import roc_curve, auc, confusion_matrix
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+
+# Plotly
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+from plotly.subplots import make_subplots
+
+# ----------------------------
+# 1) LOAD & PREPROCESS DATA
+# ----------------------------
+df = pd.read_csv("dataset.csv")
+
+# Fill numeric NaNs with median
+for col in ["Downloads_Xplore", "AminerCitationCount", "CitationCount_CrossRef"]:
+    df[col] = df[col].fillna(df[col].median())
+
+# Create simple counts of text‐fields
+df["InternalRef_count"] = (
+    df["InternalReferences"].fillna("").str.split(";")
+    .apply(lambda lst: len([x for x in lst if x.strip()]))
+)
+df["Keywords_count"] = (
+    df["AuthorKeywords"].fillna("").str.split(";")
+    .apply(lambda lst: len([x for x in lst if x.strip()]))
+)
+
+# ------------
+# 2) MODEL 1:
+# Predict Awards (binary) via LogisticRegression
+# ------------
+df["Award_flag"] = df["Award"].notna().astype(int)
+features_clf = ["PaperType", "Conference", "Year",
+                "Downloads_Xplore", "InternalRef_count", "Keywords_count"]
+X = df[features_clf]
+y = df["Award_flag"]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+num_feats = ["Year", "Downloads_Xplore", "InternalRef_count", "Keywords_count"]
+cat_feats = ["PaperType", "Conference"]
+
+preprocessor_clf = ColumnTransformer([
+    ("num", StandardScaler(), num_feats),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats)
+])
+
+clf_pipe = Pipeline([
+    ("prep", preprocessor_clf),
+    ("clf", LogisticRegression(max_iter=1000, class_weight="balanced"))
+])
+
+clf_pipe.fit(X_train, y_train)
+probs = clf_pipe.predict_proba(X_test)[:, 1]
+fpr, tpr, _ = roc_curve(y_test, probs)
+roc_auc = auc(fpr, tpr)
+y_pred = (probs >= 0.5).astype(int)
+cm = confusion_matrix(y_test, y_pred)
+
+# -------------------
+# 3) MODEL 2:
+# Predict Downloads via LinearRegression
+# -------------------
+df2 = df.copy()
+df2["GraphicsReplicabilityStamp"] = df2["GraphicsReplicabilityStamp"].fillna("None")
+
+features_reg = ["AminerCitationCount", "CitationCount_CrossRef",
+                "InternalRef_count", "Year",
+                "Conference", "GraphicsReplicabilityStamp"]
+Xr = df2[features_reg]
+yr = df2["Downloads_Xplore"]
+
+num_feats_r = ["AminerCitationCount", "CitationCount_CrossRef", "InternalRef_count", "Year"]
+cat_feats_r = ["Conference", "GraphicsReplicabilityStamp"]
+
+preprocessor_reg = ColumnTransformer([
+    ("num", StandardScaler(), num_feats_r),
+    ("cat", OneHotEncoder(handle_unknown="ignore"), cat_feats_r)
+])
+
+reg_pipe = Pipeline([
+    ("prep", preprocessor_reg),
+    ("linreg", LinearRegression())
+])
+
+Xr_train, Xr_test, yr_train, yr_test = train_test_split(
+    Xr, yr, test_size=0.3, random_state=42
+)
+reg_pipe.fit(Xr_train, yr_train)
+yr_pred = reg_pipe.predict(Xr_test)
+
+# -------------------
+# 4) KEYWORD TRENDS
+# -------------------
+df_kw = df[["Year", "AuthorKeywords"]].dropna()
+df_kw["kw_list"] = df_kw["AuthorKeywords"].str.split(";")
+df_kw = df_kw.explode("kw_list")
+df_kw["kw_list"] = df_kw["kw_list"].str.strip().str.lower()
+top10 = df_kw["kw_list"].value_counts().nlargest(10).index.tolist()
+df_top = df_kw[df_kw["kw_list"].isin(top10)]
+kw_trend = df_top.groupby(["Year", "kw_list"]).size().reset_index(name="count")
+
+# -------------------
+# 5) GRAPHICS REPLICABILITY META‐ANALYSIS
+# -------------------
+df_meta = df2.copy()
+counts_award = (
+    df_meta.groupby("GraphicsReplicabilityStamp")["Award"]
+    .apply(lambda s: s.notna().sum())
+    .reset_index(name="Award_Count")
+)
+
+# -------------------
+# 6) IMPACT OF AWARDS
+# -------------------
+df_aw = df.copy()
+df_aw["AwardLabel"] = np.where(df_aw["Award"].notna(), "Awarded", "Not Awarded")
+
+# -------------------
+# 7) BUILD PLOTLY FIGURES
+#    using a dark theme, clear colors & interactivity
+# -------------------
+# FIGURE 1: ROC Curve + Confusion Matrix
+fig1 = make_subplots(rows=1, cols=2,
+                     subplot_titles=("ROC Curve (AUC={:.2f})".format(roc_auc),
+                                     "Confusion Matrix"))
+# ROC
+fig1.add_trace(go.Scatter(
+    x=fpr, y=tpr, mode="lines",
+    line=dict(color="cyan", width=3),
+    hovertemplate="FPR: %{x:.2f}<br>TPR: %{y:.2f}<extra></extra>"
+), row=1, col=1)
+fig1.add_trace(go.Scatter(
+    x=[0,1], y=[0,1], mode="lines",
+    line=dict(color="gray", dash="dash"),
+    showlegend=False
+), row=1, col=1)
+# Confusion matrix heatmap
+fig1.add_trace(go.Heatmap(
+    z=cm,
+    x=["No Award","Award"], y=["No Award","Award"],
+    colorscale="Viridis",
+    hovertemplate="Actual: %{y}<br>Pred: %{x}<br>Count: %{z}<extra></extra>"
+), row=1, col=2)
+
+fig1.update_layout(
+    template="plotly_dark",
+    title_text="Award Prediction: ROC & Confusion Matrix",
+    showlegend=False,
+    height=400, width=900
+)
+
+# FIGURE 2: Downloads Prediction
+min_d, max_d = yr_test.min(), yr_test.max()
+buffer = (max_d - min_d) * 0.05
+fig2 = go.Figure()
+fig2.add_trace(go.Scatter(
+    x=yr_test, y=yr_pred, mode="markers",
+    marker=dict(color="magenta", size=6, opacity=0.7),
+    hovertemplate="Actual: %{x:.0f}<br>Predicted: %{y:.0f}<extra></extra>"
+))
+fig2.add_trace(go.Line(
+    x=[min_d - buffer, max_d + buffer],
+    y=[min_d - buffer, max_d + buffer],
+    line=dict(color="white", dash="dash"),
+    hoverinfo="skip"
+))
+fig2.update_layout(
+    template="plotly_dark",
+    title="Download Prediction: Actual vs Predicted",
+    xaxis_title="Actual Downloads",
+    yaxis_title="Predicted Downloads",
+    xaxis=dict(range=[min_d - buffer, max_d + buffer]),
+    yaxis=dict(range=[min_d - buffer, max_d + buffer]),
+    width=700, height=500
+)
+
+# FIGURE 3: Top‐10 Keyword Trends
+fig3 = px.line(
+    kw_trend, x="Year", y="count", color="kw_list",
+    template="plotly_dark",
+    labels={"kw_list":"Keyword", "count":"Occurrences"},
+    title="Top 10 Keywords Over Time"
+)
+fig3.update_traces(mode="lines+markers")
+fig3.update_layout(legend=dict(title="Keyword"), width=800, height=500)
+
+# FIGURE 4: Graphics Replicability Meta‐Analysis (3 subplots)
+fig4 = make_subplots(rows=1, cols=3,
+                     subplot_titles=("Citations by Replicability",
+                                     "Downloads by Replicability",
+                                     "Awards by Replicability"))
+# Box: citations
+fig4.add_trace(go.Box(
+    x=df_meta["GraphicsReplicabilityStamp"],
+    y=df_meta["CitationCount_CrossRef"],
+    marker_color="orange",
+    hovertemplate="Stamp: %{x}<br>Cites: %{y}<extra></extra>"
+), row=1, col=1)
+# Box: downloads
+fig4.add_trace(go.Box(
+    x=df_meta["GraphicsReplicabilityStamp"],
+    y=df_meta["Downloads_Xplore"],
+    marker_color="lightgreen",
+    hovertemplate="Stamp: %{x}<br>Downloads: %{y}<extra></extra>"
+), row=1, col=2)
+# Bar: award counts
+fig4.add_trace(go.Bar(
+    x=counts_award["GraphicsReplicabilityStamp"],
+    y=counts_award["Award_Count"],
+    marker_color="lightblue",
+    hovertemplate="Stamp: %{x}<br>Awarded: %{y}<extra></extra>"
+), row=1, col=3)
+
+fig4.update_layout(
+    template="plotly_dark",
+    showlegend=False,
+    width=1200, height=400
+)
+
+# FIGURE 5: Impact of Awards on Citation & Downloads
+fig5 = make_subplots(rows=1, cols=2,
+                     subplot_titles=("Citations by Award Status",
+                                     "Downloads by Award Status"))
+fig5.add_trace(go.Violin(
+    x=df_aw["AwardLabel"], y=df_aw["CitationCount_CrossRef"],
+    box_visible=True, meanline_visible=True,
+    line_color="yellow", fillcolor="rgba(255,255,0,0.3)",
+    hovertemplate="Status: %{x}<br>Cites: %{y}<extra></extra>"
+), row=1, col=1)
+fig5.add_trace(go.Violin(
+    x=df_aw["AwardLabel"], y=df_aw["Downloads_Xplore"],
+    box_visible=True, meanline_visible=True,
+    line_color="aqua", fillcolor="rgba(0,255,255,0.3)",
+    hovertemplate="Status: %{x}<br>Downloads: %{y}<extra></extra>"
+), row=1, col=2)
+
+fig5.update_layout(
+    template="plotly_dark",
+    showlegend=False,
+    width=900, height=400
+)
+
+# ----------------------------
+# 8) EXPORT TO INTERACTIVE HTML
+# ----------------------------
+figs = [fig1, fig2, fig3, fig4, fig5]
+
+html_header = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Interactive Results</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body { background-color: #1e1e1e; color: #ddd; font-family: Arial, sans-serif; }
+    h2 { color: #fff; }
+    .plot-container { margin-bottom: 40px; }
+  </style>
+</head>
+<body>
+  <h1>Data Science & Statistical Learning Visualizations</h1>
+"""
+
+html_footer = """
+</body>
+</html>
+"""
+
+# Build HTML with all figures
+html_body = ""
+for idx, fig in enumerate(figs):
+    div_id = f"plot{idx}"
+    # each fig without duplicating the script tag
+    html_body += f'<div class="plot-container" id="{div_id}"></div>\n'
+    html_body += pio.to_html(
+        fig,
+        include_plotlyjs=False,
+        full_html=False,
+        div_id=div_id
+    )
+    html_body += "\n<hr/>\n"
+
+# Write to output.html
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html_header + html_body + html_footer)
+
+print("output.html generated successfully.")
+
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_curve, auc, confusion_matrix
+from sklearn.linear_model import LinearRegression
+
+# -----------------------------------------------------------------------------
+# 0. Set default Plotly theme to dark
+# -----------------------------------------------------------------------------
+pio.templates.default = "plotly_dark"
+
+# -----------------------------------------------------------------------------
+# 1. Load and preprocess data
+# -----------------------------------------------------------------------------
+df = pd.read_csv('dataset.csv')
+
+# Fill numeric NaNs with median
+for col in ['AminerCitationCount', 'CitationCount_CrossRef', 'Downloads_Xplore']:
+    df[col] = df[col].fillna(df[col].median())
+
+# -----------------------------------------------------------------------------
+# 2. Enhanced Trend Analysis on Citation Counts
+#    (a) By top 5 Conferences
+# -----------------------------------------------------------------------------
+top_confs = df['Conference'].value_counts().nlargest(5).index.to_list()
+df_conf = df[df['Conference'].isin(top_confs)]
+df_conf_melt = (
+    df_conf
+    .groupby(['Year','Conference'])[['AminerCitationCount','CitationCount_CrossRef']]
+    .mean()
+    .reset_index()
+    .melt(id_vars=['Year','Conference'],
+          value_vars=['AminerCitationCount','CitationCount_CrossRef'],
+          var_name='Metric', value_name='AvgCitation')
+)
+
+fig1 = px.line(
+    df_conf_melt,
+    x='Year', y='AvgCitation',
+    color='Conference',
+    line_dash='Metric',
+    markers=True,
+    color_discrete_sequence=px.colors.qualitative.Vivid,
+    title='Average Citation Trends by Conference (Top 5)',
+    labels={'AvgCitation':'Average Citation', 'Metric':'Citation Type'}
+)
+fig1.update_layout(
+    template='plotly_dark',
+    xaxis=dict(
+        title='Year',
+        range=[df.Year.min(), df.Year.max()],
+        rangeslider=dict(visible=True),
+        showgrid=False
+    ),
+    yaxis=dict(title='Avg Citation', showgrid=False),
+    legend_title_text='Conference / Metric'
+)
+fig1.update_traces(hovertemplate='Year: %{x}<br>%{fullData.name}<br>Citation: %{y:.1f}')
+
+# -----------------------------------------------------------------------------
+#    (b) By top 5 Paper Types
+# -----------------------------------------------------------------------------
+top_ptypes = df['PaperType'].value_counts().nlargest(5).index.to_list()
+df_pt = df[df['PaperType'].isin(top_ptypes)]
+df_pt_melt = (
+    df_pt
+    .groupby(['Year','PaperType'])[['AminerCitationCount','CitationCount_CrossRef']]
+    .mean()
+    .reset_index()
+    .melt(id_vars=['Year','PaperType'],
+          value_vars=['AminerCitationCount','CitationCount_CrossRef'],
+          var_name='Metric', value_name='AvgCitation')
+)
+
+fig2 = px.line(
+    df_pt_melt,
+    x='Year', y='AvgCitation',
+    color='PaperType',
+    line_dash='Metric',
+    markers=True,
+    color_discrete_sequence=px.colors.qualitative.Bold,
+    title='Average Citation Trends by Paper Type (Top 5)',
+    labels={'AvgCitation':'Average Citation', 'Metric':'Citation Type'}
+)
+fig2.update_layout(
+    template='plotly_dark',
+    xaxis=dict(
+        title='Year',
+        range=[df.Year.min(), df.Year.max()],
+        rangeslider=dict(visible=True),
+        showgrid=False
+    ),
+    yaxis=dict(title='Avg Citation', showgrid=False),
+    legend_title_text='PaperType / Metric'
+)
+fig2.update_traces(hovertemplate='Year: %{x}<br>%{fullData.name}<br>Citation: %{y:.1f}')
+
+# -----------------------------------------------------------------------------
+# 3. Machine Learning to Predict Awards
+# -----------------------------------------------------------------------------
+df_ml = df.copy()
+df_ml['Award_flag'] = df_ml['Award'].notna().astype(int)
+
+# features: number of keywords & internal references
+df_ml['n_keywords'] = (
+    df_ml['AuthorKeywords']
+      .fillna('')
+      .apply(lambda x: len([kw.strip() for kw in x.replace(';',',').split(',') if kw.strip()]))
+)
+df_ml['n_int_refs'] = (
+    df_ml['InternalReferences']
+      .fillna('')
+      .apply(lambda x: len([r.strip() for r in x.replace(';',',').split(',') if r.strip()]))
+)
+
+# one-hot encode PaperType & Conference
+df_ml = pd.get_dummies(df_ml, columns=['PaperType','Conference'], drop_first=True)
+
+features_ml = (
+    ['Year','Downloads_Xplore','n_keywords','n_int_refs'] +
+    [c for c in df_ml.columns if c.startswith('PaperType_') or c.startswith('Conference_')]
+)
+X = df_ml[features_ml]
+y = df_ml['Award_flag']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42, stratify=y
+)
+
+clf = RandomForestClassifier(n_estimators=100, random_state=42)
+clf.fit(X_train, y_train)
+y_prob = clf.predict_proba(X_test)[:,1]
+y_pred = clf.predict(X_test)
+
+# ROC Curve
+fpr, tpr, _ = roc_curve(y_test, y_prob)
+roc_auc = auc(fpr, tpr)
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(
+    x=fpr, y=tpr,
+    mode='lines+markers',
+    name=f'ROC (AUC={roc_auc:.2f})',
+    line=dict(color='lime', width=3)
+))
+fig3.add_trace(go.Scatter(
+    x=[0,1], y=[0,1],
+    mode='lines',
+    name='Chance',
+    line=dict(color='gray', dash='dash')
+))
+fig3.update_layout(
+    template='plotly_dark',
+    title='ROC Curve for Award Prediction',
+    xaxis=dict(title='False Positive Rate', range=[0,1]),
+    yaxis=dict(title='True Positive Rate', range=[0,1]),
+    legend=dict(x=0.7, y=0.2)
+)
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+fig4 = go.Figure(data=go.Heatmap(
+    z=cm,
+    x=['Predicted 0','Predicted 1'],
+    y=['Actual 0','Actual 1'],
+    text=cm,
+    texttemplate="%{text}",
+    colorscale='Viridis',
+    showscale=True
+))
+fig4.update_layout(
+    template='plotly_dark',
+    title='Confusion Matrix for Award Prediction',
+    xaxis=dict(title='Predicted'),
+    yaxis=dict(title='Actual')
+)
+
+# -----------------------------------------------------------------------------
+# 4. Regression Analysis for Download Prediction
+# -----------------------------------------------------------------------------
+df_reg = df.copy()
+df_reg['GraphicsReplicabilityStamp'] = df_reg['GraphicsReplicabilityStamp'].fillna('None')
+df_reg['n_int_refs'] = df_reg['InternalReferences'].fillna('').apply(
+    lambda x: len([r.strip() for r in x.replace(';',',').split(',') if r.strip()])
+)
+
+# one-hot encode GraphicsReplicabilityStamp & Conference
+df_reg = pd.get_dummies(
+    df_reg,
+    columns=['GraphicsReplicabilityStamp','Conference'],
+    drop_first=True
+)
+
+features_reg = (
+    ['AminerCitationCount','n_int_refs','Year'] +
+    [c for c in df_reg.columns if c.startswith('GraphicsReplicabilityStamp_') or c.startswith('Conference_')]
+)
+Xr = df_reg[features_reg]
+yr = df_reg['Downloads_Xplore']
+
+Xr_train, Xr_test, yr_train, yr_test = train_test_split(
+    Xr, yr, test_size=0.3, random_state=42
+)
+lr = LinearRegression()
+lr.fit(Xr_train, yr_train)
+yr_pred = lr.predict(Xr_test)
+
+# Coefficients Bar (horizontal)
+coef_df = pd.DataFrame({
+    'Feature': features_reg,
+    'Coefficient': lr.coef_
+})
+coef_df['abs_coef'] = coef_df['Coefficient'].abs()
+coef_df = coef_df.sort_values('abs_coef', ascending=True)
+
+fig5 = px.bar(
+    coef_df,
+    x='Coefficient', y='Feature',
+    orientation='h',
+    color='Coefficient',
+    color_continuous_scale='Plasma',
+    title='Regression Coefficients for Download Prediction',
+    labels={'Coefficient':'Coef Value','Feature':'Feature'}
+)
+fig5.update_layout(template='plotly_dark', margin=dict(l=200))
+
+# Predicted vs Actual Scatter
+fig6 = go.Figure()
+fig6.add_trace(go.Scatter(
+    x=yr_test, y=yr_pred,
+    mode='markers',
+    marker=dict(color='cyan', size=6),
+    name='Predicted vs Actual'
+))
+fig6.add_trace(go.Scatter(
+    x=[yr_test.min(), yr_test.max()],
+    y=[yr_test.min(), yr_test.max()],
+    mode='lines',
+    line=dict(color='magenta', dash='dash'),
+    name='Ideal'
+))
+fig6.update_layout(
+    template='plotly_dark',
+    title='Predicted vs Actual Downloads',
+    xaxis=dict(title='Actual Downloads'),
+    yaxis=dict(title='Predicted Downloads')
+)
+
+# -----------------------------------------------------------------------------
+# 5. Keyword Trend Analysis
+# -----------------------------------------------------------------------------
+kw_df = df[['Year','AuthorKeywords']].copy()
+kw_df['AuthorKeywords'] = kw_df['AuthorKeywords'].fillna('')
+kw_df['KeywordList'] = kw_df['AuthorKeywords'].apply(
+    lambda x: [kw.strip() for kw in x.replace(';',',').split(',') if kw.strip()]
+)
+kw_exp = kw_df.explode('KeywordList')
+kw_exp = kw_exp[kw_exp['KeywordList'] != '']
+
+top_keywords = kw_exp['KeywordList'].value_counts().nlargest(10).index.to_list()
+kw_top = kw_exp[kw_exp['KeywordList'].isin(top_keywords)]
+kw_trend = kw_top.groupby(['Year','KeywordList']).size().reset_index(name='Count')
+
+fig7 = px.line(
+    kw_trend,
+    x='Year', y='Count',
+    color='KeywordList',
+    markers=True,
+    title='Top 10 Keyword Trends Over Years',
+    labels={'Count':'Frequency','KeywordList':'Keyword'},
+    color_discrete_sequence=px.colors.qualitative.Safe
+)
+fig7.update_layout(
+    template='plotly_dark',
+    xaxis=dict(
+        title='Year',
+        range=[df.Year.min(), df.Year.max()],
+        rangeslider=dict(visible=True),
+        showgrid=False
+    ),
+    yaxis=dict(title='Count', showgrid=False),
+    legend_title_text='Keyword'
+)
+fig7.update_traces(hovertemplate='%{fullData.name}<br>Year: %{x}<br>Count: %{y}')
+
+# -----------------------------------------------------------------------------
+# 6. Impact of Awards on Citations and Downloads
+# -----------------------------------------------------------------------------
+df_aw = df.copy()
+df_aw['Award_flag'] = df_aw['Award'].notna().astype(int)
+stats = df_aw.groupby('Award_flag')[['CitationCount_CrossRef','Downloads_Xplore']].mean().reset_index()
+stats_melt = stats.melt(
+    id_vars='Award_flag',
+    value_vars=['CitationCount_CrossRef','Downloads_Xplore'],
+    var_name='Metric',
+    value_name='Average'
+)
+stats_melt['Status'] = stats_melt['Award_flag'].map({0:'Non-Awarded',1:'Awarded'})
+
+fig8 = px.bar(
+    stats_melt,
+    x='Metric', y='Average',
+    color='Status',
+    barmode='group',
+    title='Average Citations & Downloads: Awarded vs Non-Awarded',
+    labels={'Metric':'Metric','Average':'Mean Value'}
+)
+fig8.update_layout(
+    template='plotly_dark',
+    xaxis=dict(title='Metric'),
+    yaxis=dict(title='Mean'),
+    legend_title_text='Paper Status'
+)
+
+# -----------------------------------------------------------------------------
+# 7. Export all figures to a single HTML file
+# -----------------------------------------------------------------------------
+figs = [fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8]
+html_parts = []
+for i, fig in enumerate(figs, start=1):
+    html_parts.append(
+        fig.to_html(
+            include_plotlyjs='cdn',
+            full_html=False,
+            div_id=f'fig{i}'
+        )
+    )
+
+html_page = (
+    '<!DOCTYPE html>'
+    '<html><head><meta charset="utf-8"><title>Interactive Plots</title></head>'
+    '<body style="background-color:#1e1e1e; margin:0; padding:20px;">\n'
+    + "\n".join(html_parts) +
+    '\n</body></html>'
+)
+
+with open('output.html', 'w', encoding='utf-8') as f:
+    f.write(html_page)
+
+print("✅ output.html generated with enhanced interactive figures.")
+
