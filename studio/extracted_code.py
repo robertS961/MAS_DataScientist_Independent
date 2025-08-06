@@ -10092,3 +10092,505 @@ with open('output.html', 'w', encoding='utf-8') as f:
 
 print("output.html has been generated with all interactive figures.")
 
+# ---- NEW BLOCK ---- # 
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+import plotly.express as px
+import plotly.graph_objects as go
+from statsmodels.tsa.arima.model import ARIMA
+from plotly.io import to_html
+import warnings
+
+warnings.filterwarnings("ignore")
+
+# -------------------------------
+# 1. Load, dedupe, and preprocess
+# -------------------------------
+df = pd.read_csv('dataset.csv')
+
+# Remove exact duplicates by DOI
+df = df.drop_duplicates(subset='DOI').reset_index(drop=True)
+
+# Fill key numeric NaNs with medians
+for col in ['AminerCitationCount', 'CitationCount_CrossRef', 'Downloads_Xplore']:
+    df[col] = df[col].fillna(df[col].median())
+
+# -------------------------------
+# 2. Conference Impact Analysis
+# -------------------------------
+conf_stats = (
+    df.groupby('Conference')['CitationCount_CrossRef']
+      .agg(median_cit='median', mean_cit='mean', count='count')
+      .reset_index()
+)
+# Only conferences with at least 10 papers
+conf_stats = conf_stats[conf_stats['count'] >= 10]
+# Sort by mean descending
+conf_stats = conf_stats.sort_values('mean_cit', ascending=False).head(10)
+
+fig1 = px.bar(
+    conf_stats,
+    x='mean_cit',
+    y='Conference',
+    orientation='h',
+    color='mean_cit',
+    color_continuous_scale=px.colors.sequential.Plasma,
+    error_x=conf_stats['mean_cit'] - conf_stats['median_cit'],
+    labels={
+        'mean_cit':'Avg CrossRef Citations',
+        'Conference':'Conference'
+    },
+    title="Top 10 Conferences by Average CrossRef Citations (≥10 papers)",
+    hover_data={'count':True, 'median_cit':True}
+)
+fig1.update_layout(
+    template='plotly_white',
+    yaxis=dict(autorange="reversed"),  # largest at top
+    xaxis=dict(range=[0, conf_stats['mean_cit'].max() * 1.1]),
+    margin=dict(l=200, r=40, t=60, b=40)
+)
+
+# -------------------------------
+# 3. Correlation Analysis
+# -------------------------------
+corr_df = df[['Downloads_Xplore','AminerCitationCount','CitationCount_CrossRef']]
+fig2 = px.scatter_matrix(
+    corr_df,
+    dimensions=corr_df.columns,
+    title="Downloads vs. Aminer & CrossRef Citations",
+    labels={
+        'Downloads_Xplore':'Downloads',
+        'AminerCitationCount':'Aminer Citations',
+        'CitationCount_CrossRef':'CrossRef Citations'
+    },
+    color_discrete_sequence=px.colors.qualitative.Safe
+)
+fig2.update_layout(template='plotly_white', width=800, height=800)
+for trace in fig2.select_traces():
+    trace.update(marker=dict(size=5))  # Removed invalid selector usage
+
+# -------------------------------
+# 4. Topic Modeling & Top Words
+# -------------------------------
+abstracts = df[['Abstract','Year']].dropna(subset=['Abstract'])
+vectorizer = CountVectorizer(max_df=0.9, min_df=10, stop_words='english')
+X = vectorizer.fit_transform(abstracts['Abstract'])
+
+n_topics = 5
+lda = LatentDirichletAllocation(n_components=n_topics, random_state=0)
+topic_matrix = lda.fit_transform(X)
+
+# Extract top words
+words = np.array(vectorizer.get_feature_names_out())
+topic_word_rows = []
+for t in range(n_topics):
+    top_idx = lda.components_[t].argsort()[-10:][::-1]
+    for idx in top_idx:
+        topic_word_rows.append({
+            'Topic': f'Topic {t+1}',
+            'Word': words[idx],
+            'Importance': lda.components_[t][idx]
+        })
+topic_words_df = pd.DataFrame(topic_word_rows)
+
+fig3 = px.bar(
+    topic_words_df,
+    x='Word',
+    y='Importance',
+    facet_col='Topic',
+    facet_col_wrap=2,
+    color='Topic',
+    color_discrete_sequence=px.colors.qualitative.Vivid,
+    title="Top 10 Words per LDA Topic",
+)
+fig3.update_layout(
+    template='plotly_white',
+    showlegend=False,
+    height=600,
+    margin=dict(t=60, b=40, l=40, r=40)
+)
+fig3.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+
+# -------------------------------
+# 5. Topic Trends Over Time
+# -------------------------------
+topic_trends = pd.DataFrame(
+    topic_matrix,
+    columns=[f'Topic {i+1}' for i in range(n_topics)]
+)
+topic_trends['Year'] = abstracts['Year'].values
+yearly = topic_trends.groupby('Year').mean().reset_index()
+
+fig4 = go.Figure()
+colors = px.colors.qualitative.Dark24
+for i, col in enumerate([f'Topic {i+1}' for i in range(n_topics)]):
+    fig4.add_trace(go.Scatter(
+        x=yearly['Year'],
+        y=yearly[col],
+        mode='lines+markers',
+        name=col,
+        marker=dict(color=colors[i]),
+        hovertemplate='Year %{x}<br>'+col+': %{y:.3f}<extra></extra>'
+    ))
+fig4.update_layout(
+    title="Evolution of Topic Prevalence Over Time",
+    xaxis_title="Year",
+    yaxis_title="Average Topic Weight",
+    template='plotly_white',
+    xaxis=dict(rangeslider=dict(visible=True)),
+    legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
+)
+
+# -------------------------------
+# 6. Time Series ARIMA Forecast
+# -------------------------------
+ts = df.groupby('Year')['Downloads_Xplore'].sum().reset_index()
+all_years = pd.Series(range(ts['Year'].min(), ts['Year'].max()+1), name='Year')
+ts = (all_years.to_frame()
+      .merge(ts, on='Year', how='left')
+      .fillna(0)
+      .set_index('Year'))
+
+model = ARIMA(ts['Downloads_Xplore'], order=(1,1,1))
+res = model.fit()
+steps = 5
+fc = res.get_forecast(steps=steps)
+fc_mean = fc.predicted_mean
+fc_ci = fc.conf_int()
+
+future_years = list(range(ts.index.max()+1, ts.index.max()+1+steps))
+
+fig5 = go.Figure()
+# Actual
+fig5.add_trace(go.Scatter(
+    x=ts.index,
+    y=ts['Downloads_Xplore'],
+    mode='lines+markers',
+    name='Actual',
+    marker=dict(color='royalblue'),
+    hovertemplate='Year %{x}<br>Downloads: %{y:.0f}<extra></extra>'
+))
+# Forecast
+fig5.add_trace(go.Scatter(
+    x=future_years,
+    y=fc_mean,
+    mode='lines+markers',
+    name='Forecast',
+    marker=dict(color='firebrick'),
+    hovertemplate='Year %{x}<br>Forecast: %{y:.0f}<extra></extra>'
+))
+# CI band
+fig5.add_trace(go.Scatter(
+    x=future_years + future_years[::-1],
+    y=list(fc_ci.iloc[:,0]) + list(fc_ci.iloc[:,1][::-1]),
+    fill='toself',
+    fillcolor='rgba(255,0,0,0.2)',
+    line=dict(color='rgba(255,255,255,0)'),
+    hoverinfo='skip',
+    name='95% CI'
+))
+fig5.update_layout(
+    title="Annual Downloads_Xplore: Actuals & 5-Year ARIMA Forecast",
+    xaxis_title="Year",
+    yaxis_title="Total Downloads",
+    template='plotly_white',
+    xaxis=dict(range=[ts.index.min(), future_years[-1]],
+               rangeslider=dict(visible=True)),
+    margin=dict(t=60,b=40,l=60,r=40)
+)
+
+# -------------------------------
+# 7. Export to HTML
+# -------------------------------
+figures = [fig1, fig2, fig3, fig4, fig5]
+html_parts = ["<script src='https://cdn.plot.ly/plotly-latest.min.js'></script>"]
+for i, fig in enumerate(figures):
+    html_parts.append(
+        to_html(fig, full_html=False, include_plotlyjs=False, div_id=f"plot{i}")
+    )
+
+html_page = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"/><title>Interactive Data Science Visuals</title></head><body>
+<h1 style="text-align:center;">Data Science & Statistical Learning Visualizations</h1>
+<hr>
+{'<hr>'.join(html_parts)}
+</body></html>
+"""
+
+with open('output.html', 'w', encoding='utf-8') as f:
+    f.write(html_page)
+
+print("✅ output.html generated with improved interactive Plotly figures.")
+
+# ---- NEW BLOCK ---- # 
+# enhanced_plotly_dashboard.py
+
+import pandas as pd
+import numpy as np
+import nltk
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+import statsmodels.api as sm
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.offline import plot
+
+# 1. Load and preprocess data
+df = pd.read_csv("dataset.csv")
+
+# Numeric columns: fill NaN with median
+num_cols = [
+    "FirstPage", "LastPage", "AminerCitationCount", "CitationCount_CrossRef",
+    "PubsCited_CrossRef", "Downloads_Xplore"
+]
+for col in num_cols:
+    df[col] = df[col].fillna(df[col].median())
+
+# Categorical columns: fill NaN with "Unknown"
+cat_cols = ["Conference", "PaperType", "AuthorKeywords", "Award", "Abstract"]
+for col in cat_cols:
+    df[col] = df[col].fillna("Unknown")
+
+# Binary flag for Award
+df["AwardFlag"] = np.where(df["Award"] != "Unknown", 1, 0)
+
+# Year should be int
+df["Year"] = df["Year"].astype(int)
+min_year, max_year = df["Year"].min(), df["Year"].max()
+
+# 2. Conference Impact Analysis: top 5 by citations
+conf_agg = (
+    df.groupby(["Year", "Conference"])
+      .agg(Citations=("CitationCount_CrossRef", "sum"),
+           Downloads=("Downloads_Xplore", "sum"))
+      .reset_index()
+)
+top5 = (
+    conf_agg.groupby("Conference")["Citations"]
+            .sum()
+            .nlargest(5)
+            .index
+            .tolist()
+)
+conf_plot = conf_agg[conf_agg["Conference"].isin(top5)]
+
+# Figure 1: Citations over time with range slider & selector
+fig1 = px.line(
+    conf_plot,
+    x="Year", y="Citations", color="Conference",
+    title="Top 5 Conferences: Citation Trends Over Years",
+    markers=True,
+    color_discrete_sequence=px.colors.qualitative.Bold
+)
+fig1.update_traces(
+    hovertemplate="Conference: %{name}<br>Year: %{x}<br>Citations: %{y}<extra></extra>"
+)
+fig1.update_layout(
+    template="plotly_dark",
+    xaxis=dict(
+        title="Year",
+        range=[min_year - 1, max_year + 1],
+        rangeselector=dict(
+            buttons=[
+                dict(count=5, label="5Y", step="year", stepmode="backward"),
+                dict(count=10, label="10Y", step="year", stepmode="backward"),
+                dict(step="all")
+            ]
+        ),
+        rangeslider=dict(visible=True)
+    ),
+    yaxis=dict(title="Total Citations", rangemode="tozero")
+)
+
+# Figure 2: Downloads over time with same controls
+fig2 = px.line(
+    conf_plot,
+    x="Year", y="Downloads", color="Conference",
+    title="Top 5 Conferences: Download Trends Over Years",
+    markers=True,
+    color_discrete_sequence=px.colors.qualitative.Vivid
+)
+fig2.update_traces(
+    hovertemplate="Conference: %{name}<br>Year: %{x}<br>Downloads: %{y}<extra></extra>"
+)
+fig2.update_layout(
+    template="plotly_dark",
+    xaxis=fig1.layout.xaxis,
+    yaxis=dict(title="Total Downloads", rangemode="tozero")
+)
+
+# 3. Trend Analysis of Keywords via LDA
+docs = df["AuthorKeywords"].str.replace(";", " ").tolist()
+vectorizer = CountVectorizer(max_df=0.9, min_df=5, stop_words="english")
+tf_matrix = vectorizer.fit_transform(docs)
+
+lda = LatentDirichletAllocation(n_components=4, random_state=0)
+topic_matrix = lda.fit_transform(tf_matrix)
+
+lda_df = pd.DataFrame(
+    topic_matrix,
+    columns=[f"Topic {i+1}" for i in range(4)]
+)
+lda_df["Year"] = df["Year"].values
+topic_year = lda_df.groupby("Year").mean().reset_index()
+
+fig3 = go.Figure()
+colors = px.colors.qualitative.Safe
+for i, topic in enumerate(topic_year.columns[1:]):
+    fig3.add_trace(go.Scatter(
+        x=topic_year["Year"],
+        y=topic_year[topic],
+        mode="lines+markers",
+        name=topic,
+        line=dict(color=colors[i], width=2),
+        hovertemplate=f"Year: %{{x}}<br>{topic}: %{{y:.3f}}<extra></extra>"
+    ))
+fig3.update_layout(
+    title="Evolution of Keyword Topics Over Years",
+    template="plotly_dark",
+    xaxis=dict(
+        title="Year",
+        range=[min_year - 1, max_year + 1],
+        rangeselector=fig1.layout.xaxis.rangeselector,
+        rangeslider=dict(visible=True)
+    ),
+    yaxis=dict(title="Avg Topic Proportion", rangemode="tozero")
+)
+
+# 4. Predictive Modeling of Paper Downloads: feature importance
+mod_df = df[["Downloads_Xplore", "PaperType", "Conference", "Year"]].copy()
+mod_df = pd.get_dummies(mod_df, columns=["PaperType", "Conference"], drop_first=True)
+X = mod_df.drop("Downloads_Xplore", axis=1)
+y = mod_df["Downloads_Xplore"]
+
+rf = RandomForestRegressor(n_estimators=200, random_state=42)
+rf.fit(X, y)
+imp = pd.Series(rf.feature_importances_, index=X.columns)
+feat_imp = imp.sort_values(ascending=False).head(10).reset_index()
+feat_imp.columns = ["Feature", "Importance"]
+
+fig4 = px.bar(
+    feat_imp,
+    x="Importance", y="Feature",
+    orientation="h",
+    title="Top 10 Features for Predicting Downloads",
+    color="Importance",
+    color_continuous_scale=px.colors.sequential.Plasma
+)
+fig4.update_traces(
+    hovertemplate="Feature: %{y}<br>Importance: %{x:.4f}<extra></extra>"
+)
+fig4.update_layout(
+    template="plotly_dark",
+    yaxis=dict(autorange="reversed", title="Feature"),
+    xaxis=dict(title="Importance")
+)
+
+# 5. Regression Analysis on Research Impact
+reg_df = df[[
+    "CitationCount_CrossRef", "Downloads_Xplore", "AwardFlag", "PubsCited_CrossRef"
+]].dropna()
+Xr = sm.add_constant(
+    reg_df[["Downloads_Xplore", "AwardFlag", "PubsCited_CrossRef"]]
+)
+yr = reg_df["CitationCount_CrossRef"]
+ols = sm.OLS(yr, Xr).fit()
+
+coef = ols.params.drop("const").sort_values()
+coef_df = coef.reset_index()
+coef_df.columns = ["Feature", "Coefficient"]
+
+fig5 = px.bar(
+    coef_df,
+    x="Coefficient", y="Feature",
+    orientation="h",
+    title="Regression Coefficients for Citation Count",
+    color="Coefficient",
+    color_continuous_scale=px.colors.sequential.Viridis
+)
+fig5.update_traces(
+    hovertemplate="Feature: %{y}<br>Coefficient: %{x:.4f}<extra></extra>"
+)
+fig5.update_layout(
+    template="plotly_dark",
+    yaxis=dict(autorange="reversed", title="Feature"),
+    xaxis=dict(title="Coefficient")
+)
+
+# 6. Sentiment Analysis of Abstracts
+nltk.download("vader_lexicon", quiet=True)
+sia = SentimentIntensityAnalyzer()
+df["Sentiment"] = df["Abstract"].apply(
+    lambda txt: sia.polarity_scores(txt)["compound"]
+)
+
+# Fig6: Histogram with marginal rug
+fig6 = px.histogram(
+    df,
+    x="Sentiment",
+    nbins=50,
+    title="Distribution of Abstract Sentiment Scores",
+    marginal="rug",
+    color_discrete_sequence=["#EF553B"]
+)
+fig6.update_traces(
+    hovertemplate="Sentiment: %{x:.3f}<br>Count: %{y}<extra></extra>"
+)
+fig6.update_layout(template="plotly_dark", xaxis=dict(title="Sentiment Score"))
+
+# Fig7: Avg sentiment over years with slider
+sent_year = df.groupby("Year")["Sentiment"].mean().reset_index()
+fig7 = px.line(
+    sent_year,
+    x="Year", y="Sentiment",
+    title="Average Abstract Sentiment Over Years",
+    markers=True,
+    color_discrete_sequence=["#00CC96"]
+)
+fig7.update_traces(
+    hovertemplate="Year: %{x}<br>Avg Sentiment: %{y:.3f}<extra></extra>"
+)
+fig7.update_layout(
+    template="plotly_dark",
+    xaxis=dict(
+        title="Year",
+        range=[min_year - 1, max_year + 1],
+        rangeselector=fig1.layout.xaxis.rangeselector,
+        rangeslider=dict(visible=True)
+    ),
+    yaxis=dict(title="Avg Sentiment", rangemode="tozero")
+)
+
+# 7. Export all to a standalone HTML
+all_figs = [fig1, fig2, fig3, fig4, fig5, fig6, fig7]
+divs = [plot(fig, include_plotlyjs=False, output_type="div") for fig in all_figs]
+
+html_template = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Enhanced Interactive Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {{ background-color: #1e1e1e; color: #fff; margin:0; padding:0; }}
+        h1 {{ text-align:center; padding:20px 0; }}
+        .plot-container {{ width:90%; margin:20px auto; }}
+    </style>
+</head>
+<body>
+    <h1>Enhanced Interactive Data Science Dashboard</h1>
+    {"".join(f'<div class="plot-container">{d}</div>' for d in divs)}
+</body>
+</html>
+"""
+
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html_template)
+
+print("Enhanced dashboard generated in output.html")
+
