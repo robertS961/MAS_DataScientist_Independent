@@ -1,270 +1,229 @@
 # ---- NEW BLOCK ---- # 
-# enhanced_plotly_dashboard.py
+# plotly_visualizations_enhanced.py
 
 import pandas as pd
 import numpy as np
-import nltk
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-import statsmodels.api as sm
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_curve, auc
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.offline import plot
+from plotly.subplots import make_subplots
 
-# 1. Load and preprocess data
+# 1. Load & clean
 df = pd.read_csv("dataset.csv")
 
-# Numeric columns: fill NaN with median
-num_cols = [
-    "FirstPage", "LastPage", "AminerCitationCount", "CitationCount_CrossRef",
-    "PubsCited_CrossRef", "Downloads_Xplore"
-]
-for col in num_cols:
+# Numeric fill
+for col in ["AminerCitationCount", "CitationCount_CrossRef", "Downloads_Xplore"]:
     df[col] = df[col].fillna(df[col].median())
 
-# Categorical columns: fill NaN with "Unknown"
-cat_cols = ["Conference", "PaperType", "AuthorKeywords", "Award", "Abstract"]
-for col in cat_cols:
-    df[col] = df[col].fillna("Unknown")
+# Categorical/text fill
+df["PaperType"] = df["PaperType"].fillna("Unknown")
+df["Conference"] = df["Conference"].fillna("Unknown")
+df["InternalReferences"] = df["InternalReferences"].fillna("")
+df["GraphicsReplicabilityStamp"] = df["GraphicsReplicabilityStamp"].fillna("")
 
-# Binary flag for Award
-df["AwardFlag"] = np.where(df["Award"] != "Unknown", 1, 0)
+# Derived features
+df["NumInternalRefs"] = df["InternalReferences"].apply(lambda x: len(x.split(";")) if x else 0)
+df["GraphicsFlag"] = (df["GraphicsReplicabilityStamp"] != "").astype(int)
 
-# Year should be int
-df["Year"] = df["Year"].astype(int)
-min_year, max_year = df["Year"].min(), df["Year"].max()
+# 2. Enhanced Trend Analysis (dark template, slider, dropdown)
+trend_df = df.groupby(["Year", "PaperType"]) \
+             .agg(Aminer=("AminerCitationCount","mean"),
+                  CrossRef=("CitationCount_CrossRef","mean")) \
+             .reset_index()
 
-# 2. Conference Impact Analysis: top 5 by citations
-conf_agg = (
-    df.groupby(["Year", "Conference"])
-      .agg(Citations=("CitationCount_CrossRef", "sum"),
-           Downloads=("Downloads_Xplore", "sum"))
-      .reset_index()
-)
-top5 = (
-    conf_agg.groupby("Conference")["Citations"]
-            .sum()
-            .nlargest(5)
-            .index
-            .tolist()
-)
-conf_plot = conf_agg[conf_agg["Conference"].isin(top5)]
+# Base "All" year-aggregated
+all_df = df.groupby("Year").agg(
+    Aminer=("AminerCitationCount","mean"),
+    CrossRef=("CitationCount_CrossRef","mean")
+).reset_index()
 
-# Figure 1: Citations over time with range slider & selector
-fig1 = px.line(
-    conf_plot,
-    x="Year", y="Citations", color="Conference",
-    title="Top 5 Conferences: Citation Trends Over Years",
-    markers=True,
-    color_discrete_sequence=px.colors.qualitative.Bold
-)
-fig1.update_traces(
-    hovertemplate="Conference: %{name}<br>Year: %{x}<br>Citations: %{y}<extra></extra>"
-)
-fig1.update_layout(
+fig_trend = go.Figure()
+# All traces
+fig_trend.add_trace(go.Scatter(
+    x=all_df.Year, y=all_df.Aminer,
+    mode="lines+markers", name="Aminer Citations",
+    line=dict(color=px.colors.qualitative.Dark24[0], width=3)))
+fig_trend.add_trace(go.Scatter(
+    x=all_df.Year, y=all_df.CrossRef,
+    mode="lines+markers", name="CrossRef Citations",
+    line=dict(color=px.colors.qualitative.Dark24[2], width=3)))
+
+# Per-paper-type hidden by default
+paper_types = sorted(trend_df.PaperType.unique())
+for i, pt in enumerate(paper_types):
+    sub = trend_df[trend_df.PaperType == pt]
+    fig_trend.add_trace(go.Scatter(
+        x=sub.Year, y=sub.Aminer,
+        mode="lines", name=f"Aminer ({pt})",
+        line=dict(dash="dash", color=px.colors.qualitative.Dark24[0]),
+        visible=False))
+    fig_trend.add_trace(go.Scatter(
+        x=sub.Year, y=sub.CrossRef,
+        mode="lines", name=f"CrossRef ({pt})",
+        line=dict(dash="dash", color=px.colors.qualitative.Dark24[2]),
+        visible=False))
+
+# Dropdown menus
+buttons = []
+# button for "All"
+vis0 = [True, True] + [False] * (2 * len(paper_types))
+buttons.append(dict(label="All", method="update",
+                    args=[{"visible": vis0},
+                          {"title":"Citation Trend: All PaperTypes"}]))
+# buttons for each paper type
+for idx, pt in enumerate(paper_types):
+    vis = [False] * (2 + 2*len(paper_types))
+    base = 2 + idx*2
+    vis[base] = vis[base+1] = True
+    buttons.append(dict(label=pt, method="update",
+                        args=[{"visible": vis},
+                              {"title":f"Citation Trend: {pt}"}]))
+
+fig_trend.update_layout(
     template="plotly_dark",
-    xaxis=dict(
-        title="Year",
-        range=[min_year - 1, max_year + 1],
-        rangeselector=dict(
-            buttons=[
-                dict(count=5, label="5Y", step="year", stepmode="backward"),
-                dict(count=10, label="10Y", step="year", stepmode="backward"),
-                dict(step="all")
-            ]
-        ),
-        rangeslider=dict(visible=True)
+    updatemenus=[dict(active=0, buttons=buttons, x=1.15, y=1.05)],
+    title="Citation Trend: All PaperTypes",
+    xaxis=dict(title="Year", rangeslider=dict(visible=True)),
+    yaxis=dict(title="Mean Citations"),
+    margin=dict(r=150)
+)
+
+# 3. Award Prediction ROC (dark, hover & legend)
+df["AwardBinary"] = df["Award"].notna().astype(int)
+X = pd.get_dummies(df[["PaperType","Conference","Year","Downloads_Xplore","NumInternalRefs"]],
+                   drop_first=True)
+y = df["AwardBinary"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, stratify=y, test_size=0.3, random_state=42)
+
+# Models
+lr = LogisticRegression(max_iter=500).fit(X_train, y_train)
+rf = RandomForestClassifier(n_estimators=100, random_state=42).fit(X_train, y_train)
+
+fpr_lr, tpr_lr, _ = roc_curve(y_test, lr.predict_proba(X_test)[:,1])
+fpr_rf, tpr_rf, _ = roc_curve(y_test, rf.predict_proba(X_test)[:,1])
+auc_lr, auc_rf = auc(fpr_lr, tpr_lr), auc(fpr_rf, tpr_rf)
+
+fig_ml = go.Figure()
+fig_ml.add_trace(go.Scatter(
+    x=fpr_lr, y=tpr_lr, mode="lines",
+    name=f"Logistic (AUC={auc_lr:.2f})",
+    line=dict(color=px.colors.qualitative.Dark24[4], width=3)))
+fig_ml.add_trace(go.Scatter(
+    x=fpr_rf, y=tpr_rf, mode="lines",
+    name=f"RandomForest (AUC={auc_rf:.2f})",
+    line=dict(color=px.colors.qualitative.Dark24[6], width=3)))
+fig_ml.add_trace(go.Scatter(
+    x=[0,1], y=[0,1], mode="lines",
+    name="Chance", line=dict(color="gray", dash="dash")))
+
+fig_ml.update_layout(
+    template="plotly_dark",
+    title="ROC Curves for Award Prediction",
+    xaxis=dict(title="False Positive Rate"),
+    yaxis=dict(title="True Positive Rate")
+)
+
+# 4. Regression: Actual vs Predicted Downloads (dark, residual coloring)
+reg_df = df[["Downloads_Xplore","AminerCitationCount","GraphicsFlag","NumInternalRefs","Year","Conference"]]
+reg_df = pd.get_dummies(reg_df, drop_first=True)
+Xr, yr = reg_df.drop(columns="Downloads_Xplore"), reg_df["Downloads_Xplore"]
+model_reg = LinearRegression().fit(Xr, yr)
+yp = model_reg.predict(Xr)
+resid = yp - yr
+
+fig_reg = go.Figure(data=go.Scatter(
+    x=yr, y=yp,
+    mode="markers",
+    marker=dict(
+        size=7,
+        color=resid,
+        colorscale="RdBu",
+        showscale=True,
+        colorbar=dict(title="Residual")
     ),
-    yaxis=dict(title="Total Citations", rangemode="tozero")
+    hovertemplate=
+        "Actual: %{x:.0f}<br>" +
+        "Pred: %{y:.0f}<br>" +
+        "Resid: %{marker.color:.1f}<extra></extra>"
+))
+fig_reg.add_shape(
+    type="line", x0=yr.min(), y0=yr.min(),
+    x1=yr.max(), y1=yr.max(),
+    line=dict(color="white", dash="dash")
 )
-
-# Figure 2: Downloads over time with same controls
-fig2 = px.line(
-    conf_plot,
-    x="Year", y="Downloads", color="Conference",
-    title="Top 5 Conferences: Download Trends Over Years",
-    markers=True,
-    color_discrete_sequence=px.colors.qualitative.Vivid
-)
-fig2.update_traces(
-    hovertemplate="Conference: %{name}<br>Year: %{x}<br>Downloads: %{y}<extra></extra>"
-)
-fig2.update_layout(
+fig_reg.update_layout(
     template="plotly_dark",
-    xaxis=fig1.layout.xaxis,
-    yaxis=dict(title="Total Downloads", rangemode="tozero")
+    title="Actual vs Predicted Downloads",
+    xaxis=dict(title="Actual Downloads"),
+    yaxis=dict(title="Predicted Downloads")
 )
 
-# 3. Trend Analysis of Keywords via LDA
-docs = df["AuthorKeywords"].str.replace(";", " ").tolist()
-vectorizer = CountVectorizer(max_df=0.9, min_df=5, stop_words="english")
-tf_matrix = vectorizer.fit_transform(docs)
+# 5. Conference Impact (top 15, horizontal), dark
+conf_stats = df.groupby("Conference").agg(
+    Aminer=("AminerCitationCount","mean"),
+    CrossRef=("CitationCount_CrossRef","mean")
+).reset_index().sort_values("Aminer", ascending=False).head(15)
 
-lda = LatentDirichletAllocation(n_components=4, random_state=0)
-topic_matrix = lda.fit_transform(tf_matrix)
-
-lda_df = pd.DataFrame(
-    topic_matrix,
-    columns=[f"Topic {i+1}" for i in range(4)]
+conf_m = conf_stats.melt(id_vars="Conference", var_name="Metric", value_name="Mean")
+fig_conf = px.bar(
+    conf_m, x="Mean", y="Conference", color="Metric",
+    orientation="h", barmode="group",
+    color_discrete_sequence=px.colors.qualitative.Dark24,
+    title="Top 15 Conferences by Mean Citations"
 )
-lda_df["Year"] = df["Year"].values
-topic_year = lda_df.groupby("Year").mean().reset_index()
+fig_conf.update_layout(template="plotly_dark", yaxis=dict(autorange="reversed"))
 
-fig3 = go.Figure()
-colors = px.colors.qualitative.Safe
-for i, topic in enumerate(topic_year.columns[1:]):
-    fig3.add_trace(go.Scatter(
-        x=topic_year["Year"],
-        y=topic_year[topic],
-        mode="lines+markers",
-        name=topic,
-        line=dict(color=colors[i], width=2),
-        hovertemplate=f"Year: %{{x}}<br>{topic}: %{{y:.3f}}<extra></extra>"
-    ))
-fig3.update_layout(
-    title="Evolution of Keyword Topics Over Years",
-    template="plotly_dark",
-    xaxis=dict(
-        title="Year",
-        range=[min_year - 1, max_year + 1],
-        rangeselector=fig1.layout.xaxis.rangeselector,
-        rangeslider=dict(visible=True)
-    ),
-    yaxis=dict(title="Avg Topic Proportion", rangemode="tozero")
-)
+# 6. Award Impact (violin), dark
+df_aw = df.copy()
+df_aw["AwardStr"] = df_aw["AwardBinary"].map({0:"No Award",1:"Award"})
+fig_award = make_subplots(rows=1, cols=2, subplot_titles=("Citations","Downloads"))
+fig_award.add_trace(go.Violin(
+    x=df_aw["AwardStr"], y=df_aw["CitationCount_CrossRef"],
+    name="Citations", spanmode="hard",
+    line_color=px.colors.qualitative.Dark24[8],
+    fillcolor="rgba(50,50,200,0.6)"
+), row=1, col=1)
+fig_award.add_trace(go.Violin(
+    x=df_aw["AwardStr"], y=df_aw["Downloads_Xplore"],
+    name="Downloads", spanmode="hard",
+    line_color=px.colors.qualitative.Dark24[10],
+    fillcolor="rgba(200,50,50,0.6)"
+), row=1, col=2)
+fig_award.update_layout(template="plotly_dark", title="Award Impact on Citations & Downloads")
 
-# 4. Predictive Modeling of Paper Downloads: feature importance
-mod_df = df[["Downloads_Xplore", "PaperType", "Conference", "Year"]].copy()
-mod_df = pd.get_dummies(mod_df, columns=["PaperType", "Conference"], drop_first=True)
-X = mod_df.drop("Downloads_Xplore", axis=1)
-y = mod_df["Downloads_Xplore"]
+# Collect figures
+figs = [
+    ("Citation Trend Analysis", fig_trend),
+    ("Award Prediction ROC", fig_ml),
+    ("Download Regression Analysis", fig_reg),
+    ("Conference Impact Assessment", fig_conf),
+    ("Award Impact Violin Plots", fig_award)
+]
 
-rf = RandomForestRegressor(n_estimators=200, random_state=42)
-rf.fit(X, y)
-imp = pd.Series(rf.feature_importances_, index=X.columns)
-feat_imp = imp.sort_values(ascending=False).head(10).reset_index()
-feat_imp.columns = ["Feature", "Importance"]
+# 7. Build HTML with CDN in each div
+html_parts = []
+for title, fig in figs:
+    div = fig.to_html(include_plotlyjs='cdn', full_html=False)
+    html_parts.append(f"<h2>{title}</h2>\n{div}\n")
 
-fig4 = px.bar(
-    feat_imp,
-    x="Importance", y="Feature",
-    orientation="h",
-    title="Top 10 Features for Predicting Downloads",
-    color="Importance",
-    color_continuous_scale=px.colors.sequential.Plasma
-)
-fig4.update_traces(
-    hovertemplate="Feature: %{y}<br>Importance: %{x:.4f}<extra></extra>"
-)
-fig4.update_layout(
-    template="plotly_dark",
-    yaxis=dict(autorange="reversed", title="Feature"),
-    xaxis=dict(title="Importance")
-)
+html_page = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Dark Mode Plotly Dashboard</title>
+<style>
+  body {{ background:#111; color:#ddd; font-family:sans-serif; padding:20px; }}
+  h1 {{ text-align:center; }}
+  h2 {{ margin-top:50px; }}
+</style>
+</head><body>
+<h1>Interactive Dark-Mode Visualizations</h1>
+{''.join(html_parts)}
+</body></html>"""
 
-# 5. Regression Analysis on Research Impact
-reg_df = df[[
-    "CitationCount_CrossRef", "Downloads_Xplore", "AwardFlag", "PubsCited_CrossRef"
-]].dropna()
-Xr = sm.add_constant(
-    reg_df[["Downloads_Xplore", "AwardFlag", "PubsCited_CrossRef"]]
-)
-yr = reg_df["CitationCount_CrossRef"]
-ols = sm.OLS(yr, Xr).fit()
+with open("output.html","w",encoding="utf-8") as f:
+    f.write(html_page)
 
-coef = ols.params.drop("const").sort_values()
-coef_df = coef.reset_index()
-coef_df.columns = ["Feature", "Coefficient"]
-
-fig5 = px.bar(
-    coef_df,
-    x="Coefficient", y="Feature",
-    orientation="h",
-    title="Regression Coefficients for Citation Count",
-    color="Coefficient",
-    color_continuous_scale=px.colors.sequential.Viridis
-)
-fig5.update_traces(
-    hovertemplate="Feature: %{y}<br>Coefficient: %{x:.4f}<extra></extra>"
-)
-fig5.update_layout(
-    template="plotly_dark",
-    yaxis=dict(autorange="reversed", title="Feature"),
-    xaxis=dict(title="Coefficient")
-)
-
-# 6. Sentiment Analysis of Abstracts
-nltk.download("vader_lexicon", quiet=True)
-sia = SentimentIntensityAnalyzer()
-df["Sentiment"] = df["Abstract"].apply(
-    lambda txt: sia.polarity_scores(txt)["compound"]
-)
-
-# Fig6: Histogram with marginal rug
-fig6 = px.histogram(
-    df,
-    x="Sentiment",
-    nbins=50,
-    title="Distribution of Abstract Sentiment Scores",
-    marginal="rug",
-    color_discrete_sequence=["#EF553B"]
-)
-fig6.update_traces(
-    hovertemplate="Sentiment: %{x:.3f}<br>Count: %{y}<extra></extra>"
-)
-fig6.update_layout(template="plotly_dark", xaxis=dict(title="Sentiment Score"))
-
-# Fig7: Avg sentiment over years with slider
-sent_year = df.groupby("Year")["Sentiment"].mean().reset_index()
-fig7 = px.line(
-    sent_year,
-    x="Year", y="Sentiment",
-    title="Average Abstract Sentiment Over Years",
-    markers=True,
-    color_discrete_sequence=["#00CC96"]
-)
-fig7.update_traces(
-    hovertemplate="Year: %{x}<br>Avg Sentiment: %{y:.3f}<extra></extra>"
-)
-fig7.update_layout(
-    template="plotly_dark",
-    xaxis=dict(
-        title="Year",
-        range=[min_year - 1, max_year + 1],
-        rangeselector=fig1.layout.xaxis.rangeselector,
-        rangeslider=dict(visible=True)
-    ),
-    yaxis=dict(title="Avg Sentiment", rangemode="tozero")
-)
-
-# 7. Export all to a standalone HTML
-all_figs = [fig1, fig2, fig3, fig4, fig5, fig6, fig7]
-divs = [plot(fig, include_plotlyjs=False, output_type="div") for fig in all_figs]
-
-html_template = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8" />
-    <title>Enhanced Interactive Dashboard</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <style>
-        body {{ background-color: #1e1e1e; color: #fff; margin:0; padding:0; }}
-        h1 {{ text-align:center; padding:20px 0; }}
-        .plot-container {{ width:90%; margin:20px auto; }}
-    </style>
-</head>
-<body>
-    <h1>Enhanced Interactive Data Science Dashboard</h1>
-    {"".join(f'<div class="plot-container">{d}</div>' for d in divs)}
-</body>
-</html>
-"""
-
-with open("output.html", "w", encoding="utf-8") as f:
-    f.write(html_template)
-
-print("Enhanced dashboard generated in output.html")
+print("output.html generated successfully in dark mode.")
 
