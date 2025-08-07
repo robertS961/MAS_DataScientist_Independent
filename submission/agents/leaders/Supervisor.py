@@ -1,13 +1,14 @@
-from helper_functions import make_supervisor_node
+from helper_functions import make_supervisor_node, get_llm
 from langchain_openai import ChatOpenAI
 from langgraph.graph import  START
 from agents import web_scraper_node, vis_a, Research_Stat_Agent, Research_DataScience_Agent, create_search_nodes
 from dotenv import load_dotenv
 from classes import State
+
 load_dotenv()
 
 from langgraph_supervisor import create_supervisor
-llm =  ChatOpenAI(model="gpt-4o")
+llm =  get_llm()
 def supervisor(state:State, agent: int = 0, name = "lead_supervisor"):
     if agent == 0:
         agents = [Research_Stat_Agent(State), Research_DataScience_Agent(State)]

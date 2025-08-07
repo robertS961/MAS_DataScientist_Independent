@@ -1,8 +1,10 @@
 
 from langgraph.prebuilt import create_react_agent
 from classes import State
+from helper_functions import get_llm
 
 def machinelearning_agent(state: State):
+    llm = get_llm()
     data = state['dataset_info']
     data_info = state['data_info']
     prompt = (
@@ -16,7 +18,7 @@ def machinelearning_agent(state: State):
     )
     #websearch = WebSearch()
     ml_agent = create_react_agent(
-        model="openai:gpt-4o", 
+        model=llm, 
         tools=[],
         name = "MachineLearning_Agent",
         prompt = prompt

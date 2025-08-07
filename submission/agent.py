@@ -20,24 +20,24 @@ class Agent:
         print("Supervisor Team is Created! \n")
         self.plotly_team = create_output_plotly_team(State)
         print("Plotly Team is Created! \n")
-    '''   
+    '''    
     def decode_output(self, output: dict):
         # if the final output contains Vega-Lite codes, then use generate_html_report
         # if the final output contains Python codes, then use generate_pdf_report
         generate_pdf_report(output, "output.pdf")
-        #generate_html_report(output, "output.html")
-    '''        
-
+        # generate_html_report(output, "output.html")
+    '''
     def process(self):
         #Return error if any of the graphs didn't build
         if self.research_team is None or self.supervisor_team is None or self.plotly_team is None or self.ml_team is None:
             raise RuntimeError("Agent not initialised. Call initialize() first.")
         
         # initialize the state & read the dataset
+        path = "dataset.csv" # change this when you change the dataset
         state = initialize_state_from_csv()
-        data_info = get_datainfo("dataset.csv")
+        data_info = get_datainfo(path)
         data = state['dataset_info']
-        data_description = data_describe("dataset.csv")
+        data_description = data_describe(path)
 
         #Set up State Variables for the ML Team
         dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "ml")

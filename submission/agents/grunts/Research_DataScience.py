@@ -3,8 +3,10 @@ from langgraph.prebuilt import create_react_agent
 from tools import transfer_to_stats_agent
 from tools import WebSearch
 from tools import scrape_webpages
+from helper_functions import get_llm
 
 def Research_DataScience_Agent(state:State):
+    llm = get_llm()
     web_search = WebSearch()
     stats_agent = transfer_to_stats_agent()
     print(f"\n\nThis is the current message {state['messages']}\n\n")
@@ -12,7 +14,7 @@ def Research_DataScience_Agent(state:State):
     # previous_feedback = state['feedback']
     data = state['dataset_info']
     research_ds_agent = create_react_agent(
-        model="openai:gpt-4o",
+        model=llm,
         tools=[web_search],
         prompt=(
             "You are a research data science agent.\n\n"

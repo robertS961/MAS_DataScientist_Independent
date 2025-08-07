@@ -1,10 +1,12 @@
 from classes import State
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from helper_functions import get_llm
 
 
 
 def make_judge(state:State):
+    llm = get_llm()
     current_message = state['messages']
     data = state['dataset_info']
     critique_prompt = (
@@ -18,7 +20,7 @@ def make_judge(state:State):
     )
 
     """Evaluate the assistant's response using a separate judge model."""
-    model = ChatOpenAI(model = 'gpt-4o', temperature = 0, max_tokens = 4096)
+    model = llm
     response = model.invoke([
         SystemMessage(content=critique_prompt),
         HumanMessage(content=f"Here is the current message{current_message} \n\n. State wether the message meets the protocol. If false return a message so a string with all the improvements. If True return the string True \n\n")

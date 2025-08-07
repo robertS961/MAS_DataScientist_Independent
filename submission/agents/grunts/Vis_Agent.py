@@ -1,10 +1,11 @@
 from classes import State
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import InMemorySaver
-from helper_functions import get_last_ai_message
+from helper_functions import get_last_ai_message, get_llm
 
 
 def vis_a(state:State):
+    llm = get_llm()
     data = state['dataset_info']
     data_info = state['data_info']
     code = state['code'] 
@@ -44,7 +45,7 @@ def vis_a(state:State):
         )
     
     vis_agent = create_react_agent(
-        model = "openai:gpt-4o",
+        model = llm,
         tools = [],
         prompt = prompt,
         name = 'vis_agent',
