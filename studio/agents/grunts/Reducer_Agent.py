@@ -1,8 +1,10 @@
 
 from langgraph.prebuilt import create_react_agent
 from classes import State
+from helper_functions import get_llm
 
 def reducer_agent(state: State, ideas:int = 5):
+    llm = get_llm()
     data = state['dataset_info']
     message = state['ideas']
     prompt = (
@@ -20,7 +22,7 @@ def reducer_agent(state: State, ideas:int = 5):
     )
     #websearch = WebSearch()
     reducer_agent = create_react_agent(
-        model="openai:gpt-4o", 
+        model=llm, 
         tools=[],
         name = "reducer_agent",
         prompt = prompt

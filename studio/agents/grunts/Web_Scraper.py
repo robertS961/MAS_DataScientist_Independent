@@ -5,8 +5,10 @@ from classes import State
 from langgraph.types import Command
 from typing import Literal
 from tools import scrape_webpages
+from helper_functions import get_llm
 
 def web_scraper_node(state:State):
+    llm = get_llm()
     data = state['dataset_info']
     prompt=(
             "You are a web scraper data science agent.\n\n"
@@ -18,7 +20,7 @@ def web_scraper_node(state:State):
             f"The results should be data science ideas applied to the {data} \n"
     )
     web_scraper_node = create_react_agent(
-        model="openai:gpt-4o", 
+        model=llm, 
         tools=[scrape_webpages],
         name = "web_scrape_node",
         prompt = prompt 

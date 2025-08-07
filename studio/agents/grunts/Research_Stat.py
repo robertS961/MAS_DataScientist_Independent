@@ -3,10 +3,12 @@ from langgraph.prebuilt import create_react_agent
 from tools.Web_Search import WebSearch
 from tools.Transfer_To_Ds_Agent import transfer_to_ds_agent
 from tools import scrape_webpages
+from helper_functions import get_llm
 
 
 
 def Research_Stat_Agent(state:State):
+    llm = get_llm()
     web_search = WebSearch()
     ds_agent = transfer_to_ds_agent()
     previous_message = state['messages']
@@ -14,7 +16,7 @@ def Research_Stat_Agent(state:State):
     data = state['dataset_info']
     #vis_agent = transfer_to_vis_agent()
     research_stat_agent = create_react_agent(
-        model="openai:gpt-4o",
+        model=llm,
         tools=[web_search],
         prompt=(
             "You are a research statistician agent.\n\n"

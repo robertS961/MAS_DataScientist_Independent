@@ -18,6 +18,7 @@ def prompt(expert_intro, message, data):
         "If you are passed ideas feel free to improve them or use them to create better ideas\n\n"
     )
 def create_search_nodes(count: int, state: State, name = "basic"):
+    llm = get_llm()
     agents = []
     for cnt in range(count):
         data = state['dataset_info']
@@ -29,7 +30,7 @@ def create_search_nodes(count: int, state: State, name = "basic"):
         }[(cnt % 3)]
         #websearch = WebSearch()
         search_agent = create_react_agent(
-            model="openai:gpt-4o", 
+            model=llm, 
             tools=[],
             name = f"search_node_{cnt}_{name}",
             prompt = prompt(expert_intro, message, data)

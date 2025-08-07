@@ -1,8 +1,10 @@
 
 from langgraph.prebuilt import create_react_agent
 from classes import State
+from helper_functions import get_llm
 
 def pdf_checker_agent(state: State):
+    llm = get_llm()
     prompt = (
         "You are a data visualization expert with over 20 years of experience! \n" 
         "Your goal is to improve data visualizations that are written in python code! \n "
@@ -15,7 +17,7 @@ def pdf_checker_agent(state: State):
     )
     #websearch = WebSearch()
     ml_agent = create_react_agent(
-        model="openai:o4-mini", 
+        model=llm, #Might need to change this to gpt-4o mini
         tools=[],
         name = "PDF_Checker_Agent",
         prompt = prompt

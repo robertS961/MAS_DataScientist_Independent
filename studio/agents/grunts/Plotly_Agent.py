@@ -1,8 +1,10 @@
 
 from langgraph.prebuilt import create_react_agent
 from classes import State
+from helper_functions import get_llm
 
 def ploty_agent(state: State):
+    llm = get_llm()
     prompt = (
         "You are a python plotly expert with over 10 years of experience! \n"
         "You will be given ideas to be executed on a tabular data set. It will be ideas on various statistical, machine learning, and data science ideas. \n"
@@ -30,7 +32,7 @@ def ploty_agent(state: State):
     '''
     #websearch = WebSearch()
     plotly_ = create_react_agent(
-        model="openai:o4-mini", 
+        model= llm, # Change it back to "openai:o4-mini",
         tools=[],
         name = "Plotly_Agent",
         prompt = prompt
