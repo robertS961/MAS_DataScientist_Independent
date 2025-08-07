@@ -15,7 +15,7 @@ agent = machinelearning_agent(State)
 result = agent.invoke(dic, config)
 return_message = get_last_ai_message(result['messages'])
 print(return_message)
-
+'''
 dic, config = define_variables(thread = 1, loop_limit = 12, data = data, data_info = data_info, name = "code", input = return_message)
 
 graph = create_code(State)
@@ -38,5 +38,5 @@ with open("extracted_code.py", "a", encoding="utf-8") as f:
 generate_pdf_report(result, 'output.pdf')
 
 
-    
+'''
 
