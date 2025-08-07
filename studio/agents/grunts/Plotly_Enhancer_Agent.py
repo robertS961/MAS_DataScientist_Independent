@@ -10,6 +10,8 @@ def ploty_enhancer_agent(state: State):
         f"Also fix the axis ranges to ensure that the graphs display meaningful data and are not blank!  Use this information about the data \n {state['data_description']}\n"
         f"Use this information also {state['data_info']}, make sure the code is prepared for NaN values, duplicate values, and missing values! \n"
         "Also some of the graph displays are not clear, based on the data, like for line plots there might be doubles of the same pair. Make sure to aggregate them together for line plots, bar plots, etc. to display clear figures! \n"
+        "Make sure the graphs have keys and they are easy to understand! \n"
+        "Make sure the narrative descriptions of the graphs explain the graph and the importance why this is being graphed and the explination of any tool used(like machine learning or algorithms)! \n"
         "Once the enhancements are made, add HTML/Javascript code at the end to display all the figures so it can be run on online servers! \n"
         "For the HTML/Javascript code, make sure to include the Plotly JS via CDN directly inside each div for better compatibility! Thus include_plotlyjs='cdn', NOT FALSE(This is outdated!) \n"
         "Do NOT use '<script src=https://cdn.plot.ly/plotly-latest.min.js></script>' in the HTML code, instead use include_plotlyjs='cdn' in the plot function! \n"
