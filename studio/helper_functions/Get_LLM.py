@@ -19,19 +19,21 @@ def get_llm(**kw):
     provider = os.getenv("LLM_PROVIDER", "openai")
 
     if provider.lower() == "azure":
+        model_name = kw.get('model', "gpt-4o")
         return AzureChatOpenAI(
             azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
             api_key       =os.environ["AZURE_OPENAI_API_KEY"],
-            deployment_name=os.environ["AZURE_OPENAI_DEPLOYMENT"],
+            deployment_name=model_name,
             api_version   =os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
             **kw,
         )
     elif provider.lower() == "local-echo":
         from langchain.llms.fake import FakeListLLM
         return FakeListLLM(responses=["This is a stub."])  
-    else:  
+    else:
+        model_name = kw.get('model', os.getenv("OPENAI_MODEL", "gpt-4o"))  
         return ChatOpenAI(
             api_key =os.getenv("OPENAI_API_KEY"),
-            model_name=os.getenv("OPENAI_MODEL", "gpt-4o"),
+            model_name=model_name,
             **kw,
         )
