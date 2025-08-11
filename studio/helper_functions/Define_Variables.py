@@ -51,6 +51,16 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
             "Please test the code and make sure it runs without errors and bugs! \n"
             "Return all the code only! Thank you!"
         )
+    elif name == "vegalite":
+        prompt = (
+            f"You are given ideas to perform on a tabular data set. Here are the ideas \n {input} \n"
+            f"These ideas use column names from the data set which has the following columns \n {data} \n"
+            f"The column types are \n {data_info} \n, so make sure to take out NaN values and fill them with the mean or median \n"
+            "You shall take these ideas and turn them into vega-lite code that creates beautiful graphs and visualizations \n"
+            "These results should be displayed with vega-lite and should be interactive \n"
+            "Please test the code and make sure it runs without errors and bugs! \n"
+            "Return all the code only! Thank you!"
+        )
     '''
     elif name == "plotly":
         prompt = (
@@ -79,6 +89,7 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         "code": code,
         "errors": "",
         "data_description": data_description,
+        "code_type": name,
     }
     #Orginal State Variables for Invoke
     

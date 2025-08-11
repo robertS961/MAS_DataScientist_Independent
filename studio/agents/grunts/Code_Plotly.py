@@ -8,6 +8,7 @@ from helper_functions import run_code, get_last_ai_message
 from langchain_experimental.utilities import PythonREPL
 
 def code_plotly(state:State) -> Command[Literal[END, 'vis_agent']]:
+    code_type = state['code_type']
     last_ai = get_last_ai_message(state['messages'])
     state['code'] = last_ai
     code = last_ai
@@ -20,10 +21,10 @@ def code_plotly(state:State) -> Command[Literal[END, 'vis_agent']]:
                 {
                     "role": "user",
                     "content": (
-                        f"Here is the code for the plotly graphs that runs without errors: \n {code} \n"
-                        "Your goal is to improve this code by making the plotly graphs more interactive and beautiful! Currently some of them look blank and don't show any meaningful data! \n"
+                        f"Here is the code for the {code_type} graphs that runs without errors: \n {code} \n"
+                        f"Your goal is to improve this code by making the {code_type} graphs more interactive and beautiful! Currently some of them look blank and don't show any meaningful data! \n"
                         "Make sure the code runs without errors and bugs! \n"
-                        "Return the full python code with plotly and the html/javascript code at the end! \n"
+                        f"Return the full python code with plotly and the html/javascript code at the end! \n" if code_type == 'plotly' else 'Return the full vega-lite code! \n'
                         "Thank you ! \n"
                     )
                 }

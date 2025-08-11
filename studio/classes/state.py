@@ -14,3 +14,4 @@ class State(TypedDict):
     errors: str
     data_info: str
     data_description: str
+    code_type: str
