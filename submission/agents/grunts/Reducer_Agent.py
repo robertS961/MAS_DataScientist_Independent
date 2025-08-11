@@ -4,7 +4,7 @@ from classes import State
 from helper_functions import get_llm
 
 def reducer_agent(state: State, ideas:int = 10):
-    llm = get_llm()
+    llm = get_llm(model = 'gpt-5-mini')
     data = state['dataset_info']
     message = state['ideas']
     prompt = (

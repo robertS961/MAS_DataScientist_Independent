@@ -5,7 +5,7 @@ from helper_functions import get_last_ai_message, get_llm
 
 
 def vis_a(state:State):
-    llm = get_llm()
+    llm = get_llm(model = 'gpt-5-mini')
     data = state['dataset_info']
     data_info = state['data_info']
     code = state['code'] 

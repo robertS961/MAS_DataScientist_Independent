@@ -3,7 +3,7 @@ from classes import State
 from helper_functions import get_llm
 
 def ploty_enhancer_agent(state: State):
-    llm = get_llm()
+    llm = get_llm(model = 'gpt-5-mini')
     prompt = (
         "You are a python plotly expert with over 20 years of experience! \n"
         "You will be given python plotly code to be executed on a tabular data set. It will display graphs on various statistical, machine learning, and data science ideas. \n"

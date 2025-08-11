@@ -8,7 +8,7 @@ from tools import scrape_webpages
 from helper_functions import get_llm
 
 def web_scraper_node(state:State):
-    llm = get_llm()
+    llm = get_llm(model = 'gpt-5-mini')
     data = state['dataset_info']
     prompt=(
             "You are a web scraper data science agent.\n\n"

@@ -9,7 +9,7 @@ from classes import State
 load_dotenv()
 
 from langgraph_supervisor import create_supervisor
-llm = get_llm()
+llm = get_llm(model = 'gpt-5')
 def supervisor_team(state:State, name = "team_supervisor" ):
     supervisor_graph = supervisor(state, agent = 1, name = "lead_supervisor")
     print("\n supervisor_Graph created\n ")
