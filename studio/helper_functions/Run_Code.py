@@ -1,15 +1,19 @@
 import re
+from classes import State
 
-def run_code(new_code: str):
+def run_code(state:State, new_code: str):
     """
     Extracts and executes Python code blocks from a string using regex.
     Matches blocks like: ```python\n<code>\n```
     """
-    pattern = re.compile(r'```python\s*\n(.*?)```', re.DOTALL)
+    print(f"This is the new code \n\n {new_code} \n \n")
+    if state['code_type'] == "vegalite": pattern = re.compile(r'```json\s*\n(.*?)```', re.DOTALL)
+    else: pattern = re.compile(r'```python\s*\n(.*?)```', re.DOTALL)
     code_blocks = pattern.findall(new_code)
 
     if not code_blocks:
-        print("⚠️ No Python code blocks found.")
+        if state['code_type'] == "vegalite": print("⚠️ No HTML code blocks found.")
+        else: print("⚠️ No Python code blocks found.")
         return
 
     for code in code_blocks:

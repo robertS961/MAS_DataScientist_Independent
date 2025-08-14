@@ -77,7 +77,7 @@ state = initialize_state_from_csv()
 data = state['dataset_info']
 data_info = get_datainfo("dataset.csv")
 data_description = data_describe("dataset.csv")
-dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "vegalite", input = previous, data_description= data_description)
+dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "plotly", input = previous, data_description= data_description)
 dic['revise'] = True
 vegalite_team = vegalite_leader(State)
 for chunk in vegalite_team.stream(input = dic, config = config):

@@ -6,10 +6,11 @@ from helper_functions import get_last_ai_message, get_llm
 
 def vis_a(state:State):
     llm = get_llm()
+    code_type = state['code_type']
     data = state['dataset_info']
     data_info = state['data_info']
     code = state['code'] 
-    if not state['revise']: 
+    if not state['revise']:
         state['ideas'] = get_last_ai_message(state['messages'])
         state['revise'] = True
         ideas = state['ideas']
@@ -31,7 +32,7 @@ def vis_a(state:State):
         ideas = state['ideas']
         error = state['errors']
         prompt = (
-            "You are a Python Coding Expert with 20 years of experience coding in python! Your job is to fix broken code! \n"
+            f"You are a {code_type} Coding Expert with 20 years of experience! Your job is to fix broken code! \n"
             f"Code has already been generated for these several ideas \n {ideas} \n\n "
             f"The following code was created for those above ideas \n {code}\n  : based on these data columns \n {data}\n\n"
             f"However there were errors in the code. Here is the error: \n {error}\n\n"

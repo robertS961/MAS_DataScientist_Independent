@@ -12,9 +12,10 @@ def code_plotly(state:State) -> Command[Literal[END, 'vis_agent']]:
     last_ai = get_last_ai_message(state['messages'])
     state['code'] = last_ai
     code = last_ai
+    print(f"This is the code before the transfer \n\n {code} \n\n")
     try:
         print("🟢 Testing the code ...")
-        run_code(code)
+        run_code(state, code)
         print("✅ The Code Works!")
         return Command(
             update = {"messages":[

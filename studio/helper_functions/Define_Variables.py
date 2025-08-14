@@ -59,7 +59,7 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
             "You shall take these ideas and turn them into vega-lite code that creates beautiful graphs and visualizations \n"
             "These results should be displayed with vega-lite and should be interactive \n"
             "Please test the code and make sure it runs without errors and bugs! \n"
-            "Return all the code only! Thank you!"
+            "Return ONLY VEGA_LITE CODE NOT ANY OTHER TYPE! Thank you!"
         )
     '''
     elif name == "plotly":
