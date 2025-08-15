@@ -68,7 +68,7 @@ This comprehensive approach will harness both data science and statistical metho
  
 '''
 
-from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, get_datainfo, data_describe, get_last_human_message
+from helper_functions import initialize_state_from_csv, define_variables, pretty_print_messages, get_datainfo, data_describe, get_last_ai_message, run_code
 from agents import create_output_plotly_team
 from classes import State, Configurable
 import re
@@ -86,7 +86,7 @@ for chunk in plotly_team.stream(input = dic, config = config):
  
 
 print(f"This is the chunk \n {chunk} \n")
-msg = get_last_human_message(chunk['plotly_enhancer_leader']['messages'])
+msg = get_last_ai_message(chunk['plotly_enhancer_leader']['messages'])
 
 code = re.findall(r"```python\n(.*?)\n```", msg, re.DOTALL)
 print(f"This is the code ! \n {code} \n")
@@ -99,3 +99,5 @@ with open("test_plotly_code.py", "w", encoding="utf-8") as f:
     f.write("# ---- NEW BLOCK ---- # \n")
     for block in code:
         f.write(block + "\n\n")
+
+run_code(msg)

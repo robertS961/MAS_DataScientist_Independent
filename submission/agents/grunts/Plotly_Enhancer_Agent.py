@@ -18,7 +18,7 @@ def ploty_enhancer_agent(state: State):
         "For the HTML/Javascript code, make sure to include the Plotly JS via CDN directly inside each div for better compatibility! Thus include_plotlyjs='cdn', NOT FALSE(This is outdated!) \n"
         "Do NOT use '<script src=https://cdn.plot.ly/plotly-latest.min.js></script>' in the HTML code, instead use include_plotlyjs='cdn' in the plot function! \n"
         "Make sure the code runs without errors and bugs! \n"
-        "Return the full python code with plotly and the html/javascript code at the end! \n "
+        "Return the full python code with plotly and the html/javascript code at the end without the use of the script above and having include_plotlyjs='cdn' in each div ! \n "
         "Thank you! \n"
     )
     '''

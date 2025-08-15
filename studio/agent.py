@@ -4,7 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 from agents import create_research_team, supervisor_team, machinelearning_agent, create_output_plotly_team
 from classes import State
-from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message, get_datainfo, get_last_human_message, data_describe
+from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message, get_datainfo, data_describe, run_code
 
 load_dotenv()
 class Agent:
@@ -40,14 +40,14 @@ class Agent:
         data_description = data_describe(path)
 
         #Set up State Variables for the ML Team
-        dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "ml")
+        dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info = data_info, name = "ml")
         
         #Get ML Team Ideas from the Data
         result = self.ml_team.invoke(dic, config)
         ideas_3 = get_last_ai_message(result['messages'])
 
         #Define the Class variables
-        dic, config = define_variables(thread = 1, loop_limit = 10, data = data, data_info = data_info, name = "research")
+        dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info = data_info, name = "research")
     
         #Stream the Output for Generating Research Ideas from the Web
         for chunk in self.research_team.compile(cache=MemorySaver()).stream(input = dic, config = config):
@@ -70,7 +70,7 @@ class Agent:
             pretty_print_messages(chunk)
 
         #Get the final code 
-        msg = get_last_human_message(chunk['plotly_enhancer_leader']['messages'])
+        msg = get_last_ai_message(chunk['plotly_enhancer_leader']['messages'])
 
         #Add Code to Data Base for testing
         code = re.findall(r"```python\n(.*?)\n```", msg, re.DOTALL)
@@ -88,7 +88,10 @@ class Agent:
         #Generate PDF output
         #generate_pdf_report(msg, 'output.pdf')
         #Return to Run.py
+        print(f"This is the message for the code \n {msg} \n")
+        run_code(msg)
         return msg
+    
 
     
         #print(f"\n\n This is the last_ai_content round 2 {last_ai_content_2} \n\n")
