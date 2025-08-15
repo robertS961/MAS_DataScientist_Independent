@@ -50,10 +50,12 @@ class Agent:
         dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info = data_info, name = "research")
     
         #Stream the Output for Generating Research Ideas from the Web
-        for chunk in self.research_team.compile(cache=MemorySaver()).stream(input = dic, config = config):
+        for chunk in self.research_team.stream(input = dic, config = config):
             pretty_print_messages(chunk, last_message=True)
+
+        print(f"This is the chunk \n {chunk} \n")
         
-        ideas_1 = get_last_ai_message(chunk['reflection']['messages'])
+        ideas_1 = get_last_ai_message(chunk['research_supervisor']['messages'])
         
         #Stream the Output for Generating Research Ideas from LLM's with different arrangement of MAS
         for chunk in self.supervisor_team.compile(name = "supervisor_team", cache = MemorySaver()).stream(input = dic, config = config):
