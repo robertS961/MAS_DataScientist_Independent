@@ -12,7 +12,7 @@ def code_plotly_final(state:State) -> Command[Literal['narrative_agent', 'vis_ag
     state['code'] = last_ai
     code = last_ai
     try:
-        print("🟢 Testing the code ...")
+        print("🟢 Testing the code round 2...")
         run_code(code)
         print("✅ The Code Works!")
         return Command(

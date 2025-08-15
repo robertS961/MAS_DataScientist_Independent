@@ -4,7 +4,7 @@ from classes import State
 from helper_functions import get_llm
 
 def machinelearning_agent(state: State):
-    llm = get_llm(model = 'gpt-5')
+    llm = get_llm(model = 'gpt-4o')
     data = state['dataset_info']
     data_info = state['data_info']
     prompt = (

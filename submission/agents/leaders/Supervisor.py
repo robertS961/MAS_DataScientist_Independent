@@ -8,7 +8,7 @@ from classes import State
 load_dotenv()
 
 from langgraph_supervisor import create_supervisor
-llm =  get_llm(model = 'gpt-5')
+llm =  get_llm(model = 'gpt-4o')
 def supervisor(state:State, agent: int = 0, name = "lead_supervisor"):
     if agent == 0:
         agents = [Research_Stat_Agent(State), Research_DataScience_Agent(State)]

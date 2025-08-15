@@ -18,7 +18,7 @@ def prompt(expert_intro, message, data):
         "If you are passed ideas feel free to improve them or use them to create better ideas\n\n"
     )
 def create_search_nodes(count: int, state: State, name = "basic"):
-    llm = get_llm(model = 'gpt-5')
+    llm = get_llm(model = 'gpt-4o')
     agents = []
     for cnt in range(count):
         data = state['dataset_info']

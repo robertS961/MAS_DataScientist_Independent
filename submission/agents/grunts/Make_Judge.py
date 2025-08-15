@@ -6,7 +6,7 @@ from helper_functions import get_llm
 
 
 def make_judge(state:State):
-    llm = get_llm(model='gpt-5')
+    llm = get_llm(model='gpt-4o')
     current_message = state['messages']
     data = state['dataset_info']
     critique_prompt = (

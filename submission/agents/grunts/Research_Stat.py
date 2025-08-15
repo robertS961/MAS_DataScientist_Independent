@@ -8,7 +8,7 @@ from helper_functions import get_llm
 
 
 def Research_Stat_Agent(state:State):
-    llm = get_llm(model = 'gpt-5')
+    llm = get_llm(model = 'gpt-4o')
     web_search = WebSearch()
     ds_agent = transfer_to_ds_agent()
     previous_message = state['messages']

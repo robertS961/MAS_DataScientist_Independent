@@ -39,7 +39,7 @@ def vis_a(state:State):
             "Please fix the code and make sure it runs correctly!\n\n"
             "Return the fixed code in place of the faulty code in what was given to you along with the previous code that was correct \n"
             "You should return the code with the bugs fixed! Do not return just fixed code! Return all the old code with the fixes made!\n"
-            "The return code should ALL be sandwhiched between ONE SET of triple single quotes like ''' CODE ''' \n"
+            "The return code should ALL be returned like ```python #CODE HERE ``` \n"
             "Lastly make sure the number of code ideas/blocks given to you is returned with the same amount. 5 code block ideas in then 5 out! \n"
             "Thank you \n"
         )

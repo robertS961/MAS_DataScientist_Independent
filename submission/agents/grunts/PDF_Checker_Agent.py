@@ -4,7 +4,7 @@ from classes import State
 from helper_functions import get_llm
 
 def pdf_checker_agent(state: State):
-    llm = get_llm(model = 'gpt-5')
+    llm = get_llm(model = 'gpt-4o')
     prompt = (
         "You are a data visualization expert with over 20 years of experience! \n" 
         "Your goal is to improve data visualizations that are written in python code! \n "
