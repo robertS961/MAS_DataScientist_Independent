@@ -6,7 +6,7 @@ from tools import scrape_webpages
 from helper_functions import get_llm
 
 def Research_DataScience_Agent(state:State):
-    llm = get_llm(model = 'gpt-4o')
+    llm = get_llm(model = 'gpt-5-mini')
     web_search = WebSearch()
     stats_agent = transfer_to_stats_agent()
     print(f"\n\nThis is the current message {state['messages']}\n\n")
