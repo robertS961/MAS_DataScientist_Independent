@@ -14215,3 +14215,407 @@ with open('output.html', 'w', encoding='utf-8') as f:
 
 print("output.html generated successfully with narratives.")
 
+# ---- NEW BLOCK ---- # 
+# CODE HERE
+import pandas as pd
+import numpy as np
+
+# NLP & modeling libraries
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import confusion_matrix
+from sklearn.linear_model import LinearRegression
+from textblob import TextBlob
+
+# Plotly for interactive graphs
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import plotly.offline as pyo
+
+# 1. LOAD & PREPROCESS
+df = pd.read_csv('dataset.csv')
+
+# Fill numeric NaNs with median to avoid blanks
+num_cols = [
+    'FirstPage','LastPage','AminerCitationCount',
+    'CitationCount_CrossRef','PubsCited_CrossRef','Downloads_Xplore'
+]
+for c in num_cols:
+    df[c].fillna(df[c].median(), inplace=True)
+
+# 2. TOPIC MODELING ON ABSTRACT + KEYWORDS
+df_tm = df[['Abstract','AuthorKeywords']].fillna('')
+df_tm['combined'] = df_tm['Abstract'].str.strip() + ' ' + df_tm['AuthorKeywords'].str.strip()
+
+# Vectorize and LDA
+count_vec = CountVectorizer(max_df=0.9, min_df=10, stop_words='english')
+dtm = count_vec.fit_transform(df_tm['combined'])
+lda = LatentDirichletAllocation(n_components=5, random_state=0)
+lda.fit(dtm)
+
+terms = count_vec.get_feature_names_out()
+topic_words = {}
+for tidx, comp in enumerate(lda.components_):
+    top_idx = comp.argsort()[-10:][::-1]
+    topic_words[tidx] = [terms[i] for i in top_idx]
+
+# Build bar charts for each topic
+bars = []
+colors = ['#636efa','#EF553B','#00cc96','#ab63fa','#FFA15A']
+for tidx, words in topic_words.items():
+    vals = [lda.components_[tidx][count_vec.vocabulary_[w]] for w in words]
+    bars.append(
+        go.Bar(
+            x=words, y=vals,
+            name=f"Topic {tidx}",
+            marker_color=colors[tidx],
+            hoverinfo='x+y'
+        )
+    )
+
+fig1 = go.Figure(data=bars)
+# Initially show only Topic 0
+for i in range(len(bars)):
+    fig1.data[i].visible = (i == 0)
+
+# Dropdown menu to switch topics
+buttons = []
+for tidx in topic_words:
+    visible = [i == tidx for i in range(len(bars))]
+    buttons.append(dict(
+        label=f"Topic {tidx}",
+        method="update",
+        args=[{"visible": visible},
+              {"title": f"Top Words for Topic {tidx}", 
+               "yaxis": {"title": "Word Importance"}}]
+    ))
+
+fig1.update_layout(
+    title="Top Words for Topic 0",
+    updatemenus=[dict(active=0, buttons=buttons, x=1.05, y=1.15)],
+    xaxis_title="Top Words",
+    yaxis_title="Importance",
+    template='plotly_dark',
+    width=800, height=500
+)
+
+
+# 3. TEXT CLASSIFICATION: PREDICT PAPER TYPE FROM ABSTRACT
+df_cls = df[['Abstract','PaperType']].dropna()
+# Keep only the top 4 paper types for cleaner confusion matrix
+top_types = df_cls['PaperType'].value_counts().nlargest(4).index
+df_cls = df_cls[df_cls['PaperType'].isin(top_types)]
+
+X = df_cls['Abstract']
+y = df_cls['PaperType']
+
+tfidf = TfidfVectorizer(stop_words='english', max_features=5000)
+X_tfidf = tfidf.fit_transform(X)
+
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X_tfidf, y, test_size=0.3, random_state=0, stratify=y
+)
+clf = MultinomialNB()
+clf.fit(X_tr, y_tr)
+y_pred = clf.predict(X_te)
+
+cm = confusion_matrix(y_te, y_pred, labels=top_types)
+annot = cm.astype(str)
+
+fig2 = go.Figure(
+    data=go.Heatmap(
+        z=cm,
+        x=list(top_types),
+        y=list(top_types),
+        text=annot,
+        texttemplate="%{text}",
+        colorscale='Viridis',
+        showscale=True
+    )
+)
+fig2.update_layout(
+    title="Confusion Matrix: PaperType Classification",
+    xaxis_title="Predicted PaperType",
+    yaxis_title="Actual PaperType",
+    template='plotly_dark',
+    width=600, height=600
+)
+
+
+# 4. REGRESSION: PREDICT DOWNLOADS_XPLORE
+df_reg = df[['AminerCitationCount','Year','PubsCited_CrossRef','Downloads_Xplore']].dropna()
+Xr = df_reg[['AminerCitationCount','Year','PubsCited_CrossRef']]
+yr = df_reg['Downloads_Xplore']
+
+Xr_tr, Xr_te, yr_tr, yr_te = train_test_split(
+    Xr, yr, test_size=0.3, random_state=0
+)
+reg = LinearRegression()
+reg.fit(Xr_tr, yr_tr)
+yr_pred = reg.predict(Xr_te)
+
+# Determine axis ranges with padding
+min_val = min(yr_te.min(), yr_pred.min())
+max_val = max(yr_te.max(), yr_pred.max())
+pad = (max_val - min_val) * 0.05
+
+fig3 = go.Figure()
+fig3.add_trace(go.Scatter(
+    x=yr_te, y=yr_pred,
+    mode='markers',
+    marker=dict(color='magenta', size=6, opacity=0.7),
+    name='Predicted vs Actual',
+    hovertemplate="Actual: %{x:.1f}<br>Predicted: %{y:.1f}<extra></extra>"
+))
+fig3.add_trace(go.Scatter(
+    x=[min_val-pad, max_val+pad],
+    y=[min_val-pad, max_val+pad],
+    mode='lines',
+    line=dict(color='cyan', dash='dash'),
+    name='Ideal Fit'
+))
+fig3.update_layout(
+    title="Regression: Predicted vs Actual Downloads",
+    xaxis_title="Actual Downloads_Xplore",
+    yaxis_title="Predicted Downloads_Xplore",
+    xaxis=dict(range=[min_val-pad, max_val+pad]),
+    yaxis=dict(range=[min_val-pad, max_val+pad]),
+    template='plotly_dark',
+    width=700, height=500
+)
+
+
+# 5. SENTIMENT ANALYSIS ON ABSTRACTS
+df_sent = df[['Abstract','CitationCount_CrossRef','Downloads_Xplore']].dropna()
+# Compute sentiment polarity
+df_sent['sentiment'] = df_sent['Abstract'].apply(
+    lambda txt: TextBlob(txt).sentiment.polarity
+)
+
+fig4 = make_subplots(
+    rows=1, cols=2,
+    subplot_titles=("Sentiment vs Citations", "Sentiment vs Downloads"),
+    horizontal_spacing=0.15
+)
+fig4.add_trace(
+    go.Scatter(
+        x=df_sent['sentiment'],
+        y=df_sent['CitationCount_CrossRef'],
+        mode='markers',
+        marker=dict(color='lime', size=5, opacity=0.6),
+        name='Citations',
+        hovertemplate="Sentiment: %{x:.2f}<br>Citations: %{y}<extra></extra>"
+    ),
+    row=1, col=1
+)
+fig4.add_trace(
+    go.Scatter(
+        x=df_sent['sentiment'],
+        y=df_sent['Downloads_Xplore'],
+        mode='markers',
+        marker=dict(color='orange', size=5, opacity=0.6),
+        name='Downloads',
+        hovertemplate="Sentiment: %{x:.2f}<br>Downloads: %{y}<extra></extra>"
+    ),
+    row=1, col=2
+)
+fig4.update_xaxes(title_text="Sentiment Polarity", row=1, col=1)
+fig4.update_yaxes(title_text="CitationCount_CrossRef", row=1, col=1)
+fig4.update_xaxes(title_text="Sentiment Polarity", row=1, col=2)
+fig4.update_yaxes(title_text="Downloads_Xplore", row=1, col=2)
+fig4.update_layout(
+    title="Abstract Sentiment vs Impact Metrics",
+    template='plotly_dark',
+    width=900, height=450
+)
+
+
+# 6. AWARD IMPACT ON DOWNLOADS
+df_aw = df.copy()
+df_aw['Awarded'] = df_aw['Award'].notna()
+
+fig5 = go.Figure()
+fig5.add_trace(go.Box(
+    y=df_aw[df_aw['Awarded']]['Downloads_Xplore'],
+    name='Awarded',
+    marker_color='#FFA15A',
+    boxpoints='all', jitter=0.5, pointpos=-1.8
+))
+fig5.add_trace(go.Box(
+    y=df_aw[~df_aw['Awarded']]['Downloads_Xplore'],
+    name='Not Awarded',
+    marker_color='#19D3F3',
+    boxpoints='all', jitter=0.5, pointpos=-1.8
+))
+fig5.update_layout(
+    title="Award Impact on Downloads",
+    yaxis_title="Downloads_Xplore",
+    xaxis_title="Award Status",
+    template='plotly_dark',
+    width=700, height=500
+)
+
+
+# 7. GENERATE & SAVE INTERACTIVE HTML
+divs = []
+for fig in [fig1, fig2, fig3, fig4, fig5]:
+    div = pyo.plot(fig, include_plotlyjs='cdn', output_type='div')
+    divs.append(div)
+
+# The following HTML content injects academic-style narratives for each figure.
+# Each figure's interactive div is embedded, followed by an explanatory paragraph.
+# Paragraphs are written to flow like a paper: Introduction -> Methods/Results (figures) -> Conclusion.
+
+html_content = f"""
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Interactive Data Science & Statistical Learning Visualizations</title>
+  <style>
+    body {{
+      background-color: #0f1720;
+      color: #e6eef8;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }}
+    .container {{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #0b1220;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    }}
+    h1 {{
+      text-align: center;
+      color: #ffffff;
+      margin-bottom: 10px;
+    }}
+    h2 {{
+      color: #cfe8ff;
+      margin-top: 36px;
+      margin-bottom: 8px;
+    }}
+    p.lead {{
+      font-size: 16px;
+      color: #dbeeff;
+      margin-bottom: 18px;
+    }}
+    .figure-block {{
+      margin-bottom: 28px;
+      padding: 12px;
+      background-color: #07101a;
+      border-radius: 6px;
+    }}
+    .caption {{
+      font-size: 14px;
+      color: #bcd8ff;
+      margin-top: 10px;
+      text-align: justify;
+    }}
+    footer {{
+      margin-top: 30px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      color: #9fb7d9;
+      font-size: 13px;
+      text-align: center;
+    }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Interactive Plotly Dashboards: Analytic Report on Academic Papers</h1>
+
+    <!-- Introduction -->
+    <section>
+      <h2>Introduction</h2>
+      <p class="lead">
+        This report presents a series of interactive visual analyses designed to explore the dynamics of scholarly papers using a multifaceted dataset containing metadata, abstracts, citations, downloads, and awards. The visualizations combine unsupervised and supervised learning, sentiment analysis, and distributional comparison to provide a narrative-driven examination of research themes, classification performance, predictive modeling of paper reach, the affective content of abstracts, and the relationship between awards and readership. Each figure is accompanied by an interpretive paragraph that explains what is shown, why it matters, and how researchers might build further analyses from these results.
+      </p>
+    </section>
+
+    <!-- Topic Modeling -->
+    <section class="figure-block">
+      <h2>Figure 1 — Topic Modeling (Latent Dirichlet Allocation)</h2>
+      {divs[0]}
+      <p class="caption">
+        This interactive bar chart displays the top lexical indicators for each of five latent topics discovered via Latent Dirichlet Allocation applied to the concatenation of paper abstracts and author-supplied keywords. Topic modeling is an unsupervised method that surfaces the dominant themes present across a corpus without requiring prior labels. The dropdown control above the chart allows the reader to switch among extracted topics to inspect influential words for each theme. Interpreting these term sets provides a qualitative lens on the research landscape represented by the dataset: recurring technical terms suggest methodological clusters, while domain terms indicate substantive subfields. Such insight is valuable for trend detection, meta-analyses of subject area evolution, and guiding targeted literature reviews.
+      </p>
+      <p class="caption">
+        Building on this output, subsequent analyses can track topic prevalence over time, link topics to impact metrics (citations, downloads), or use topic assignments as features in supervised prediction tasks (for example, to help classify future papers or to forecast their likely readership). When using topic models for strategic decision-making, researchers should always corroborate term-based interpretations with close reading of exemplar abstracts to avoid overinterpretation of aggregated lexical signals.
+      </p>
+    </section>
+
+    <!-- Classification -->
+    <section class="figure-block">
+      <h2>Figure 2 — PaperType Classification (Confusion Matrix)</h2>
+      {divs[1]}
+      <p class="caption">
+        This heatmap shows the confusion matrix for a Multinomial Naive Bayes classifier trained to predict paper types from abstracts, restricted to the most common categories to ensure robust estimates. Rows correspond to actual labels and columns to predicted labels, with counts shown directly in each cell. The confusion matrix is a compact diagnostic that helps evaluate classification fidelity and reveal which categories are frequently confused—key information for model refinement and error analysis. A well-diagonal matrix indicates strong discriminative signal in abstracts, whereas off-diagonal mass indicates label ambiguity or feature overlap across categories.
+      </p>
+      <p class="caption">
+        These results motivate several practical follow-ups: expanding the feature set (e.g., including title, keywords, or citation features), experimenting with transformer-based encoders for richer semantic representations, and applying calibration techniques or class-weighted training for imbalanced categories. Importantly, domain experts should inspect common misclassifications to decide whether label taxonomy adjustments or additional contextual features are warranted.
+      </p>
+    </section>
+
+    <!-- Regression -->
+    <section class="figure-block">
+      <h2>Figure 3 — Predictive Regression for Downloads</h2>
+      {divs[2]}
+      <p class="caption">
+        This scatter plot compares actual download counts to the predictions produced by a linear regression model that uses prior citation counts, publication year, and number of cited publications as predictors. The dashed line indicates the ideal y = x fit; proximity of points to this line signifies accurate predictions. Predictive modeling of downloads is useful for anticipating the dissemination and reach of scholarly outputs, informing resource allocation, and evaluating the return on different dissemination strategies.
+      </p>
+      <p class="caption">
+        The visualization highlights the model’s capacity and limitations: clustering of points and systematic deviations from the ideal line reveal heteroskedasticity and unmodeled effects such as topical virality, open-access status, or promotional activities. To improve predictive performance, future work should explore non-linear models, temporal dynamics (time-series of downloads), richer bibliometric features, and ensemble methods that better capture interactions and heavy tails in usage distributions.
+      </p>
+    </section>
+
+    <!-- Sentiment -->
+    <section class="figure-block">
+      <h2>Figure 4 — Sentiment Analysis of Abstracts vs Impact Metrics</h2>
+      {divs[3]}
+      <p class="caption">
+        These paired scatter plots map the TextBlob-computed sentiment polarity of each abstract against two impact measures: crossref citations and Xplore downloads. Sentiment polarity is a scalar that ranges from negative to positive and is an exploratory proxy for affective tone or assertiveness within an abstract’s language. The visual comparison allows readers to inspect whether more positively- or negatively-worded abstracts correspond to differential scholarly attention.
+      </p>
+      <p class="caption">
+        In practice, any observed relationship should be interpreted cautiously: textual sentiment is only one dimension among many (methodological novelty, topic salience, author prominence) that drive impact. Subsequent analyses may apply more nuanced linguistic features (e.g., subjectivity, hedging, modality), control for confounds via regression, or segment results by topical clusters discovered earlier to detect domain-specific patterns.
+      </p>
+    </section>
+
+    <!-- Award Impact -->
+    <section class="figure-block">
+      <h2>Figure 5 — Award Impact on Downloads (Boxplots)</h2>
+      {divs[4]}
+      <p class="caption">
+        The boxplots compare the distribution of downloads between papers that received an award and those that did not. Boxplots convey central tendency, dispersion, and outliers, providing an intuitive sense of whether awarded papers tend to attract higher readership. This comparison is relevant for evaluating the downstream benefits of awards on visibility and for understanding selection effects in recognition systems.
+      </p>
+      <p class="caption">
+        Interpreting differences between groups requires care: awards may select for already-visible work (introducing endogeneity), and the small number of awarded items can affect statistical stability. Robust follow-up work would include formal hypothesis testing (e.g., nonparametric tests), propensity-score matching to control for confounders (like author reputation or institution), and longitudinal analysis to estimate whether awards cause sustained increases in attention.
+      </p>
+    </section>
+
+    <!-- Conclusion -->
+    <section>
+      <h2>Conclusion</h2>
+      <p class="lead">
+        Together, these interactive visualizations form a coherent analytic narrative: unsupervised topic discovery surfaces the thematic structure of the corpus; supervised classification demonstrates how abstracts encode label-relevant information; regression modeling provides a first-pass predictive lens on readership; sentiment analysis offers a linguistic viewpoint on scholarly communication; and distributional comparisons illuminate the potential effect of awards on visibility. Each method provides complementary evidence, and integrating them yields richer insight than any single analysis. Future work should combine these modalities—e.g., using topic assignments as regression features or aligning sentiment analysis with topic clusters—to more accurately model and interpret the determinants of academic impact.
+      </p>
+      <footer>
+        Generated analysis: interactive figures and academic narratives for interpretability, reproducibility, and extension. For reproducibility, run this script in the directory containing dataset.csv; the output file <code>output.html</code> will contain all interactive figures embedded with the narratives above.
+      </footer>
+    </section>
+  </div>
+</body>
+</html>
+"""
+
+with open("output.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("✅ output.html generated with annotated interactive figures and academic narratives.")
+
