@@ -1,0 +1,3 @@
+
+class globe:
+    edges = []

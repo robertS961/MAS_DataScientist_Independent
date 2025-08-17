@@ -3,8 +3,9 @@ import re
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 from agents import create_research_team, supervisor_team, machinelearning_agent, create_output_plotly_team
-from classes import State
+from classes import State, globe
 from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message, get_datainfo, data_describe, run_code
+
 
 load_dotenv()
 class Agent:
@@ -41,9 +42,10 @@ class Agent:
 
         #Set up State Variables for the ML Team
         dic, config = define_variables(thread = 1, loop_limit = 25, data = data, data_info = data_info, name = "ml")
-        
+        print(f"This is the previous state {globe.edges} \n")
         #Get ML Team Ideas from the Data
         result = self.ml_team.invoke(dic, config)
+        print(f"This is the post state {globe.edges} \n")
         ideas_3 = get_last_ai_message(result['messages'])
 
         #Define the Class variables

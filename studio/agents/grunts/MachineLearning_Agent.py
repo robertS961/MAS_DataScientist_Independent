@@ -1,6 +1,6 @@
 
 from langgraph.prebuilt import create_react_agent
-from classes import State
+from classes import State, globe
 from helper_functions import get_llm
 
 def machinelearning_agent(state: State):
@@ -16,7 +16,7 @@ def machinelearning_agent(state: State):
         "Make sure the ideas corretly use the columns! Like don't use linear regression on strings etc. \n"
         "Thank you! \n"
     )
-    #websearch = WebSearch()
+    globe.edges.append(["a","b"])
     ml_agent = create_react_agent(
         model=llm, 
         tools=[],

@@ -23,7 +23,7 @@ def supervisor(state:State, agent: int = 0, name = "lead_supervisor"):
             "Please return a neatly labeled list of the ideas from both the statistical learning agent and the data science agent! \n\n"
         )
     elif agent == 1:
-        agents = create_search_nodes(3, State, "supervisor")
+        agents = create_search_nodes(3, State, "supervisor", "gpt-4o")
         prompt = (
             "You are a supervisor managing three agents:\n"
             f"You have access to the following columns of a dataset {state['dataset_info']} \n"

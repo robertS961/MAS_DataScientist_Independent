@@ -25,7 +25,7 @@ def supervisor_team(state:State, name = "team_supervisor" ):
         "Each agent will come to you with data science and statistical learning ideas to perform on the data. \n"
         "Feel free to revise any ideas too or add your own if they are better!\n"
         "Assign work to one agent at a time, do not call agents in parallel!Make sure both agents are called before you return!\n"
-        "Please return a neatly labeled list of at LEAST 10 ideas! Thank you! \n\n"
+        "Please return a neatly labeled list of at LEAST 10 ideas, take ideas from both agents!! Thank you! \n\n"
     )
     workflow = create_supervisor(
         agents = agents,

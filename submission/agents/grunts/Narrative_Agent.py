@@ -12,10 +12,11 @@ def narrative_agent(state: State):
         "If the graph doesn't have a narrative then write one, once again inside the correct HTML tag. The goal is to explain what the graph is doing, why its important, and the significance of the findings and why these findings are important \n"
         "Make sure each pharagraph flows into the next one just like an actual report \n"
         "Lastly add an introduction to the entire flow and a conclusion. Make sure the introduction goes over the purpose of the paper and the flow of what the readers will read\see. Make sure the conclusion wraps the entire paper up with key points from the visualizations and possible next steps for research scientists.\n"
+        "Make sure the paper has a title, each section has a title, and the introduction and conclusion are clearly labled with titles too.\n "
         "Make all the writing extremely educational, diving into the purposes of the graphs and algorithms but not making it overly complicated. There is power in simplicity, but keep each section at the length of a pharagraph !"
-        "To concluded do not touch the python code, add all of these changes to HTML/Javascript Code , only by adding narratives, don't change the meat of that code either!\n"
+        "To conclude do not touch the python code, add all of these changes to HTML/Javascript Code , only by adding narratives, don't change the meat of that code either!\n"
         "Return all the python code and the newly edited javascript/html code bewteen ```python #CODE HERE ```\n"
-        "Make sure there isnt any bugs with the new additions. Thank you!"
+        "Make sure there isnt any bugs with the new additions. Thank you!\n"
     )
     #websearch = WebSearch()
     narrative_a = create_react_agent(
