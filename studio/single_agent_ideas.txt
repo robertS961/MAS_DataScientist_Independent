@@ -1,0 +1,370 @@
+ 
+------- Next set of Ideas for 0 -------
+1. K-Means clustering on [age, annual_income, spending_score]  
+2. Logistic regression to predict gender using [annual_income, spending_score, product_category]  
+3. Random forest regression for purchase_amount with [age, annual_income, spending_score, product_category, store_location]  
+4. ARIMA forecasting of monthly purchase_amount aggregated by purchase_date  
+5. Association rule mining on [product_category, payment_method]  
+6. XGBoost classification of store_location from [age, annual_income, spending_score, product_category, payment_method] 
+------- Next set of Ideas for 1 -------
+1. Logistic regression predicting Loan_Status using Gender, Married, Dependents, Education, Self_Employed, ApplicantIncome, CoapplicantIncome, LoanAmount, Loan_Amount_Term, Credit_History and Property_Area  
+2. Random forest classification of Loan_Status with features Gender, Married, Dependents, Education, Self_Employed, ApplicantIncome, CoapplicantIncome, LoanAmount, Loan_Amount_Term, Credit_History and Property_Area  
+3. K-means clustering on ApplicantIncome, CoapplicantIncome, LoanAmount, Loan_Amount_Term and Credit_History  
+4. PCA on numeric columns ApplicantIncome, CoapplicantIncome, LoanAmount and Loan_Amount_Term  
+5. Association rule mining among Gender, Married, Education, Self_Employed, Property_Area and Loan_Status  
+6. Isolation Forest anomaly detection on LoanAmount and ApplicantIncome 
+------- Next set of Ideas for 2 -------
+1. Linear Regression  
+2. Logistic Regression  
+3. Random Forest  
+4. K-Means Clustering  
+5. Principal Component Analysis  
+6. Support Vector Machine 
+------- Next set of Ideas for 3 -------
+• Correlation heatmap of all numeric features in classes.state.State['dataset_info']  
+• Seaborn pairplot of classes.state.State['dataset_info'][['feature1', 'feature2', 'feature3']]  
+• PCA scatter plot (PC1 vs PC2) colored by classes.state.State['dataset_info']['target']  
+• t-SNE 2D projection of classes.state.State['dataset_info'][['feature4', 'feature5', 'feature6']]  
+• Bar chart of feature importances from a RandomForest trained on classes.state.State['dataset_info'] 
+------- Next set of Ideas for 4 -------
+1. Principal Component Analysis on classes.state.State['dataset_info']['NumericFeatureA'], classes.state.State['dataset_info']['NumericFeatureB'], classes.state.State['dataset_info']['NumericFeatureC']  
+2. k-Means clustering using classes.state.State['dataset_info']['FeatureX'], classes.state.State['dataset_info']['FeatureY'], classes.state.State['dataset_info']['FeatureZ']  
+3. Random Forest classifier predicting classes.state.State['dataset_info']['TargetLabel'] from classes.state.State['dataset_info']['Input1'], classes.state.State['dataset_info']['Input2'], classes.state.State['dataset_info']['Input3']  
+4. ARIMA time-series forecast on classes.state.State['dataset_info']['DateTime'] vs. classes.state.State['dataset_info']['TimeSeriesMetric']  
+5. t-SNE embedding of classes.state.State['dataset_info']['HighDim1'], classes.state.State['dataset_info']['HighDim2'], classes.state.State['dataset_info']['HighDim3'] colored by classes.state.State['dataset_info']['CategoryLabel'] 
+------- Next set of Ideas for 5 -------
+1. Logistic regression to predict churn using session_duration, page_views, purchase_amount  
+2. Random forest regression to estimate purchase_amount from session_duration, page_views, event_type  
+3. K-means clustering on session_duration, page_views, purchase_amount  
+4. Principal Component Analysis (PCA) over session_duration, page_views, purchase_amount  
+5. ARIMA time-series forecasting of daily page_views aggregated by timestamp  
+6. Isolation Forest anomaly detection on purchase_amount vs. session_duration 
+------- Next set of Ideas for 6 -------
+1. Pairplot of numeric features (Age, Salary, YearsAtCompany, PerformanceScore) colored by Department.  
+2. t-SNE projection of (Age, Salary, YearsAtCompany, PerformanceScore) with points labeled by Gender.  
+3. Correlation heatmap of all numeric columns (Age, Salary, YearsAtCompany, PerformanceScore).  
+4. Feature-importance bar chart from a RandomForestClassifier predicting high vs. low PerformanceScore using (Age, Salary, YearsAtCompany, Department, Gender).  
+5. Box plots of Salary grouped by Department and Gender. 
+------- Next set of Ideas for 7 -------
+1. Linear regression predicting annual_income using age, spending_score, and membership_duration  
+2. Logistic regression classifying churn_flag from gender, age, annual_income, and spending_score  
+3. K-means clustering on age, annual_income, spending_score, and membership_duration  
+4. Principal Component Analysis (PCA) on age, annual_income, spending_score, and membership_duration  
+5. Random Forest classification of churn_flag using all features (age, gender, annual_income, spending_score, membership_duration)  
+6. ARIMA time-series forecasting of monthly_purchases over time 
+------- Next set of Ideas for 8 -------
+1. Correlation heatmap  
+   sns.heatmap(classes.state.State['dataset_info'].corr(), annot=True)
+
+2. Scatter‐matrix plot  
+   pd.plotting.scatter_matrix(classes.state.State['dataset_info'], diagonal='kde')
+
+3. PCA biplot on numeric features  
+   X = classes.state.State['dataset_info'].select_dtypes(include=['number'])  
+   X_pca = PCA(n_components=2).fit_transform(X)  
+   plt.scatter(X_pca[:,0], X_pca[:,1])
+
+4. t-SNE embedding of all numeric columns  
+   X = classes.state.State['dataset_info'].select_dtypes(include=['number'])  
+   X_tsne = TSNE(n_components=2).fit_transform(X)  
+   plt.scatter(X_tsne[:,0], X_tsne[:,1])
+
+5. Boxplots of a numeric column by a categorical column  
+   classes.state.State['dataset_info'].boxplot(column=['numeric_col'], by='categorical_col') 
+------- Next set of Ideas for 9 -------
+1. Linear Regression: predict classes.state.State['dataset_info']['target_column'] using classes.state.State['dataset_info']['feature_1'], classes.state.State['dataset_info']['feature_2'], classes.state.State['dataset_info']['feature_3']  
+2. Logistic Regression: classify classes.state.State['dataset_info']['binary_target'] using classes.state.State['dataset_info']['feature_4'], classes.state.State['dataset_info']['feature_5']  
+3. Random Forest: predict classes.state.State['dataset_info']['target_column'] using all features in classes.state.State['dataset_info']  
+4. K-Means Clustering on classes.state.State['dataset_info']['feature_1'], classes.state.State['dataset_info']['feature_4'], classes.state.State['dataset_info']['feature_6']  
+5. PCA on classes.state.State['dataset_info']['numerical_feature_1'], classes.state.State['dataset_info']['numerical_feature_2'], classes.state.State['dataset_info']['numerical_feature_3']  
+6. ARIMA Forecasting on classes.state.State['dataset_info']['date_column'] to forecast classes.state.State['dataset_info']['target_column'] 
+------- Next set of Ideas for 10 -------
+1. Time-series forecasting of Sales using “Date” and “Sales” with ARIMA/LSTM  
+2. Random Forest classification of high vs. low “DiscountApplied” using “CustomerAge”, “CustomerGender”, “StoreRegion”  
+3. K-means clustering on “CustomerAge”, “UnitsSold”, “Sales” to segment buying behaviors  
+4. Association rule mining between “ProductCategory” and “DiscountApplied”  
+5. Regression of “Sales” on “UnitsSold”, “DiscountApplied”, “StoreRegion” with gradient boosting  
+6. PCA on numeric features (“CustomerAge”, “UnitsSold”, “Sales”, “DiscountApplied”) 
+------- Next set of Ideas for 11 -------
+1. Correlation Heatmap  
+   – Input: classes.state.State['dataset_info']['age'], ['income'], ['purchase_count']  
+
+2. Boxplot Comparison  
+   – Group by: classes.state.State['dataset_info']['state']  
+   – Compare: classes.state.State['dataset_info']['income']  
+
+3. K-Means Clustering  
+   – Features: classes.state.State['dataset_info']['age'], ['income'], ['purchase_count']  
+
+4. Random Forest Classification  
+   – Target: classes.state.State['dataset_info']['churned']  
+   – Predictors: classes.state.State['dataset_info']['age'], ['income'], ['purchase_count'], ['gender']  
+
+5. Time-Series Forecast  
+   – Series: classes.state.State['dataset_info']['purchase_count']  
+   – Time Index: classes.state.State['dataset_info']['date'] 
+------- Next set of Ideas for 12 -------
+1. Pairplot of all numeric columns in classes.state.State['dataset_info']  
+2. Correlation‐matrix heatmap for numeric features from classes.state.State['dataset_info']  
+3. 2D PCA scatter of classes.state.State['dataset_info']['columns']  
+4. K-means clustering on selected features in classes.state.State['dataset_info'] with elbow‐method plot  
+5. Random Forest feature‐importance bar chart for the target in classes.state.State['dataset_info'] 
+------- Next set of Ideas for 13 -------
+1. Scatter plot of classes.state.State['dataset_info']['Age'] vs. classes.state.State['dataset_info']['AnnualIncome'], colored by classes.state.State['dataset_info']['SpendingScore']  
+2. Correlation heatmap of numeric columns: classes.state.State['dataset_info']['Age'], ['AnnualIncome'], ['SpendingScore']  
+3. Box plots of classes.state.State['dataset_info']['AnnualIncome'] grouped by classes.state.State['dataset_info']['Region']  
+4. PCA projection of features ['Age', 'AnnualIncome', 'SpendingScore'] from classes.state.State['dataset_info'], with points colored by classes.state.State['dataset_info']['Churn']  
+5. Time-series plot of monthly churn rate, aggregating classes.state.State['dataset_info']['Churn'] over classes.state.State['dataset_info']['SignupDate'] 
+------- Next set of Ideas for 14 -------
+1. Regression of release_year using energy, valence, speechiness, acousticness, instrumentalness, liveness, loudness, tempo, duration_ms, time_signature  
+2. Classification of mode based on energy, valence, speechiness, acousticness, instrumentalness, liveness, loudness, tempo  
+3. k-means clustering of songs using energy, valence, acousticness, instrumentalness, loudness, tempo  
+4. PCA on energy, valence, speechiness, acousticness, instrumentalness, liveness, loudness, tempo for dimensionality reduction  
+5. Time-series trend analysis of average loudness and valence by release_year  
+6. Isolation Forest anomaly detection on tempo, loudness, duration_ms, acousticness, instrumentalness 
+------- Next set of Ideas for 15 -------
+1. Scatter plot of dataset_info['feature_1'] vs dataset_info['feature_2'], colored by dataset_info['category_label']  
+2. Correlation heatmap of all numeric columns in dataset_info  
+3. PCA projection (2D) of dataset_info[['feature_3','feature_4','feature_5']]  
+4. Box plots of dataset_info['target_value'] grouped by dataset_info['group_id']  
+5. Time-series line chart of dataset_info['timestamp'] vs dataset_info['metric'] 
+------- Next set of Ideas for 16 -------
+1. Linear regression: predict murders ~ population  
+2. Logistic regression: classify region ~ murders + population  
+3. K-means clustering on {population, murders, area}  
+4. Principal Component Analysis on {population, murders, area}  
+5. Random Forest: predict region or division from population, murders, area  
+6. Anomaly detection on murders/population ratio 
+------- Next set of Ideas for 17 -------
+1. Linear Regression: predict classes.state.State['dataset_info']['target'] using classes.state.State['dataset_info']['feature_1'], classes.state.State['dataset_info']['feature_2'], classes.state.State['dataset_info']['feature_3']  
+2. Logistic Regression: classify classes.state.State['dataset_info']['binary_target'] with classes.state.State['dataset_info']['feature_2'], classes.state.State['dataset_info']['feature_4']  
+3. Random Forest: feature-importance ranking for classes.state.State['dataset_info']['target'] across all columns in classes.state.State['dataset_info']  
+4. K-Means Clustering: segment observations by classes.state.State['dataset_info']['feature_1'] and classes.state.State['dataset_info']['feature_2']  
+5. PCA: dimensionality reduction on classes.state.State['dataset_info']['feature_1'], classes.state.State['dataset_info']['feature_2'], classes.state.State['dataset_info']['feature_n']  
+6. ARIMA Time Series: forecast classes.state.State['dataset_info']['time_index'] → classes.state.State['dataset_info']['time_series_value'] 
+------- Next set of Ideas for 18 -------
+Columns: classes.state.State['dataset_info']['columns']
+
+Ideas:
+1. Random Forest classification to predict attrition using features [age, salary, experience, education, performance_score].  
+2. Linear regression modeling of salary as a function of age, experience, education and performance_score.  
+3. K-Means clustering on age, salary, experience and performance_score to identify employee segments.  
+4. PCA on [age, salary, experience, performance_score, education] for dimensionality reduction and feature interpretation.  
+5. Association rule mining between department, education and attrition to uncover common patterns.  
+6. Isolation Forest anomaly detection on performance_score vs. salary to flag outlier employees. 
+------- Next set of Ideas for 19 -------
+1. Logistic Regression: Attrition ~ Age + MonthlyIncome + JobSatisfaction + OverTime + TotalWorkingYears  
+2. Random Forest Classification: PerformanceRating ~ Age + Department + JobLevel + YearsAtCompany + WorkLifeBalance  
+3. K-Means Clustering on Age, MonthlyIncome, TotalWorkingYears, TrainingTimesLastYear, YearsSinceLastPromotion  
+4. Principal Component Analysis on Age, MonthlyIncome, TotalWorkingYears, YearsAtCompany, YearsInCurrentRole  
+5. Cox Proportional Hazards Model for time-to-Attrition using YearsAtCompany + JobSatisfaction + OverTime + DistanceFromHome  
+6. Association Rule Mining among Department, JobRole, Education, MaritalStatus, Attrition 
+------- Next set of Ideas for 20 -------
+1. Time-series forecasting of water_usage over date for each city  
+2. Anomaly detection on daily water_usage per location across date  
+3. K-means clustering of locations by their water_usage patterns over date  
+4. Regression modeling of water_usage using date-derived features and city as predictors  
+5. Classification of high vs. low water_usage days using date features and city  
+6. Change-point detection in water_usage time series for each city over date 
+------- Next set of Ideas for 21 -------
+1. Choropleth map of classes.state.State['dataset_info']['Population'] by state  
+2. Scatter plot of classes.state.State['dataset_info']['MedianIncome'] vs. classes.state.State['dataset_info']['PovertyRate'] with regression line  
+3. Correlation heatmap of classes.state.State['dataset_info']['UnemploymentRate'], classes.state.State['dataset_info']['EducationLevel'], classes.state.State['dataset_info']['AverageHouseholdSize']  
+4. PCA on classes.state.State['dataset_info']['MedianAge'], classes.state.State['dataset_info']['ForeignBorn'], classes.state.State['dataset_info']['Veterans']  
+5. K-means clustering of states using classes.state.State['dataset_info']['PopulationDensity'], classes.state.State['dataset_info']['MedianIncome'], classes.state.State['dataset_info']['UnemploymentRate'] 
+------- Next set of Ideas for 22 -------
+1. Correlation heatmap of numeric columns (age, income, purchase_amount)  
+2. PCA scatter plot on (age, income, purchase_amount) colored by region  
+3. Time-series line chart of purchase_amount over purchase_date, faceted by product_category  
+4. K-means customer segmentation using (age, income, purchase_amount) and visualized in 3D  
+5. Random Forest feature-importance bar plot for predicting churn using age, income, purchase_amount, region, product_category 
+------- Next set of Ideas for 23 -------
+1. Random Forest classification using classes.state.State['dataset_info']['TargetColumn'] and predictors classes.state.State['dataset_info']['FeatureA'], classes.state.State['dataset_info']['FeatureB']  
+2. Gradient Boosting regression on classes.state.State['dataset_info']['NumericOutcome'] with inputs classes.state.State['dataset_info']['FeatureC'], classes.state.State['dataset_info']['FeatureD']  
+3. K-Means clustering of records based on classes.state.State['dataset_info']['FeatureSet']  
+4. ARIMA/LSTM time-series forecasting of classes.state.State['dataset_info']['TimeStamp'] → classes.state.State['dataset_info']['Metric']  
+5. PCA or UMAP dimensionality reduction on classes.state.State['dataset_info']['HighDimFeatures'] 
+------- Next set of Ideas for 24 -------
+1. LogisticRegression(features=classes.state.State['dataset_info'][['feat1','feat2','feat3']],  
+   target=classes.state.State['dataset_info']['label'])  
+2. KMeans(n_clusters=4,  
+   data=classes.state.State['dataset_info'][['feat1','feat2','feat4']])  
+3. PCA(n_components=2,  
+   data=classes.state.State['dataset_info'][['feat1','feat2','feat3','feat4']])  
+4. RandomForestClassifier(features=classes.state.State['dataset_info'][['feat1','feat2','feat3']],  
+   target=classes.state.State['dataset_info']['label'])  
+5. IsolationForest(contamination=0.01,  
+   data=classes.state.State['dataset_info'][['feat1','feat2','feat3','feat4']])  
+6. ARIMA(order=(1,1,1),  
+   series=classes.state.State['dataset_info']['timestamp']→classes.state.State['dataset_info']['target']) 
+------- Next set of Ideas for 25 -------
+1. K-means clustering on Population, Income, Illiteracy, Murder, HS_Grad, Frost  
+2. PCA on Population, Income, Illiteracy, Life_Exp, Murder, HS_Grad, Frost, Area  
+3. Random Forest classification to predict high-Murder (binary) using Income, Illiteracy, HS_Grad, Frost, Area  
+4. Linear regression: Life_Exp ~ Income + Illiteracy + Murder + HS_Grad + Frost  
+5. Logistic regression to predict above-median Income (binary) from Population, Illiteracy, HS_Grad, Murder, Frost  
+6. Gradient Boosting regression of Murder on Income, HS_Grad, Population, Area, Frost 
+------- Next set of Ideas for 26 -------
+1. Scatter plot of classes.state.State['dataset_info']['age'] vs. classes.state.State['dataset_info']['income'], colored by classes.state.State['dataset_info']['gender']  
+2. Correlation heatmap of classes.state.State['dataset_info']['age'], classes.state.State['dataset_info']['income'], classes.state.State['dataset_info']['purchase_amount']  
+3. Box plot of classes.state.State['dataset_info']['purchase_amount'] grouped by classes.state.State['dataset_info']['region']  
+4. Time‐series line chart of classes.state.State['dataset_info']['signup_date'] vs. classes.state.State['dataset_info']['purchase_amount'] (with rolling average)  
+5. PCA biplot using the first two principal components from classes.state.State['dataset_info']['age'], classes.state.State['dataset_info']['income'], classes.state.State['dataset_info']['purchase_amount'] 
+------- Next set of Ideas for 27 -------
+1. Principal Component Analysis on classes.state.State['dataset_info']['feature_1'], classes.state.State['dataset_info']['feature_2'], classes.state.State['dataset_info']['feature_3']  
+2. K-Means Clustering on classes.state.State['dataset_info']['feature_4'], classes.state.State['dataset_info']['feature_5']  
+3. Logistic Regression predicting classes.state.State['dataset_info']['target_label'] from classes.state.State['dataset_info']['feature_6'], classes.state.State['dataset_info']['feature_7']  
+4. Random Forest Classification of classes.state.State['dataset_info']['target_label'] using all features in classes.state.State['dataset_info']  
+5. ARIMA Time Series Forecast on classes.state.State['dataset_info']['date'], classes.state.State['dataset_info']['value']  
+6. Autoencoder Anomaly Detection on classes.state.State['dataset_info']['feature_8'], classes.state.State['dataset_info']['feature_9'] 
+------- Next set of Ideas for 28 -------
+1. Correlation heatmap of all numeric columns in classes.state.State['dataset_info']  
+2. PCA on the standardized numeric features in classes.state.State['dataset_info'] → 2D scatter of PC1 vs PC2  
+3. K-means clustering on [feature1, feature2, feature3] from classes.state.State['dataset_info'] → cluster assignment plot  
+4. RandomForest model predicting classes.state.State['dataset_info']['target'] using all other columns → feature-importance bar chart  
+5. LogisticRegression on classes.state.State['dataset_info'][['featureA','featureB',…]] to classify classes.state.State['dataset_info']['label'] → ROC curve  
+6. ARIMA forecasting on the time series in classes.state.State['dataset_info']['date'] vs classes.state.State['dataset_info']['value'] 
+------- Next set of Ideas for 29 -------
+1. Correlation heatmap of age, income, purchase_amount, transaction_count  
+2. Logistic regression to predict churn_label from age, income, gender  
+3. K-means clustering on income, purchase_amount, transaction_count  
+4. ARIMA time series forecasting of monthly sales using transaction_date and purchase_amount  
+5. Apriori association rule mining on product_category and purchase_amount  
+6. Isolation Forest anomaly detection on purchase_amount and transaction_count 
+------- Next set of Ideas for 30 -------
+1. Time-series ARIMA forecasting on daily aggregated Quantity by InvoiceDate  
+2. K-means clustering of CustomerID using mean Quantity, mean UnitPrice, and Country  
+3. Principal Component Analysis (PCA) on Quantity and UnitPrice  
+4. Random Forest regression to predict UnitPrice from Quantity and Country  
+5. Association rule mining (Apriori) on StockCode within each InvoiceNo  
+6. Logistic regression to classify high-value customers (aggregate spend threshold) using Quantity, UnitPrice, Country 
+------- Next set of Ideas for 31 -------
+1. Random Forest classification to predict classes.state.State['dataset_info']['target_column']  
+2. Lasso regression on classes.state.State['dataset_info']['continuous_target']  
+3. K-means clustering of classes.state.State['dataset_info']['feature1','feature2',…]  
+4. Principal Component Analysis on classes.state.State['dataset_info']['numeric_features']  
+5. ARIMA time-series forecasting using classes.state.State['dataset_info']['date_index','value']  
+6. Isolation Forest anomaly detection over classes.state.State['dataset_info']['all_variables'] 
+------- Next set of Ideas for 32 -------
+1. Logistic regression to predict conversion using session_duration, click_count, amount, device_type and region  
+2. ARIMA time-series forecasting on amount aggregated by timestamp  
+3. K-means clustering of users based on session_duration, click_count and amount  
+4. PCA for dimensionality reduction on amount, session_duration, click_count and purchase_frequency  
+5. Random Forest classification of category using amount, session_duration, device_type and region  
+6. XGBoost regression to predict session_duration from click_count, amount and device_type 
+------- Next set of Ideas for 33 -------
+1. Logistic Regression on customer churn using features age, income, purchase_amount, customer_segment, region  
+2. Random Forest classification of product_category from gender, age, income, purchase_amount, region  
+3. K-Means clustering on income, purchase_amount, age, signup_date (converted to numeric)  
+4. PCA dimensionality reduction on numeric columns age, income, purchase_amount  
+5. ARIMA time-series forecasting of purchase_amount over signup_date  
+6. Isolation Forest anomaly detection on purchase_amount, frequency_of_purchases, region 
+------- Next set of Ideas for 34 -------
+1. Multiple Linear Regression: predict `purchase_amount` using `age`, `annual_income`, `spending_score`, `purchase_count`  
+2. K-Means Clustering on `age`, `annual_income`, `spending_score`  
+3. Random Forest Classification: predict `gender` using `annual_income`, `spending_score`, `region`, `product_category`  
+4. Time Series Forecasting (ARIMA or LSTM) on `purchase_count` over `timestamp`  
+5. Isolation Forest Anomaly Detection on `annual_income`, `spending_score`  
+6. Association Rule Mining between `product_category` and `region` 
+------- Next set of Ideas for 35 -------
+1. Scatter plot of salary vs. years_at_company, colored by performance_score  
+2. Boxplot of salary grouped by department  
+3. Heatmap of correlation coefficients among age, salary, years_at_company, performance_score  
+4. KDE plots of salary distributions segmented by education_level  
+5. Principal component analysis on numeric features (age, salary, years_at_company, performance_score) 
+------- Next set of Ideas for 36 -------
+1. Pairwise scatterplot matrix of classes.state.State['dataset_info']['numerical_features']  
+2. Correlation heatmap for classes.state.State['dataset_info']['numerical_features']  
+3. PCA biplot on classes.state.State['dataset_info']['numerical_features']  
+4. t-SNE embedding of classes.state.State['dataset_info']['all_features']  
+5. Hierarchical clustering dendrogram using classes.state.State['dataset_info']['selected_features'] 
+------- Next set of Ideas for 37 -------
+- Logistic regression to predict attrition using age, department, monthly_income, job_satisfaction  
+- Random forest classification of performance_rating from years_at_company, education_level, monthly_income, job_satisfaction  
+- K-means clustering on age, monthly_income, years_at_company to identify employee segments  
+- Time-series forecasting of monthly_income or attrition_rate over years_at_company  
+- Principal component analysis on age, monthly_income, years_at_company, job_satisfaction, performance_rating  
+- Survival analysis (time-to-attrition) using years_at_company, job_satisfaction, performance_rating 
+------- Next set of Ideas for 38 -------
+1. Logistic Regression on classes.state.State['dataset_info'][feature_cols] → classes.state.State['dataset_info']['target']  
+2. Random Forest Classification using classes.state.State['dataset_info'][feature_cols] → classes.state.State['dataset_info']['target']  
+3. K-Means Clustering over classes.state.State['dataset_info'][feature_cols]  
+4. Principal Component Analysis on classes.state.State['dataset_info'][feature_cols]  
+5. Gradient Boosting Regression to predict classes.state.State['dataset_info']['target']  
+6. Isolation Forest Anomaly Detection on classes.state.State['dataset_info'][feature_cols] 
+------- Next set of Ideas for 39 -------
+1. Logistic Regression predicting Churn from Age, Gender, AnnualIncome, SpendingScore, MembershipDuration  
+2. Random Forest Regression estimating SpendingScore using Age, AnnualIncome, MembershipDuration, Gender  
+3. K-Means Clustering on Age, AnnualIncome, SpendingScore  
+4. PCA dimensionality reduction on Age, AnnualIncome, SpendingScore, MembershipDuration  
+5. ARIMA time-series forecasting of MonthlyPurchases  
+6. Apriori association-rule mining on ProductCategory and PurchaseHistory   
+------- Next set of Ideas for 40 -------
+1. Logistic Regression to predict churn using age, gender, income, purchase_count, session_duration, visit_frequency, region  
+2. Random Forest Regression to model satisfaction_score from age, income, purchase_count, session_duration, visit_frequency, product_category  
+3. K-Means Clustering on age, income, purchase_count, session_duration, satisfaction_score, visit_frequency for customer segmentation  
+4. ARIMA Time-Series Forecasting of monthly purchase_count based on last_purchase_date and region  
+5. Principal Component Analysis (PCA) on age, income, purchase_count, session_duration, satisfaction_score, visit_frequency for dimensionality reduction  
+6. Hierarchical Clustering on churn, satisfaction_score, purchase_count, session_duration, visit_frequency, product_category for behavioral grouping 
+------- Next set of Ideas for 41 -------
+1. LogisticRegression: predict churned using age, gender, annual_income, subscription_length, num_transactions  
+2. KMeans Clustering on age, annual_income, num_transactions, avg_transaction_value  
+3. RandomForestClassifier: predict churned with all numeric features (age, annual_income, subscription_length, num_transactions, avg_transaction_value)  
+4. PCA on age, annual_income, subscription_length, num_transactions, avg_transaction_value  
+5. ARIMA time-series forecasting of monthly num_transactions  
+6. CoxPH Survival Analysis on subscription_length with covariates age, gender, annual_income 
+------- Next set of Ideas for 42 -------
+1. Linear regression predicting classes.state.State['dataset_info']['SalePrice'] from classes.state.State['dataset_info']['LotArea'], classes.state.State['dataset_info']['OverallQual'], classes.state.State['dataset_info']['YearBuilt']  
+2. Logistic regression classifying classes.state.State['dataset_info']['Churn'] based on classes.state.State['dataset_info']['Tenure'], classes.state.State['dataset_info']['MonthlyCharges'], classes.state.State['dataset_info']['ContractType']  
+3. K-means clustering on classes.state.State['dataset_info']['AnnualIncome'] and classes.state.State['dataset_info']['SpendingScore']  
+4. Random forest regression to estimate classes.state.State['dataset_info']['LoanAmount'] using classes.state.State['dataset_info']['CreditScore'], classes.state.State['dataset_info']['ApplicantIncome'], classes.state.State['dataset_info']['CoapplicantIncome']  
+5. ARIMA time-series forecasting of classes.state.State['dataset_info']['MonthlySales']  
+6. Association rule mining on classes.state.State['dataset_info']['BasketItems'] 
+------- Next set of Ideas for 43 -------
+1. Gradient Boosting Classification to predict churn_flag using session_duration, pages_visited, purchase_amount, device_type, country  
+2. Random Forest Regression to forecast purchase_amount from session_duration, pages_visited, device_type, country  
+3. K-Means Clustering on session_duration, pages_visited, purchase_amount to segment user behavior  
+4. ARIMA or Prophet time-series forecasting of daily aggregated purchase_amount over signup_date  
+5. Association Rule Mining on page sequences (pages_visited) within each session_id  
+6. PCA for dimensionality reduction on session_duration, pages_visited, purchase_amount 
+------- Next set of Ideas for 44 -------
+- Principal Component Analysis on classes.state.State['dataset_info'] numeric columns  
+- K-Means clustering on classes.state.State['dataset_info'] features  
+- Random Forest classification predicting classes.state.State['dataset_info']['target']  
+- Support Vector Machine classification on classes.state.State['dataset_info']['target']  
+- XGBoost regression for classes.state.State['dataset_info']['target']  
+- Association rule mining on categorical fields in classes.state.State['dataset_info'] 
+------- Next set of Ideas for 45 -------
+1. Correlation heatmap of classes.state.State['dataset_info']['age'], classes.state.State['dataset_info']['annual_income'], classes.state.State['dataset_info']['spending_score'], classes.state.State['dataset_info']['membership_duration']  
+2. Scatter plot of classes.state.State['dataset_info']['age'] vs. classes.state.State['dataset_info']['annual_income'], colored by k-means cluster assignments on ['age','annual_income','spending_score']  
+3. Boxplots of classes.state.State['dataset_info']['spending_score'] grouped by classes.state.State['dataset_info']['gender'] and classes.state.State['dataset_info']['region']  
+4. Partial dependence plot (from a Random Forest) showing the effect of classes.state.State['dataset_info']['annual_income'] and classes.state.State['dataset_info']['age'] on predicted churn probability  
+5. t-SNE (or UMAP) 2D projection of features ['age','annual_income','spending_score','membership_duration'], with points colored by true vs. predicted customer segment 
+------- Next set of Ideas for 46 -------
+1. K-Means clustering on total_spent and num_orders  
+2. PCA on age, total_spent and num_orders  
+3. Random Forest classification to predict churn (derived from signup_date & last_active_date) using age, gender, country, total_spent, num_orders  
+4. Logistic Regression to predict churn using age, gender, country, total_spent, num_orders  
+5. Time-series forecasting of daily signup counts (signup_date) with ARIMA or Prophet  
+6. Survival analysis of customer lifetime (signup_date → last_active_date) with a Cox proportional hazards model 
+------- Next set of Ideas for 47 -------
+1. K-Means clustering on (annual_income, purchase_count, loyalty_score)  
+2. Logistic regression to predict churn_flag using (age, gender, annual_income, purchase_count, loyalty_score)  
+3. Random Forest classification of churn_flag from (age, gender, annual_income, purchase_count, loyalty_score)  
+4. Gradient Boosting regression to predict purchase_count from (age, annual_income, loyalty_score)  
+5. PCA on (age, annual_income, purchase_count, loyalty_score)  
+6. Isolation Forest anomaly detection on (age, annual_income, purchase_count) 
+------- Next set of Ideas for 48 -------
+1. Linear regression predicting performance_score from age and salary  
+2. Logistic regression classification of department membership using performance_score and region  
+3. K-Means clustering on age, salary, performance_score  
+4. Principal Component Analysis (PCA) on numerical features age, salary, performance_score  
+5. Time series forecasting of headcount over hire_date  
+6. Anomaly detection on salary vs. performance_score distributions 
+------- Next set of Ideas for 49 -------
+1. Logistic Regression (features: AGEP, SCHL, ratio_income_poverty, MAR, SEX; target: worked)  
+2. Random Forest Classification (features: PINCP, PERNP, ESR, COW, PUMA; target: ESR)  
+3. K-Means Clustering (variables: PINCP, ratio_income_poverty, AGEP, PERNP)  
+4. Principal Component Analysis (variables: PINCP, PERNP, ratio_income_poverty, AGEP)  
+5. Decision Tree (features: SCHL, MAR, HISP, RACSP; target: COW)  
+6. Isolation Forest Anomaly Detection (variables: PINCP, ratio_income_poverty, PERNP) 

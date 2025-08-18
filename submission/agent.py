@@ -3,7 +3,7 @@ import re
 from langgraph.checkpoint.memory import MemorySaver
 from dotenv import load_dotenv
 from agents import create_research_team, supervisor_team, machinelearning_agent, create_output_plotly_team
-from classes import State
+from classes import State, globe
 from helper_functions import pretty_print_messages, initialize_state_from_csv, define_variables, get_last_ai_message, get_datainfo, data_describe, run_code
 
 load_dotenv()
@@ -14,10 +14,13 @@ class Agent:
     def initialize(self):
         self.ml_team = machinelearning_agent(State)
         print("Machine Learning Team Created \n")
+
         self.research_team = create_research_team(State)
         print("Research Team Created \n")
+
         self.supervisor_team = supervisor_team(State)
         print("Supervisor Team is Created! \n")
+
         self.plotly_team = create_output_plotly_team(State)
         print("Plotly Team is Created! \n")
     '''    

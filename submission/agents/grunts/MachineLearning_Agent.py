@@ -1,7 +1,7 @@
 
 from langgraph.prebuilt import create_react_agent
-from classes import State
-from helper_functions import get_llm
+from classes import State, globe
+from helper_functions import get_llm, update_edge
 
 def machinelearning_agent(state: State):
     llm = get_llm(model = 'gpt-5-mini')

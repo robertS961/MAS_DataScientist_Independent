@@ -1,651 +1,722 @@
 # ---- NEW BLOCK ---- # 
-#CODE HERE
-# Enhanced interactive Plotly visualizations for dataset.csv
-# - Dark theme, improved interactivity, clearer axes and ranges
-# - Robust handling of NaNs, duplicates, and older/newer sklearn API
-# - Exports a single output.html with narrative descriptions before each figure
-# Run this script in the same folder as dataset.csv
+# CODE HERE
+# Enhanced interactive Plotly visualization suite for dataset.csv
+# - Dark-mode Plotly visuals, improved interactivity (range slider, buttons, toggles),
+#   clearer colors, robust handling of NaNs and empty groups, larger figure sizes.
+# - Adds academic-style narratives (introduction, per-figure paragraphs that flow, conclusion)
+# - Outputs a single HTML file: output.html (includes plotly.js via CDN in each figure div).
+#
+# Requirements: pandas, numpy, scikit-learn, plotly
+# Install if needed:
+# pip install pandas numpy scikit-learn plotly
 
-import pandas as pd
-import numpy as np
+import os
+import re
 import math
+import numpy as np
+import pandas as pd
+from pathlib import Path
 
 import plotly.graph_objects as go
 import plotly.express as px
-from plotly.subplots import make_subplots
 import plotly.io as pio
 
-# ML imports
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import NMF
+from sklearn.linear_model import HuberRegressor, LogisticRegression
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.metrics import roc_curve, auc, r2_score
+from sklearn.metrics import roc_curve, auc
+from sklearn.impute import SimpleImputer
 
-# Set default template to dark theme
+# Use a dark template by default for all figures
 pio.templates.default = "plotly_dark"
 
-# ---------------------------
-# Load & Preprocessing
-# ---------------------------
-df = pd.read_csv("dataset.csv")
+# -------------------------
+# Load and preprocess data
+# -------------------------
+DATA_PATH = "dataset.csv"
+if not Path(DATA_PATH).exists():
+    raise FileNotFoundError(f"{DATA_PATH} not found. Please place dataset.csv in working directory.")
 
-# Basic defensive checks
-if df.shape[0] == 0:
-    raise RuntimeError("dataset.csv appears empty.")
+df = pd.read_csv(DATA_PATH)
 
-# Fill numeric NaNs with median (robust to outliers)
-num_cols = df.select_dtypes(include=["float64", "int64"]).columns.tolist()
-for col in num_cols:
-    median_val = df[col].median()
-    df[col] = df[col].fillna(median_val)
+# Defensive: ensure expected columns exist
+expected_cols = ["Conference", "Year", "Title", "DOI", "Link", "FirstPage", "LastPage",
+                 "PaperType", "Abstract", "AuthorNames-Deduped", "AuthorNames",
+                 "AuthorAffiliation", "InternalReferences", "AuthorKeywords",
+                 "AminerCitationCount", "CitationCount_CrossRef", "PubsCited_CrossRef",
+                 "Downloads_Xplore", "Award", "GraphicsReplicabilityStamp"]
+for c in expected_cols:
+    if c not in df.columns:
+        # if missing, create with NaNs to keep pipeline running
+        df[c] = np.nan
 
-# Fill text/categorical NaNs
-text_defaults = {
-    "Award": "NoAward",
-    "GraphicsReplicabilityStamp": "NoStamp",
-    "InternalReferences": "",
-    "AuthorKeywords": "",
-    "AuthorAffiliation": "",
-}
-for col, default in text_defaults.items():
-    if col in df.columns:
-        df[col] = df[col].fillna(default)
+# Basic cleaning and derived fields
+numeric_cols = ["FirstPage", "LastPage", "AminerCitationCount", "CitationCount_CrossRef",
+                "PubsCited_CrossRef", "Downloads_Xplore"]
+for c in numeric_cols:
+    df[c] = pd.to_numeric(df[c], errors="coerce")
+    if df[c].isna().all():
+        df[c] = df[c].fillna(0.0)
     else:
-        df[col] = default
+        med = float(np.nanmedian(df[c].values))
+        df[c] = df[c].fillna(med)
 
-# Ensure AuthorNames-Deduped exists
-if "AuthorNames-Deduped" not in df.columns:
-    df["AuthorNames-Deduped"] = df.get("AuthorNames", "").fillna("")
+# Year as int (fall back to median if problematic)
+df['Year'] = pd.to_numeric(df['Year'], errors="coerce")
+if df['Year'].isna().all():
+    df['Year'] = 2009
+else:
+    df['Year'] = df['Year'].fillna(int(df['Year'].median())).astype(int)
 
-# Ensure Year is int
-df["Year"] = df["Year"].astype(int)
-
-# Remove exact duplicate rows (defensive)
-df = df.drop_duplicates()
-
-# Feature engineering
-def count_internal_refs(s):
-    if not isinstance(s, str) or s.strip() == "":
-        return 0
-    # handle different separators
-    parts = [p.strip() for p in s.replace(";", ",").split(",") if p.strip()]
-    return len(parts)
-
-def count_keywords(s):
-    if not isinstance(s, str) or s.strip() == "":
-        return 0
-    parts = [p.strip() for p in s.replace(";", ",").split(",") if p.strip()]
-    return len(parts)
-
-df["internal_refs_count"] = df["InternalReferences"].apply(count_internal_refs)
-df["keyword_count"] = df["AuthorKeywords"].apply(count_keywords)
-
-# Short helper for robust OneHotEncoder creation (compat for sklearn versions)
-def safe_ohe(**kwargs):
+# Page length derived (LastPage - FirstPage + 1) with sensible fallback
+def compute_page_len(row):
     try:
-        # sklearn >=1.2 uses sparse_output
-        return OneHotEncoder(**{**kwargs, "sparse_output": False})
-    except TypeError:
-        # older sklearn fallback
-        params = kwargs.copy()
-        params.pop("sparse_output", None)
-        return OneHotEncoder(**{**params, "sparse": False})
+        fp = row.get('FirstPage', np.nan)
+        lp = row.get('LastPage', np.nan)
+        if not (pd.isna(fp) or pd.isna(lp)):
+            return max(1.0, float(lp) - float(fp) + 1.0)
+    except Exception:
+        pass
+    return np.nan
 
-# ---------------------------
-# 1) Enhanced Trend Analysis on Citation Counts
-# ---------------------------
-# Narrative (used later in HTML): We visualize how citations evolve over time for the top conferences.
-# This helps identify venues that historically contributed more to paper impact.
+df['PageLength'] = df.apply(compute_page_len, axis=1)
+if df['PageLength'].isna().all():
+    df['PageLength'] = 1.0
+else:
+    df['PageLength'] = df['PageLength'].fillna(df['PageLength'].median())
 
-# Choose top conferences by count (limit to top 5 for clarity)
-top_confs = df["Conference"].value_counts().nlargest(5).index.tolist()
-df_trend_base = df[df["Conference"].isin(top_confs)].copy()
+# Internal references count (attempt to count separators)
+def count_internal_refs(x):
+    if pd.isnull(x):
+        return 0
+    s = str(x)
+    parts = re.split(r"[;,|\n]+", s.strip())
+    parts = [p for p in parts if p.strip() != ""]
+    # filter out obvious noise
+    return max(0, len(parts))
 
-# Aggregate mean by Year & Conference and handle potential duplicates by grouping
-df_trend = (
-    df_trend_base.groupby(["Year", "Conference"], as_index=False)[
-        ["AminerCitationCount", "CitationCount_CrossRef"]
-    ]
-    .mean()
-    .melt(id_vars=["Year", "Conference"], value_vars=["AminerCitationCount", "CitationCount_CrossRef"],
-          var_name="Metric", value_name="Count")
+df['InternalRefCount'] = df['InternalReferences'].apply(count_internal_refs)
+
+# Presence of code/data links heuristic
+def has_code_link(link, title, abstract):
+    s = " ".join([str(link or ""), str(title or ""), str(abstract or "")]).lower()
+    if any(k in s for k in ("github.com", "gitlab.com", "zenodo.org", "figshare", "osf.io", "github", "gitlab", "zenodo", "figshare", "osf", "code", "dataset", "data:")):
+        return 1
+    return 0
+
+df['HasCodeLink'] = df.apply(lambda r: has_code_link(r.get('Link', ''), r.get('Title', ''), r.get('Abstract', '')), axis=1)
+
+# Keywords processing (lowercased string)
+def normalize_keywords(x):
+    if pd.isnull(x):
+        return ""
+    s = str(x).strip().lower()
+    s = re.sub(r"[;|/]+", ",", s)
+    return s
+
+df['KeywordsNorm'] = df['AuthorKeywords'].apply(normalize_keywords)
+
+# Check replicability stamp presence (very sparse)
+df['HasReplicabilityStamp'] = df['GraphicsReplicabilityStamp'].notnull().astype(int)
+
+# Citation per year proxy to account for age
+current_year = int(df['Year'].max())
+df['YearsSince'] = (current_year - df['Year']).clip(lower=1).astype(float)
+df['AminerCitationsPerYear'] = df['AminerCitationCount'] / df['YearsSince']
+df['CrossRefCitationsPerYear'] = df['CitationCount_CrossRef'] / df['YearsSince']
+
+# Create a simple 'high-impact' label: top 10% by AminerCitationsPerYear (robust to outliers)
+cit_series = df['AminerCitationsPerYear'].replace([np.inf, -np.inf], np.nan).fillna(0)
+threshold = np.nanpercentile(cit_series, 90) if len(cit_series) > 0 else 0
+df['HighImpactTop10'] = (cit_series >= threshold).astype(int)
+
+# -------------------------
+# Utility color palettes and layout defaults for dark theme
+# -------------------------
+PALETTE = px.colors.qualitative.Dark24  # high-contrast palette suitable for dark bg
+LIGHT = "#e6eef8"
+FIG_WIDTH = 1400
+FIG_HEIGHT = 800
+FONT = dict(family="Helvetica Neue, Arial, sans-serif", color=LIGHT)
+
+# -------------------------
+# Plot 1: Conference Trends Over Time (fixed reindex / duplicate Year issue)
+# -------------------------
+agg = (df.groupby(['Conference', 'Year'], as_index=False)
+         .agg(Papers=('Title', 'count'),
+              MedianAminerCites=('AminerCitationCount', 'median'),
+              MedianDownloads=('Downloads_Xplore', 'median')))
+
+# Prepare options: All + top 10 conferences by total papers
+top_confs = df['Conference'].value_counts().nlargest(10).index.tolist()
+options_confs = ['All'] + top_confs
+
+fig_trend = go.Figure()
+
+# Full year range
+year_min = int(df['Year'].min())
+year_max = int(df['Year'].max())
+all_years = list(range(year_min, year_max + 1))
+all_years_df = pd.DataFrame({'Year': all_years})
+
+for idx, conf in enumerate(options_confs):
+    if conf == 'All':
+        subset_all = (agg.groupby('Year', as_index=False)
+                        .agg(Papers=('Papers', 'sum'),
+                             MedianAminerCites=('MedianAminerCites', 'median'),
+                             MedianDownloads=('MedianDownloads', 'median')))
+        # Merge with all_years to ensure full timeline
+        subset = pd.merge(all_years_df, subset_all, on='Year', how='left').sort_values('Year')
+    else:
+        subset_conf = agg[agg['Conference'] == conf][['Year', 'Papers', 'MedianAminerCites', 'MedianDownloads']].copy()
+        subset = pd.merge(all_years_df, subset_conf, on='Year', how='left').sort_values('Year')
+
+    # Fill NaNs for Papers with 0; leave medians NaN so lines don't mislead if no data that year
+    subset['Papers'] = subset['Papers'].fillna(0)
+
+    # Bar trace for number of papers
+    fig_trend.add_trace(go.Bar(
+        x=subset['Year'],
+        y=subset['Papers'],
+        name=f"Papers ({conf})",
+        marker_color=PALETTE[idx % len(PALETTE)],
+        hovertemplate='<b>%{x}</b><br>Papers: %{y}<br>Conference: ' + str(conf) + '<extra></extra>',
+        visible=(conf == 'All'),
+    ))
+
+    # Line for median Aminer citations
+    fig_trend.add_trace(go.Scatter(
+        x=subset['Year'],
+        y=subset['MedianAminerCites'],
+        mode="lines+markers",
+        name=f"Median Aminer Cites ({conf})",
+        yaxis="y2",
+        line=dict(width=3, color=PALETTE[(idx+6) % len(PALETTE)]),
+        marker=dict(size=8),
+        hovertemplate='<b>%{x}</b><br>Median Aminer Cites: %{y}<br>Conference: ' + str(conf) + '<extra></extra>',
+        visible=(conf == 'All'),
+    ))
+
+    # Line for median downloads (dashed)
+    fig_trend.add_trace(go.Scatter(
+        x=subset['Year'],
+        y=subset['MedianDownloads'],
+        mode="lines",
+        name=f"Median Downloads ({conf})",
+        yaxis="y3",
+        line=dict(width=3, dash='dash', color=PALETTE[(idx+12) % len(PALETTE)]),
+        hovertemplate='<b>%{x}</b><br>Median Downloads: %{y}<br>Conference: ' + str(conf) + '<extra></extra>',
+        visible=(conf == 'All'),
+    ))
+
+# Layout: 3 y-axes; add range slider and selectors
+fig_trend.update_layout(
+    title="Conference Trends Over Time: Papers vs Median Citations & Downloads",
+    xaxis=dict(title="Year", tickmode='linear', range=[year_min-0.5, year_max+0.5],
+               rangeslider=dict(visible=True), rangeselector=dict(
+                   buttons=list([
+                       dict(count=5, label="5y", step="year", stepmode="backward"),
+                       dict(count=10, label="10y", step="year", stepmode="backward"),
+                       dict(step="all", label="All")
+                   ])
+               )),
+    yaxis=dict(title="Number of Papers", showgrid=True),
+    yaxis2=dict(title="Median Aminer Citations", overlaying='y', side='right', position=0.95),
+    yaxis3=dict(title="Median Downloads (Xplore)", anchor='free', overlaying='y', side='right', position=0.87),
+    legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="left", x=0.01),
+    height=FIG_HEIGHT,
+    width=FIG_WIDTH,
+    template="plotly_dark",
+    font=FONT,
+    hovermode='x unified',
 )
 
-# If any negative or NaN counts appear, coerce
-df_trend["Count"] = pd.to_numeric(df_trend["Count"], errors="coerce").fillna(0)
-min_year = int(df_trend["Year"].min())
-max_year = int(df_trend["Year"].max())
-ymax = max(1, df_trend["Count"].max())
-y_range = [0, math.ceil(ymax * 1.12)]
-
-# Build a multi-trace figure so we can provide a dropdown to toggle metric
-metrics = df_trend["Metric"].unique().tolist()
-fig1 = go.Figure()
-color_seq = px.colors.qualitative.Alphabet  # distinct colors
-
-# Add traces: each (conference, metric) pair
-trace_idx = 0
-for metric in metrics:
-    subset_metric = df_trend[df_trend["Metric"] == metric]
-    for i, conf in enumerate(top_confs):
-        s = subset_metric[subset_metric["Conference"] == conf].sort_values("Year")
-        # Add as a trace (initially only the first metric visible)
-        visible = True if metric == metrics[0] else False
-        fig1.add_trace(
-            go.Scatter(
-                x=s["Year"],
-                y=s["Count"],
-                name=f"{conf} — {metric}",
-                mode="lines+markers",
-                marker=dict(size=6),
-                line=dict(width=2, color=color_seq[i % len(color_seq)]),
-                visible=visible,
-                hovertemplate="<b>%{text}</b><br>Year: %{x}<br>Count: %{y:.1f}",
-                text=[f"{conf} — {metric}"] * s.shape[0],
-            )
-        )
-        trace_idx += 1
-
-# Dropdown buttons to toggle metric
+# Dropdown to select conference
+n_per_conf = 3
 buttons = []
-n_confs = len(top_confs)
-for m_i, metric in enumerate(metrics):
-    visible_list = []
-    for m_j in range(len(metrics)):
-        # For all traces: visible if this trace belongs to chosen metric index
-        visible_list.extend([m_j == m_i] * n_confs)
-    buttons.append(
-        dict(
-            label=metric.replace("_", " "),
-            method="update",
-            args=[
-                {"visible": visible_list},
-                {
-                    "title": f"Citation Trends by Conference ({metric})",
-                    "yaxis": {"range": y_range},
-                    "xaxis": {"range": [min_year - 0.5, max_year + 0.5], "dtick": 1},
-                },
-            ],
-        )
+for i, conf in enumerate(options_confs):
+    vis = [False] * (len(options_confs) * n_per_conf)
+    start = i * n_per_conf
+    for j in range(n_per_conf):
+        vis[start + j] = True
+    buttons.append(dict(label=conf, method="update",
+                        args=[{"visible": vis},
+                              {"title": f"Conference Trends Over Time: {conf}"}]))
+fig_trend.update_layout(
+    updatemenus=[dict(active=0, buttons=buttons, x=0.0, y=1.18, xanchor='left',
+                      bgcolor="#101217", bordercolor="#2a3f5f", font=dict(color=LIGHT))]
+)
+
+# -------------------------
+# Plot 2: Cross-source Citation Calibration (Aminer vs CrossRef) with toggles
+# -------------------------
+# Prepare safe maxes and percentiles to avoid blank-looking plots dominated by outliers
+x_full = df['CitationCount_CrossRef'].fillna(0)
+y_full = df['AminerCitationCount'].fillna(0)
+x_95 = float(np.nanpercentile(x_full, 95))
+y_95 = float(np.nanpercentile(y_full, 95))
+x_max = max(x_full.max(), 1.0)
+y_max = max(y_full.max(), 1.0)
+
+# Robust regression
+xr = x_full.values.reshape(-1, 1)
+yr = y_full.values
+huber = HuberRegressor().fit(xr, yr)
+slope = float(huber.coef_[0])
+intercept = float(huber.intercept_)
+
+# Scatter with size scaled (but cap size)
+size_ref = np.interp(df['AminerCitationCount'], (df['AminerCitationCount'].min(), df['AminerCitationCount'].max()), (6, 36))
+size_ref = np.nan_to_num(size_ref, nan=6.0)
+
+fig_cite = go.Figure()
+
+fig_cite.add_trace(go.Scattergl(
+    x=x_full,
+    y=y_full,
+    mode='markers',
+    marker=dict(size=size_ref, color=df['Year'], colorscale='Viridis', showscale=True, colorbar=dict(title='Year')),
+    hovertemplate="<b>%{text}</b><br>CrossRef: %{x}<br>Aminer: %{y}<extra></extra>",
+    text=df['Title'].fillna("No title"),
+    name="Papers",
+))
+
+# identity y=x and regression lines (computed on full axis)
+line_x = np.linspace(0, max(x_max, x_95) * 1.05, 200)
+fig_cite.add_trace(go.Scatter(x=line_x, y=line_x, mode='lines', line=dict(color='#888888', dash='dash'), name='y = x'))
+fig_cite.add_trace(go.Scatter(x=line_x, y=(slope * line_x + intercept), mode='lines', line=dict(color='#ff6666', width=3),
+                              name=f'Robust fit: y = {slope:.2f}x + {intercept:.1f}'))
+
+# Layout and buttons to toggle scale / clip outliers
+fig_cite.update_layout(
+    title="Aminer vs CrossRef Citation Counts (robust fit)",
+    xaxis=dict(title="CitationCount_CrossRef (linear)", range=[0, max(x_95 * 1.1, x_max * 0.1)], showgrid=True),
+    yaxis=dict(title="AminerCitationCount (linear)", range=[0, max(y_95 * 1.1, y_max * 0.1)], showgrid=True),
+    height=FIG_HEIGHT,
+    width=FIG_WIDTH,
+    template="plotly_dark",
+    font=FONT,
+    hovermode='closest',
+)
+
+# Buttons: full range, clipped-to-95th, log-log
+updatemenus = [
+    dict(type="buttons", direction="right", showactive=True, x=0.02, y=1.15,
+         buttons=[
+             dict(label="Clipped (95th pct)",
+                  method="relayout",
+                  args=[{
+                      "xaxis.range": [0, x_95 * 1.05],
+                      "yaxis.range": [0, y_95 * 1.05],
+                      "xaxis.type": "linear", "yaxis.type": "linear",
+                      "xaxis.title.text": "CitationCount_CrossRef (clipped to 95th pct)",
+                      "yaxis.title.text": "AminerCitationCount (clipped to 95th pct)",
+                  }]),
+             dict(label="Full Range",
+                  method="relayout",
+                  args=[{
+                      "xaxis.range": [0, max(x_max, 1.0) * 1.05],
+                      "yaxis.range": [0, max(y_max, 1.0) * 1.05],
+                      "xaxis.type": "linear", "yaxis.type": "linear",
+                      "xaxis.title.text": "CitationCount_CrossRef (full)",
+                      "yaxis.title.text": "AminerCitationCount (full)",
+                  }]),
+             dict(label="Log-Log",
+                  method="relayout",
+                  args=[{
+                      "xaxis.type": "log",
+                      "yaxis.type": "log",
+                      "xaxis.title.text": "CitationCount_CrossRef (log)",
+                      "yaxis.title.text": "AminerCitationCount (log)",
+                  }]),
+         ],
+         bgcolor="#101217", font=dict(color=LIGHT),
     )
+]
+fig_cite.update_layout(updatemenus=updatemenus)
 
-# Add a button to show both metrics (makes all traces visible)
-buttons.append(
-    dict(
-        label="Both Metrics",
-        method="update",
-        args=[
-            {"visible": [True] * (len(metrics) * n_confs)},
-            {
-                "title": "Citation Trends by Conference (Both Metrics)",
-                "yaxis": {"range": y_range},
-                "xaxis": {"range": [min_year - 0.5, max_year + 0.5], "dtick": 1},
-            },
-        ],
-    )
+# Add marginal histogram of residuals as a second figure (kept large and dark)
+residuals = y_full - (slope * x_full + intercept)
+fig_resid = px.histogram(residuals, nbins=60, title="Residuals: Aminer - (fitted from CrossRef)",
+                         labels={'value': 'Residual (Aminer - fitted)'}, height=500, width=700, template="plotly_dark")
+fig_resid.update_layout(font=FONT)
+
+# -------------------------
+# Plot 3: Replicability Composite Score and relation to Downloads
+# -------------------------
+comp_df = df.copy()
+
+def robust_minmax(series):
+    lo = np.nanpercentile(series, 5)
+    hi = np.nanpercentile(series, 95)
+    span = hi - lo if (hi - lo) > 0 else 1.0
+    return ((series - lo) / span).clip(0, 1)
+
+comp_df['NormInternalRefCount'] = robust_minmax(comp_df['InternalRefCount'])
+comp_df['NormDownloads'] = robust_minmax(comp_df['Downloads_Xplore'])
+
+# Component weights (configurable)
+w_stamp = 0.5
+w_code = 0.35
+w_refs = 0.10
+w_downloads = 0.05
+
+comp_df['ReplicabilityScore'] = (
+    w_stamp * comp_df['HasReplicabilityStamp'] +
+    w_code * comp_df['HasCodeLink'] +
+    w_refs * comp_df['NormInternalRefCount'] +
+    w_downloads * comp_df['NormDownloads']
 )
+comp_df['ReplicabilityScore'] = comp_df['ReplicabilityScore'].clip(0, 1)
 
-fig1.update_layout(
-    title=f"Citation Trends by Conference ({metrics[0]})",
-    updatemenus=[
-        dict(active=0, buttons=buttons, x=0.0, y=1.12, xanchor="left", bgcolor="#222", bordercolor="#444")
-    ],
-    xaxis=dict(title="Year", range=[min_year - 0.5, max_year + 0.5], dtick=1),
-    yaxis=dict(title="Average Citation Count", range=y_range),
-    legend=dict(title="Conference — Metric", orientation="h", yanchor="bottom", y=-0.25),
-    hovermode="closest",
-)
+# Histogram with cumulative overlay
+fig_rep_hist = go.Figure()
+fig_rep_hist.add_trace(go.Histogram(x=comp_df['ReplicabilityScore'], nbinsx=40, name='count', marker_color='#00CC96', opacity=0.9))
+fig_rep_hist.add_trace(go.Histogram(x=comp_df['ReplicabilityScore'], nbinsx=40, histnorm='probability density', name='density', marker_color='rgba(255,255,255,0.05)'))
+fig_rep_hist.update_layout(title="Composite Replicability Score Distribution",
+                           xaxis_title="Replicability Score (0-1)",
+                           yaxis_title="Count",
+                           height=600, width=1000, template="plotly_dark", font=FONT)
 
-# ---------------------------
-# 2) Machine Learning: Predict Awards (Classification)
-# ---------------------------
-# Narrative: We build a logistic regression model to estimate the probability that a paper wins an award.
-# Features: PaperType, Conference, keyword_count, internal_refs_count, Downloads_Xplore, Year.
-# We present ROC curve and top features (coefficients) so users understand predictive drivers.
+# Boxplot by PaperType (top types)
+top_types = comp_df['PaperType'].value_counts().nlargest(8).index.tolist()
+box_df = comp_df[comp_df['PaperType'].isin(top_types)].copy()
+# ensure ordering by median score
+order = box_df.groupby('PaperType')['ReplicabilityScore'].median().sort_values().index.tolist()
+fig_rep_box = px.box(box_df, x='PaperType', y='ReplicabilityScore', category_orders={'PaperType': order},
+                     color='PaperType', title="Replicability Score by PaperType (top types)",
+                     height=600, width=FIG_WIDTH, template="plotly_dark")
+fig_rep_box.update_layout(showlegend=False, font=FONT, xaxis_tickangle=25)
 
-df_ml = df.copy()
-df_ml["AwardBinary"] = (df_ml["Award"] != "NoAward").astype(int)
+# Scatter: Replicability score vs Downloads, with citation-sized markers and jitter for visibility
+scatter_df = comp_df.copy()
+# add jitter to x for clarity when many same scores
+jitter = (np.random.rand(len(scatter_df)) - 0.5) * 0.02
+scatter_df['RepScoreJ'] = (scatter_df['ReplicabilityScore'] + jitter).clip(0, 1)
+marker_sizes = np.interp(scatter_df['AminerCitationCount'].fillna(0),
+                         (scatter_df['AminerCitationCount'].min(), scatter_df['AminerCitationCount'].max()), (6, 36))
+# px.scatter expects column names for size/color, so pass arrays via dataframe
+scatter_df['_marker_size'] = marker_sizes
+fig_rep_scatter = px.scatter(scatter_df, x='RepScoreJ', y='Downloads_Xplore', size='_marker_size',
+                             color='HasCodeLink', color_continuous_scale=['#ffaa00', '#00cc96'],
+                             hover_data=['Title', 'AuthorNames-Deduped', 'AminerCitationCount'],
+                             title="Replicability Score vs Downloads (bubble size = Aminer citations)",
+                             height=FIG_HEIGHT, width=FIG_WIDTH, template="plotly_dark")
+fig_rep_scatter.update_layout(xaxis_title="Replicability Score (with jitter)", font=FONT)
 
-# Select features
-X = df_ml[["PaperType", "Conference", "keyword_count", "internal_refs_count", "Downloads_Xplore", "Year"]].copy()
-y = df_ml["AwardBinary"].copy()
+# -------------------------
+# Plot 4: Topic Modeling (TF-IDF + NMF) + Topic Prevalence Over Time
+# -------------------------
+text_series = (df['Title'].fillna('') + '. ' + df['Abstract'].fillna('')).astype(str)
+tfv = TfidfVectorizer(max_df=0.9, min_df=6, max_features=5000, stop_words='english')
+X_tfidf = tfv.fit_transform(text_series.values)
 
-# If there are no positive examples, skip ML gracefully
-if y.sum() < 2:
-    raise RuntimeError("Not enough award examples to train a classifier.")
+n_topics = 12
+nmf = NMF(n_components=n_topics, init='nndsvda', random_state=42, max_iter=400)
+W = nmf.fit_transform(X_tfidf)
+H = nmf.components_
+feature_names = tfv.get_feature_names_out()
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
+# top words per topic
+top_n_words = 8
+topics_topwords = []
+for t in range(n_topics):
+    top_indices = H[t].argsort()[::-1][:top_n_words]
+    top_words = [feature_names[i] for i in top_indices]
+    topics_topwords.append((t, top_words))
 
-cat_feats = ["PaperType", "Conference"]
-num_feats = ["keyword_count", "internal_refs_count", "Downloads_Xplore", "Year"]
+topic_df = pd.DataFrame(W, columns=[f"Topic_{i}" for i in range(n_topics)])
+topic_df['Year'] = df['Year'].values
+topic_year = topic_df.groupby('Year').mean().reset_index().sort_values('Year')
 
-preprocessor = ColumnTransformer(
-    transformers=[
-        ("cat", safe_ohe(drop="if_binary", handle_unknown="ignore"), cat_feats),
-        ("num", StandardScaler(), num_feats),
-    ],
-    remainder="drop",
-)
+# Choose top 6 topics by overall mean
+topic_means = topic_df[[f"Topic_{i}" for i in range(n_topics)]].mean().sort_values(ascending=False)
+top_topics_idx = [int(s.split('_')[1]) for s in topic_means.head(6).index.tolist()]
 
-clf_pipeline = Pipeline(
-    [
-        ("prep", preprocessor),
-        ("model", LogisticRegression(class_weight="balanced", max_iter=2000, random_state=42)),
-    ]
-)
+# Stacked area chart: normalized by mean weights
+fig_topic_trends = go.Figure()
+for i, t in enumerate(top_topics_idx):
+    fig_topic_trends.add_trace(go.Scatter(
+        x=topic_year['Year'],
+        y=topic_year[f"Topic_{t}"],
+        stackgroup='one',
+        name=f"Topic {t}",
+        line=dict(width=1.5, color=PALETTE[i % len(PALETTE)]),
+        hovertemplate="Year: %{x}<br>Mean weight: %{y:.4f}<extra></extra>"
+    ))
+fig_topic_trends.update_layout(title="Top Topic Prevalence Over Years (NMF on Title+Abstract)",
+                               xaxis_title="Year", yaxis_title="Mean topic weight",
+                               height=FIG_HEIGHT, width=FIG_WIDTH, template="plotly_dark", font=FONT)
 
-clf_pipeline.fit(X_train, y_train)
-y_proba = clf_pipeline.predict_proba(X_test)[:, 1]
+# Topic top-words HTML snippet for the dashboard
+topic_table_html = "<div style='font-family:Arial, sans-serif; color:#eee;'><h3>Top words per topic (NMF)</h3><ul>"
+for tid, words in topics_topwords:
+    topic_table_html += f"<li><strong>Topic {tid}:</strong> " + ", ".join(words) + "</li>"
+topic_table_html += "</ul></div>"
 
-fpr, tpr, _ = roc_curve(y_test, y_proba)
+# -------------------------
+# Plot 5: Early-warning High-impact detection (simple logistic model, explainability)
+# -------------------------
+model_df = df.copy()
+model_df['TitleLen'] = model_df['Title'].fillna('').apply(lambda s: len(s.split()))
+top_conf_list = df['Conference'].value_counts().nlargest(12).index.tolist()
+model_df['ConferenceTop'] = model_df['Conference'].apply(lambda x: x if x in top_conf_list else 'Other')
+
+features = ['Downloads_Xplore', 'PageLength', 'PubsCited_CrossRef', 'InternalRefCount', 'TitleLen', 'HasCodeLink', 'ConferenceTop']
+X = model_df[features].copy()
+y = model_df['HighImpactTop10'].copy()
+
+# One-hot encode ConferenceTop (compat for sklearn newer versions)
+enc = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+conf_ohe = enc.fit_transform(X[['ConferenceTop']])
+conf_categories = [str(c).strip().replace(" ", "_").replace("/", "_") for c in enc.categories_[0]]
+conf_cols = [f"Conf_{c}" for c in conf_categories]
+conf_ohe_df = pd.DataFrame(conf_ohe, columns=conf_cols, index=X.index)
+X = pd.concat([X.drop(columns=['ConferenceTop']), conf_ohe_df], axis=1)
+
+# Impute and scale
+imputer = SimpleImputer(strategy='median')
+X_imputed = pd.DataFrame(imputer.fit_transform(X), columns=X.columns, index=X.index)
+scaler = StandardScaler()
+X_scaled = pd.DataFrame(scaler.fit_transform(X_imputed), columns=X_imputed.columns, index=X.index)
+
+# Train-test (stratify if possible)
+if y.nunique() == 2 and y.value_counts().min() >= 5:
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.30, random_state=42, stratify=y)
+else:
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.30, random_state=42)
+
+clf = LogisticRegression(class_weight='balanced', solver='liblinear', max_iter=1000)
+clf.fit(X_train, y_train)
+
+y_score = clf.predict_proba(X_test)[:, 1] if hasattr(clf, "predict_proba") else clf.decision_function(X_test)
+fpr, tpr, _ = roc_curve(y_test.fillna(0), y_score)
 roc_auc = auc(fpr, tpr)
 
-# ROC figure
-fig2 = go.Figure()
-fig2.add_trace(
-    go.Scatter(
-        x=fpr,
-        y=tpr,
-        mode="lines",
-        name=f"ROC (AUC={roc_auc:.3f})",
-        line=dict(width=3, color="#ff7f0e"),
-        hovertemplate="FPR: %{x:.3f}<br>TPR: %{y:.3f}<extra></extra>",
-    )
-)
-fig2.add_trace(
-    go.Scatter(
-        x=[0, 1],
-        y=[0, 1],
-        mode="lines",
-        name="Random",
-        line=dict(width=2, color="#888", dash="dash"),
-        hoverinfo="skip",
-    )
-)
-fig2.update_layout(
-    title="ROC Curve for Award Prediction (Logistic Regression)",
-    xaxis=dict(title="False Positive Rate", range=[0, 1]),
-    yaxis=dict(title="True Positive Rate", range=[0, 1]),
-    legend=dict(orientation="h", y=-0.2),
-    width=700,
-    height=500,
-)
+fig_roc = go.Figure()
+fig_roc.add_trace(go.Scatter(x=fpr, y=tpr, mode='lines', line=dict(color='#EF553B', width=4),
+                             name=f'ROC (AUC = {roc_auc:.3f})'))
+fig_roc.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', line=dict(color='#888888', dash='dash'), name='Random'))
+fig_roc.update_layout(title="ROC Curve: Early-warning High-impact Detection (simple model)",
+                      xaxis_title="False Positive Rate", yaxis_title="True Positive Rate",
+                      height=600, width=900, template="plotly_dark", font=FONT)
 
-# Feature importance from logistic regression coefficients
-# Extract OHE feature names robustly
-ohe = clf_pipeline.named_steps["prep"].named_transformers_["cat"]
-try:
-    ohe_names = ohe.get_feature_names_out(cat_feats).tolist()
-except Exception:
-    # older sklearn fallback
-    ohe_names = []
-    for idx, feat in enumerate(cat_feats):
-        cats = ohe.categories_[idx]
-        ohe_names += [f"{feat}_{str(cat)}" for cat in cats]
+coef_df = pd.DataFrame({'feature': X_scaled.columns, 'coef': clf.coef_[0]}).sort_values('coef', key=lambda c: np.abs(c), ascending=False).head(20)
+fig_feat = px.bar(coef_df.sort_values('coef'), x='coef', y='feature', orientation='h',
+                  color='coef', color_continuous_scale=px.colors.diverging.RdBu, title='Top Feature Coefficients (logistic)',
+                  height=FIG_HEIGHT, width=800, template="plotly_dark")
+fig_feat.update_layout(font=FONT)
 
-feature_names = ohe_names + num_feats
-coefs = clf_pipeline.named_steps["model"].coef_[0]
-feat_imp = pd.DataFrame({"feature": feature_names, "coef": coefs})
-feat_imp["abs_coef"] = feat_imp["coef"].abs()
-feat_imp = feat_imp.sort_values("abs_coef", ascending=False).head(15)
+# -------------------------
+# Assemble HTML with academic-style narratives + figures
+# -------------------------
+fragments = []
 
-fig2_imp = px.bar(
-    feat_imp[::-1],
-    x="coef",
-    y="feature",
-    orientation="h",
-    color="coef",
-    color_continuous_scale=px.colors.diverging.RdYlBu,
-    title="Top Features (by absolute coefficient) for Award Prediction",
-    labels={"coef": "Coefficient", "feature": "Feature"},
-)
-fig2_imp.update_layout(width=800, height=420)
-
-# ---------------------------
-# 3) Regression Analysis: Predict Downloads
-# ---------------------------
-# Narrative: Linear regression to predict Downloads_Xplore. We show Predicted vs Actual + Residuals to judge fit.
-
-df_reg = df.copy()
-df_reg["stamp_flag"] = (df_reg["GraphicsReplicabilityStamp"] != "NoStamp").astype(int)
-
-Xr = df_reg[["AminerCitationCount", "internal_refs_count", "stamp_flag", "Year", "Conference"]].copy()
-yr = df_reg["Downloads_Xplore"].copy()
-
-# Use a small subset if very large, but here dataset ~4k rows (ok)
-Xr_train, Xr_test, yr_train, yr_test = train_test_split(Xr, yr, test_size=0.3, random_state=42)
-
-preproc_reg = ColumnTransformer(
-    transformers=[
-        ("cat", safe_ohe(drop="if_binary", handle_unknown="ignore"), ["Conference"]),
-        ("num", StandardScaler(), ["AminerCitationCount", "internal_refs_count", "stamp_flag", "Year"]),
-    ],
-    remainder="drop",
-)
-
-reg_pipeline = Pipeline([("prep", preproc_reg), ("model", LinearRegression())])
-reg_pipeline.fit(Xr_train, yr_train)
-yr_pred = reg_pipeline.predict(Xr_test)
-
-r2 = r2_score(yr_test, yr_pred)
-
-# Pred vs Actual + Residuals subplot
-fig3 = make_subplots(rows=1, cols=2, subplot_titles=(f"Predicted vs Actual (R2={r2:.3f})", "Residuals vs Predicted"))
-
-# Scatter Predicted vs Actual
-fig3.add_trace(
-    go.Scatter(
-        x=yr_test,
-        y=yr_pred,
-        mode="markers",
-        marker=dict(color="#17becf", size=6),
-        hovertemplate="Actual: %{x:.1f}<br>Predicted: %{y:.1f}<extra></extra>",
-        name="Pred vs Actual",
-    ),
-    row=1,
-    col=1,
-)
-# Identity line
-min_val = float(min(yr_test.min(), yr_pred.min()))
-max_val = float(max(yr_test.max(), yr_pred.max()))
-fig3.add_trace(
-    go.Scatter(
-        x=[min_val, max_val],
-        y=[min_val, max_val],
-        mode="lines",
-        line=dict(color="#888", dash="dash"),
-        showlegend=False,
-    ),
-    row=1,
-    col=1,
-)
-
-# Residuals
-residuals = yr_test - yr_pred
-fig3.add_trace(
-    go.Scatter(
-        x=yr_pred,
-        y=residuals,
-        mode="markers",
-        marker=dict(color="#9467bd", size=6),
-        hovertemplate="Predicted: %{x:.1f}<br>Residual: %{y:.1f}<extra></extra>",
-        name="Residuals",
-    ),
-    row=1,
-    col=2,
-)
-
-fig3.update_xaxes(title_text="Actual Downloads", row=1, col=1)
-fig3.update_yaxes(title_text="Predicted Downloads", row=1, col=1)
-fig3.update_xaxes(title_text="Predicted Downloads", row=1, col=2)
-fig3.update_yaxes(title_text="Residuals", row=1, col=2)
-fig3.update_layout(title_text="Download Prediction Analysis (Linear Regression)", width=1000, height=450)
-
-# ---------------------------
-# 4) Keyword Trend Analysis
-# ---------------------------
-# Narrative: Top keywords by frequency and how they change over time (top 10 keywords).
-kw_df = df[["Year", "AuthorKeywords"]].copy()
-kw_df["AuthorKeywords"] = kw_df["AuthorKeywords"].astype(str).str.replace(";", ",", regex=False)
-kw_df = kw_df.assign(keyword=kw_df["AuthorKeywords"].str.split(",")).explode("keyword")
-kw_df["keyword"] = kw_df["keyword"].astype(str).str.strip().str.lower()
-kw_df = kw_df[kw_df["keyword"] != ""]
-kw_counts = kw_df.groupby("keyword").size().reset_index(name="total_counts")
-top_keywords = kw_counts.nlargest(10, "total_counts")["keyword"].tolist()
-
-kw_trend = kw_df[kw_df["keyword"].isin(top_keywords)].groupby(["Year", "keyword"]).size().reset_index(name="count")
-kw_trend = kw_trend.sort_values(["keyword", "Year"])
-
-# Ensure year axis includes range and slider
-years_sorted = sorted(kw_trend["Year"].unique())
-ymax_kw = max(1, kw_trend["count"].max())
-
-fig4 = px.line(
-    kw_trend,
-    x="Year",
-    y="count",
-    color="keyword",
-    markers=True,
-    title="Top 10 Keywords Trends Over Time",
-    color_discrete_sequence=px.colors.qualitative.Plotly,
-)
-fig4.update_layout(
-    xaxis=dict(range=[min(years_sorted) - 0.5, max(years_sorted) + 0.5], dtick=1, rangeslider=dict(visible=True)),
-    yaxis=dict(range=[0, math.ceil(ymax_kw * 1.12)], title="Keyword Count"),
-    legend=dict(title="Keyword"),
-    width=1000,
-    height=520,
-)
-
-# ---------------------------
-# 5) Award Impact (Boxplots): Citations & Downloads by Award Status
-# ---------------------------
-df_aw = df.copy()
-df_aw["AwardFlag"] = np.where(df_aw["Award"] != "NoAward", "Awarded", "Not Awarded")
-
-# Prepare axis ranges to avoid blank-looking plots
-cit_max = max(1, df_aw["CitationCount_CrossRef"].max())
-dl_max = max(1, df_aw["Downloads_Xplore"].max())
-
-fig5 = make_subplots(rows=1, cols=2, subplot_titles=("CitationCount_CrossRef by Award", "Downloads_Xplore by Award"))
-fig5.add_trace(
-    go.Box(
-        x=df_aw["AwardFlag"],
-        y=df_aw["CitationCount_CrossRef"],
-        marker_color="#FFD700",
-        name="Citations",
-        boxmean=True,
-        hovertemplate="Award: %{x}<br>Citations: %{y}<extra></extra>",
-    ),
-    row=1,
-    col=1,
-)
-fig5.add_trace(
-    go.Box(
-        x=df_aw["AwardFlag"],
-        y=df_aw["Downloads_Xplore"],
-        marker_color="#2CA02C",
-        name="Downloads",
-        boxmean=True,
-        hovertemplate="Award: %{x}<br>Downloads: %{y}<extra></extra>",
-    ),
-    row=1,
-    col=2,
-)
-
-fig5.update_yaxes(range=[0, math.ceil(cit_max * 1.12)], row=1, col=1, title_text="CitationCount_CrossRef")
-fig5.update_yaxes(range=[0, math.ceil(dl_max * 1.12)], row=1, col=2, title_text="Downloads_Xplore")
-fig5.update_layout(title_text="Award Impact on Citations and Downloads", width=1000, height=480)
-
-# ---------------------------
-# Assemble HTML with narratives and include_plotlyjs='cdn' for each figure
-# ---------------------------
-
-# Helper to render figure to div (include_plotlyjs='cdn' as requested)
-def fig_to_div(fig):
-    return pio.to_html(fig, include_plotlyjs="cdn", full_html=False)
-
-# Narrative descriptions to be included above each figure (academic, flowing)
-narratives = {
-    "introduction": """
-    <h2>Introduction</h2>
-    <p>
-    This report presents a structured, multi-method analysis of a scholarly dataset encompassing conference papers,
-    citation metrics, download counts, keywords, and award information. Our objective is to provide an empirical
-    and interpretable assessment of temporal citation dynamics, the predictive determinants of awards, the drivers of
-    downloads, and evolving topical emphases as expressed through author keywords. The visualizations combine aggregate
-    descriptive statistics with simple supervised models to enable both exploratory insight and interpretable inference.
-    Subsequent sections present results, interpretive commentary, and suggestions for future analytical directions.
-    </p>
-    """,
-    "fig1": """
-    <h3>1. Citation Trends by Conference</h3>
-    <p>
-    The first analysis examines longitudinal patterns in citation exposure across the most prolific conferences in the
-    dataset. By plotting two citation metrics (Aminer-derived and CrossRef-derived) we can compare repository-specific
-    coverage and cross-source consistency. This view highlights periods of rising or falling scholarly impact for venues,
-    making it possible to identify cohorts of years where particular conferences produced especially influential work.
-    The interactive dropdown allows selection of either metric or both simultaneously; this helps researchers discern
-    whether a signal is supported across citation sources or driven by idiosyncrasies of a single indexing system.
-    Understanding these venue-level trends is important for longitudinal bibliometrics and for stakeholders allocating
-    attention or resources toward impactful conferences.
-    </p>
-    <p>
-    This analysis sets the stage for modeling questions: if certain venues or years show higher average citation counts,
-    we can ask which paper-level features (e.g., keywords, references, downloads) best explain award outcomes and attention.
-    The next section develops a predictive model that investigates those relationships in a supervised learning framework.
-    </p>
-    """,
-    "fig2": """
-    <h3>2. Award Prediction — Model Discrimination (ROC)</h3>
-    <p>
-    Building on descriptive trends, we trained a logistic regression model to estimate the probability that a paper receives
-    an award. The ROC curve summarizes the model's discriminative ability across decision thresholds: the area under the curve (AUC)
-    quantifies how well the model distinguishes awarded from non-awarded papers. Logistic regression is used here primarily
-    for its transparency—coefficients provide direction and magnitude of association—and class balancing mitigates prevalence bias.
-    A strong ROC suggests features in the dataset contain signal about award likelihood; a weak ROC indicates awards are influenced
-    by factors not captured here (e.g., novelty, reviewer dynamics, or external reputational effects).
-    </p>
-    <p>
-    The subsequent visualization of feature coefficients supports interpretability by identifying which covariates
-    contribute most strongly to award probability and in which direction. Together, these plots guide hypothesis generation
-    about the interplay between paper attributes, venue, and scholarly recognition.
-    </p>
-    """,
-    "fig2_imp": """
-    <h3>2a. Award Prediction — Feature Importance (Coefficients)</h3>
-    <p>
-    This bar chart displays the top model coefficients (by absolute magnitude) from the logistic regression. Each coefficient
-    indicates the expected change in the log-odds of receiving an award associated with a unit change in the predictor,
-    holding other variables constant. Positive coefficients identify features that increase award likelihood, while negative
-    coefficients indicate features associated with lower likelihood. Because the model includes one-hot encodings for categorical
-    variables (e.g., conference and paper type), individual venue or format effects may appear.
-    Interpreting these coefficients requires contextual knowledge: large effects may reflect genuine merit signals or selection
-    artifacts driven by the peer-review process. These results are useful for scholars and organizers studying recognition dynamics.
-    </p>
-    <p>
-    Having examined award prediction, we next turn to download behavior to evaluate whether the drivers of recognition overlap
-    with drivers of readership and accessibility.
-    </p>
-    """,
-    "fig3": """
-    <h3>3. Download Prediction and Residual Analysis</h3>
-    <p>
-    This section fits a linear regression model to predict downloads using citation counts, internal references, a replicability
-    stamp indicator, year, and conference. The left panel compares predicted to actual downloads: alignment along the identity
-    line indicates good fit, whereas systematic departures reveal bias. The right panel presents residuals (actual minus predicted)
-    versus predicted values to detect heteroscedasticity, nonlinearities, or groups of papers systematically under- or over-predicted.
-    Understanding these patterns informs whether simple linear relationships suffice or whether more flexible modeling is warranted.
-    </p>
-    <p>
-    The download analysis complements the award analysis: if the same features predict both downloads and awards, it suggests
-    overlapping pathways to attention and recognition. Conversely, divergence points to distinct mechanisms for readership and adjudication.
-    The next section explores thematic dynamics through keyword evolution, offering content-based context for these quantitative patterns.
-    </p>
-    """,
-    "fig4": """
-    <h3>4. Keyword Trend Analysis — Top Topics Over Time</h3>
-    <p>
-    Topic evolution is a central interest in scientometrics. Here we plot the yearly frequency trajectories for the ten most
-    frequent author-assigned keywords. These curves reveal the emergence, persistence, or decline of topical foci, which helps
-    interpret the temporal patterns observed in citations and downloads. A rising keyword indicates an emergent or rapidly growing
-    research niche; a declining curve may reflect topic maturation or shifting priorities.
-    The interactive range slider enables close inspection of sub-periods and facilitates comparisons across keyword life-cycles.
-    </p>
-    <p>
-    By juxtaposing keyword trends with citation and award dynamics, researchers can investigate whether emergent topics receive
-    disproportionate recognition or readership, thereby linking content to impact.
-    The final empirical section summarizes award-related differences in attention metrics.
-    </p>
-    """,
-    "fig5": """
-    <h3>5. Award Impact on Citations and Downloads</h3>
-    <p>
-    This pair of boxplots contrasts awarded versus non-awarded papers with respect to CrossRef citations and downloads. Boxplots
-    succinctly summarize central tendency and dispersion, which allows assessment of whether awarded papers systematically enjoy higher
-    attention. Such comparisons are essential when evaluating the downstream effects of awards on visibility and scholarly dissemination.
-    Care must be taken when interpreting causality: awards might both reflect prior attention and subsequently catalyze additional attention.
-    </p>
-    <p>
-    Together with the regression and classification analyses above, these descriptive comparisons provide a multi-faceted view of
-    how recognition, readership, and citations interrelate. The concluding section synthesizes these insights and outlines future work.
-    </p>
-    """,
-    "conclusion": """
-    <h2>Conclusion</h2>
-    <p>
-    This report combines descriptive and inferential approaches to examine scholarly impact within a multi-conference dataset.
-    The temporal citation analysis identified venue-specific impact dynamics; the award prediction model highlighted which features
-    correlate with recognition; regression diagnostics for downloads indicated the extent to which simple predictors account for readership;
-    and keyword trends situated these outcomes within evolving topical landscapes. Collectively, these analyses emphasize that impact
-    is multi-dimensional and that no single metric fully captures scholarly influence.
-    Future work should incorporate richer textual representations (embeddings of abstracts), longitudinal survival analyses of attention,
-    and causal inference strategies to better establish whether awards drive attention or are merely correlated with it. The dashboard
-    and accompanying figures provide a reproducible starting point for such investigations.
-    </p>
+def fig_html_with_text(fig_html_fragment, narrative_html):
+    wrapper = f"""
+    <div style="margin:30px 50px; font-family: 'Helvetica Neue', Arial, sans-serif; color:#e6eef8;">
+      <div style="background:#0b1220; padding:18px; border-left:6px solid #2a3f5f; margin-bottom:12px;">
+        {narrative_html}
+      </div>
+      <div style="margin-top:12px;">
+        {fig_html_fragment}
+      </div>
+    </div>
     """
-}
+    return wrapper
 
-# Create HTML content: narrative + figure divs
-html_blocks = []
-html_blocks.append("<!doctype html>\n<html>\n<head>\n<meta charset='utf-8'>\n<title>Dataset Analysis Visualizations - Dark Theme</title>\n")
-# Basic CSS for dark page and readability
-html_blocks.append(
-    "<style>\n"
-    "body { background: #0f1115; color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; }\n"
-    "h1 { color: #ffffff }\n"
-    ".section { padding: 10px 0 30px 0; border-bottom: 1px solid #212428; }\n"
-    ".figure-container { background: #0b0c0f; padding: 12px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.6); }\n"
-    "p { color: #c7ccd1; max-width: 1100px; line-height: 1.5; }\n"
-    "h2,h3 { color: #ffffff; margin-top: 8px; }\n"
-    "footer { color:#777; margin-top: 20px; }\n"
-    "</style>\n"
-)
-html_blocks.append("</head>\n<body>\n")
-html_blocks.append("<h1>Dataset Analysis Visualizations (Dark Mode)</h1>\n")
+# Introduction paragraph (one academic paragraph describing purpose and flow)
+introduction_html = """
+<div style="margin:30px 50px; font-family: 'Helvetica Neue', Arial, sans-serif; color:#e6eef8; background:#07101a; padding:18px; border-left:8px solid #2a3f5f;">
+  <h1 style="margin-top:0; color:#ffffff;">Introduction</h1>
+  <p>
+    This report presents an integrated exploratory analysis of a scholarly publication dataset, focusing on five complementary
+    themes: (1) conference-level temporal trends in productivity and attention, (2) cross-source citation consistency between
+    Aminer and CrossRef, (3) a pragmatic composite replicability score and its association with downloads and citations, (4)
+    topic modeling to reveal topical drift across years, and (5) an early-warning prototype to identify papers likely to
+    become high-impact. The goal is to provide clear, interpretable visual diagnostics and lightweight predictive baselines
+    that a research team can use to prioritize replication resources, study citation dynamics, and monitor emergent topics.
+  </p>
+</div>
+"""
 
-# Introduction
-html_blocks.append("<div class='section'><div class='figure-container'>")
-html_blocks.append(narratives["introduction"])
-html_blocks.append("</div></div>\n")
+# Narrative for Plot 1: flows into Plot 2
+narr1 = """
+<h2 style="color:#ffffff; margin-top:0;">1) Conference Trends Over Time</h2>
+<p>
+  We begin with a longitudinal view of conference activity: yearly paper counts are presented as bars while median Aminer citations
+  and median Downloads (Xplore) appear as overlaying lines. This triad allows an analyst to distinguish growth in volume from
+  growth in attention — a conference may be producing more papers but not necessarily more influential ones. Observing such patterns
+  establishes temporal context for later analyses: citation calibration and topic drift both depend on where and when papers were
+  published, so understanding the baseline dynamics is crucial before drawing causal or predictive conclusions.
+</p>
+"""
 
-# Add each section: narrative + figure
-sections = [
-    ("fig1", fig1),
-    ("fig2", fig2),
-    ("fig2_imp", fig2_imp),
-    ("fig3", fig3),
-    ("fig4", fig4),
-    ("fig5", fig5),
-]
+# Prepare fig html fragment for fig_trend
+frag_trend = pio.to_html(fig_trend, full_html=False, include_plotlyjs='cdn')
+fragments.append(fig_html_with_text(frag_trend, narr1))
 
-for key, fig in sections:
-    narrative = narratives.get(key, "")
-    html_blocks.append(f"<div class='section'><div class='figure-container'>{narrative}")
-    # Convert fig to html div (include_plotlyjs='cdn' included here for compatibility)
-    div = fig_to_div(fig)
-    # pio.to_html returns a full <div>... including <script> tag referencing plotly.js via CDN when requested.
-    # We will embed it directly.
-    html_blocks.append(div)
-    html_blocks.append("</div></div>\n")
+# Narrative for Plot 2: flows from Plot1 into replicability
+narr2 = """
+<h2 style="color:#ffffff; margin-top:0;">2) Cross-source Citation Consistency: Aminer vs CrossRef</h2>
+<p>
+  Citations are a central currency in scholarly analytics yet different sources can disagree. The scatter plot compares Aminer and
+  CrossRef counts; a robust Huber regression summarizes systematic deviations and a residual histogram documents dispersion.
+  This diagnostic is important because downstream indices (replicability score, early-warning ranks) hinge on citation measurements.
+  Reconciling sources or modeling their discrepancies increases confidence in impact estimates and can inform uncertainty-aware ranking.
+</p>
+"""
 
-# Conclusion
-html_blocks.append("<div class='section'><div class='figure-container'>")
-html_blocks.append(narratives["conclusion"])
-html_blocks.append("</div></div>\n")
+# Combine main scatter and residual histogram
+frag_cite_main = pio.to_html(fig_cite, full_html=False, include_plotlyjs='cdn')
+frag_resid = pio.to_html(fig_resid, full_html=False, include_plotlyjs='cdn')
+combined_cite_html = f"""
+<div style="display:flex; gap:20px; align-items:flex-start;">
+  <div style="flex:1; min-width:700px;">{frag_cite_main}</div>
+  <div style="width:420px; min-width:320px;">{frag_resid}</div>
+</div>
+"""
+fragments.append(fig_html_with_text(combined_cite_html, narr2))
 
-# Footer
-html_blocks.append("<footer><p>Generated by Plotly & scikit-learn. Figures are interactive: zoom, pan, hover. The analysis is reproducible and ready for extensions.</p></footer>\n")
-html_blocks.append("</body>\n</html>")
+# Narrative for Plot 3: composite replicability, flows from citation reconciliation
+narr3 = """
+<h2 style="color:#ffffff; margin-top:0;">3) Composite Replicability Score & Downloads</h2>
+<p>
+  Because explicit graphics replicability stamps are rare in the dataset, we construct an interpretable composite replicability score
+  that combines explicit stamps (when present), presence of code/data links, internal reference density, and normalized downloads.
+  The histogram shows the overall distribution, the boxplot highlights variation by paper type, and the scatter inspects the relationship
+  with downloads (bubble size = Aminer citations). These visualizations are intended to guide prioritization of replication efforts:
+  papers with high composite scores and high attention are natural candidates for reproducibility audits.
+</p>
+"""
 
-html_page = "\n".join(html_blocks)
+frag_rep_hist = pio.to_html(fig_rep_hist, full_html=False, include_plotlyjs='cdn')
+frag_rep_box = pio.to_html(fig_rep_box, full_html=False, include_plotlyjs='cdn')
+frag_rep_scatter = pio.to_html(fig_rep_scatter, full_html=False, include_plotlyjs='cdn')
+combined_rep_html = f"""
+<div style="display:flex; flex-direction:column; gap:18px;">
+  <div style="display:flex; gap:18px;">
+    <div style="flex:0 0 420px;">{frag_rep_hist}</div>
+    <div style="flex:1;">{frag_rep_box}</div>
+  </div>
+  <div>{frag_rep_scatter}</div>
+</div>
+"""
+fragments.append(fig_html_with_text(combined_rep_html, narr3))
 
-# Write to output file
-output_file = "output.html"
-with open(output_file, "w", encoding="utf-8") as f:
-    f.write(html_page)
+# Narrative for Plot 4: topic modeling, flows from replicability to thematic structure
+narr4 = """
+<h2 style="color:#ffffff; margin-top:0;">4) Topic Modeling & Topic Drift</h2>
+<p>
+  We extract latent topics from Title+Abstract using TF-IDF followed by NMF and chart the prevalence of dominant topics over time.
+  The stacked area visualization and the top-words list make it straightforward to detect emergent subfields and to align thematic
+  shifts with changes in conference-level metrics or replicability signals. Topic drift is a practical lens for understanding whether
+  increases in impact or replicability are localized to particular research themes.
+</p>
+"""
 
-print(f"Exported interactive dashboard to {output_file}")
+frag_topic_trends = pio.to_html(fig_topic_trends, full_html=False, include_plotlyjs='cdn')
+topic_panel = f"<div style='width:420px; padding:10px; border-left:2px solid #1b2a44; background:#07101a;'>{topic_table_html}</div>"
+combined_topic_html = f"""
+<div style="display:flex; gap:24px; align-items:flex-start;">
+  <div style="flex:1; min-width:700px;">{frag_topic_trends}</div>
+  {topic_panel}
+</div>
+"""
+fragments.append(fig_html_with_text(combined_topic_html, narr4))
+
+# Narrative for Plot 5: early-warning, flows from topics and replicability
+narr5 = """
+<h2 style="color:#ffffff; margin-top:0;">5) Early-warning High-impact Detection (Simple Model)</h2>
+<p>
+  Finally, we demonstrate a compact early-warning classifier to identify papers that later become high-impact (top 10% by citations/year).
+  The model uses early signals—initial downloads, reference counts, page length, title length, code link presence, and venue—and emphasizes
+  interpretability via logistic regression coefficients and ROC curves. This prototype illustrates how attention, connectivity, and content
+  features can be combined to guide monitoring and curation; however, it should be extended with strict temporal validation and richer text encodings
+  before operational deployment.
+</p>
+"""
+
+frag_roc = pio.to_html(fig_roc, full_html=False, include_plotlyjs='cdn')
+frag_feat = pio.to_html(fig_feat, full_html=False, include_plotlyjs='cdn')
+combined_early_html = f"""
+<div style="display:flex; gap:20px; align-items:flex-start;">
+  <div style="flex:0 0 720px;">{frag_roc}</div>
+  <div style="flex:1 1 auto;">{frag_feat}</div>
+</div>
+"""
+fragments.append(fig_html_with_text(combined_early_html, narr5))
+
+# Conclusion paragraph (one academic paragraph summarizing and next steps)
+conclusion_html = """
+<div style="margin:30px 50px; font-family: 'Helvetica Neue', Arial, sans-serif; color:#e6eef8; background:#07101a; padding:18px; border-left:8px solid #2a3f5f;">
+  <h2 style="margin-top:0; color:#ffffff;">Conclusion</h2>
+  <p>
+    In summary, the visual diagnostics presented here form a coherent exploratory pipeline for scholarly analytics: temporal conference trends
+    provide the macro context, citation calibration reconciles measurement sources, a composite replicability score offers an interpretable
+    prioritization signal, topic modeling reveals thematic drift, and a compact early-warning model demonstrates how early signals can
+    forecast later impact. Key next steps include validating the replicability composite against ground-truth stamps where available,
+    incorporating contextual text embeddings and network features into predictive models, and developing uncertainty-aware citation
+    ensembles for robust ranking. Together, these directions can help research teams allocate verification resources effectively and
+    improve the credibility of bibliometric assessments.
+  </p>
+</div>
+"""
+
+# Methodology footer remains
+methodology_html = f"""
+<div style="margin:30px 50px; font-family: 'Helvetica Neue', Arial, sans-serif; color:#e6eef8;">
+  <hr style="border:none; border-top:1px solid #1b2a44;"/>
+  <h3 style="color:#ffffff;">Methodology & Notes</h3>
+  <ul>
+    <li>Numeric missing values were imputed with medians. Categorical missing values handled explicitly.</li>
+    <li>Replicability score is an interpretable composite (weights chosen for demonstration). Where ground-truth stamps exist,
+        supervise a model for better calibration.</li>
+    <li>Topic modeling used TF-IDF + NMF for speed and interpretability; using contextual embeddings (e.g., SBERT) will
+        increase semantic quality at higher compute cost.</li>
+    <li>Early-warning model is a demonstrator and must be revalidated temporally before operational use.</li>
+  </ul>
+</div>
+"""
+
+# Compose final HTML (intro -> all fragments -> conclusion -> methodology)
+html_header = """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Scholarly Dataset Interactive Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { margin: 0; padding: 0; background: #07101a; color: #e6eef8; }
+    h1 { font-family: 'Helvetica Neue', Arial, sans-serif; color: #ffffff; margin-left:50px; }
+    .topbar { padding: 18px 50px; background: linear-gradient(90deg,#06111a,#081522); border-bottom:1px solid #0f2740; }
+    a { color: #9fd3ff; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Scholarly Dataset Interactive Analysis</h1>
+    <div style="color:#9fb1c9; margin-top:6px; margin-left:2px;">
+      Interactive Plotly figures exploring conference trends, citation calibration, replicability scoring, topic drift, and an early-warning prototype.
+    </div>
+  </div>
+"""
+
+# Join fragments
+html_body = introduction_html + "\n".join(fragments) + conclusion_html + methodology_html
+html_footer = """
+</body>
+</html>
+"""
+
+final_html = html_header + html_body + html_footer
+
+OUT_FILE = "output.html"
+with open(OUT_FILE, 'w', encoding='utf-8') as f:
+    f.write(final_html)
+
+print(f"Done. Generated {OUT_FILE}. Open this file in a browser to view interactive visualizations.")
 

@@ -1,9 +1,9 @@
-from classes import State
+from classes import State, globe
 from langgraph.prebuilt import create_react_agent
 from tools import transfer_to_stats_agent
 from tools import WebSearch
 from tools import scrape_webpages
-from helper_functions import get_llm
+from helper_functions import get_llm, update_edge
 
 def Research_DataScience_Agent(state:State):
     llm = get_llm(model = 'gpt-5-mini')

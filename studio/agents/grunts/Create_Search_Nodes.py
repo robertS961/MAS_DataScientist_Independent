@@ -18,15 +18,15 @@ def prompt(expert_intro, message, data):
         "If you are passed ideas feel free to improve them or use them to create better ideas\n\n"
     )
 def create_search_nodes(count: int, state: State, name = "basic"):
-    llm = get_llm()
+    llm = get_llm(model = "o4-mini")
     agents = []
     for cnt in range(count):
         data = state['dataset_info']
         message = state['messages']
         expert_intro = {
-            0: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets.",
-            1: "You are a senior analyst reviewing the earlier results and adding deeper statistical insights and visualizations.",
-            2: "You are a final reviewer, refining the insights and making sure the Python visualizations are well-structured and insightful.",
+            0: "You are an expert data scientist specializing in exploratory data analysis. Your job is to identify impactful trends from datasets.Come up with insightful data science ideas to perform on the data \n",
+            1: "You are a senior statistical analyst reviewing the earlier results and adding deeper statistical insights. Add onto the ideas from before and feel free to add your own ideas too. \n",
+            2: "You are a final reviewer, refining the insights and make any changes to make the ideas more novel, stronger, and indepth. \n",
         }[(cnt % 3)]
         #websearch = WebSearch()
         search_agent = create_react_agent(

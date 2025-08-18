@@ -15,11 +15,13 @@ from .Code_Plotly_Final import code_plotly_final
 from .Narrative_Agent import narrative_agent
 from .Code_Narrative import code_narrative
 from .Vis_Narrative import vis_narrative
+from .Test_Single_Agent import test_single_agent
+from .Aggregate_Agent import aggregate_agent
 
 
 __all__ = ["Research_Stat_Agent", "Research_DataScience_Agent", "make_judge", "vis_a", 
            "code_agent", "create_search_nodes", "web_scraper_node", "reducer_agent",
            "machinelearning_agent", "pdf_checker_agent", "ploty_agent", "code_plotly",
            "ploty_enhancer_agent", "code_plotly_final", "narrative_agent", "code_narrative",
-            "vis_narrative",
+            "vis_narrative","test_single_agent", "aggregate_agent",
         ]

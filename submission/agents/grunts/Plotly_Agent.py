@@ -13,7 +13,7 @@ def ploty_agent(state: State):
         "Make sure to include a narrative description of the graphs and what they represent! This narrative should be at least a pharagraph long and should explain the importance of the graph for other data scientist!\n"
         "Make sure the narrative flows from each graph unto the next. Like reading a paper! \n"
         "Make the colors of the graphs vibrant and clear, avoid using dull and similar colors! This applies to any buttons, make sure the button is a different color than the background and the button writing is also a different color!  \n"
-        "Make sure if there is anything interactive(buttons, sliders, etc.) for the interactive graph that they are clearly out of the way of the title, axis, and graphs. Past code created by you occasionally have them overlapping with the title!"
+        "I want the graph sets ups to be as follows. Main title, space, sub titles if there is any, space, even more space!!, then the graph, interactive buttons or displays for the graph (like keys, toggles , buttons , etc.)!"
         "Once Plotly Code is written add Html/Javascript code to display all the figures so it can be ran on a server!\n"
         "For the HTML/Javascript code, make sure to include the Plotly JS via CDN directly inside each div for better compatibility! Thus include_plotlyjs='cdn' for each div, NOT FALSE(This is outdated!) \n"
         "Do NOT use '<script src=https://cdn.plot.ly/plotly-latest.min.js></script>' in the HTML code, instead use include_plotlyjs='cdn' in the plot function! \n"

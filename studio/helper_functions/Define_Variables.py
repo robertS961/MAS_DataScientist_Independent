@@ -51,6 +51,15 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
             "Please test the code and make sure it runs without errors and bugs! \n"
             "Return all the code only! Thank you!"
         )
+    elif name =="single_agent":
+        prompt = (
+            "Give 6 ideas for statistical and machine learning to perform on the data set. Don't explain the ideas. Just list the  six. Thank you \n"
+        )
+    elif name == "aggregate":
+        prompt = (
+            "Give the top 5-10 most common ideas with their respective count \n Thank you \n"
+        )
+
     '''
     elif name == "plotly":
         prompt = (
