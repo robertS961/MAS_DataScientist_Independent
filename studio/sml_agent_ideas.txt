@@ -1,0 +1,695 @@
+ 
+------- Next set of Ideas for 0-------
+Idea 1 — Regression (gradient boosting / random forest): predict CitationCount_CrossRef (continuous) using Year, Conference, PaperType, FirstPage/LastPage (paper length), AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore, plus text embeddings from Title + Abstract + AuthorKeywords.
+
+Idea 2 — Classification (logistic regression / random forest / SVM): predict Award (binary / categorical) using Conference, Year, PaperType, Citation counts (AminerCitationCount, CitationCount_CrossRef), Downloads_Xplore, and Abstract / AuthorKeywords embeddings.
+
+Idea 3 — Unsupervised topic modelling and clustering: discover topical clusters with LDA or K-means on Abstract + AuthorKeywords; validate clusters by Conference, Year, and citation statistics.
+
+Idea 4 — Author/citation network analysis + supervised prediction: construct graph from AuthorNames(-Deduped) and InternalReferences to compute centrality features and use them to predict author-level impact (AminerCitationCount) or paper citations via regression.
+
+Idea 5 — Classification (binary/multi-class): predict GraphicsReplicabilityStamp using metadata (Conference, Year, PaperType), citation/download features, and image-related signals extracted from Abstract/Title or linked content; apply XGBoost / random forest.
+
+Idea 6 — Content-based paper recommendation / similarity search (KNN on embeddings): build nearest-neighbor retrieval using Title+Abstract+AuthorKeywords embeddings to recommend similar papers and to impute Downloads_Xplore or expected citation range. 
+------- Next set of Ideas for 1-------
+Idea 1 — Boosted regression (e.g., XGBoost/LightGBM) to predict AminerCitationCount (or CitationCount_CrossRef) using: Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, page count (LastPage−FirstPage), author count (from AuthorNames-Deduped), text features (Abstract/Title lengths, TF-IDF or embeddings of Abstract/Title/AuthorKeywords).
+
+Idea 2 — Logistic regression (with regularization) to predict Award (binary) using: Conference, Year, PaperType, AminerCitationCount, Downloads_Xplore, GraphicsReplicabilityStamp, page count, author count, plus TF-IDF features from Abstract/AuthorKeywords.
+
+Idea 3 — SVM (or other discriminative classifier) to predict PaperType (multiclass) using: Abstract and Title embeddings or TF-IDF, AuthorKeywords, Conference, Year, and numeric features (AminerCitationCount, Downloads_Xplore, page count).
+
+Idea 4 — Unsupervised topic modeling + clustering (LDA or transformer embeddings + KMeans / HDBSCAN) on Abstract + Title + AuthorKeywords to discover research themes and then analyze theme distributions by Conference and Year.
+
+Idea 5 — k-Nearest Neighbors content-based recommender: compute similarity (TF-IDF or sentence embeddings) on Abstract+Title+AuthorKeywords (optionally include AuthorNames-Deduped/AuthorAffiliation) to return nearest papers for a given paper; optionally weight by Conference/Year or citation counts.
+
+Idea 6 — Graph-features + tree-based classification/regression: build citation/internal reference graph from InternalReferences and PubsCited_CrossRef, compute node features (in-degree, out-degree, centrality) and combine with paper features (Abstract embeddings, AuthorKeywords, Downloads_Xplore) to (a) classify whether a paper becomes "highly cited" (binary) using Random Forest/GBM or (b) regress future CitationCount_CrossRef. 
+------- Next set of Ideas for 2-------
+Idea 1 — Predict citation counts (regression): model CitationCount_CrossRef (and/or AminerCitationCount) from Year, Conference, Paper length (LastPage−FirstPage), Downloads_Xplore, PubsCited_CrossRef, Award, GraphicsReplicabilityStamp, author_count (from AuthorNames-Deduped) using linear regression / random forest / gradient boosting.
+
+Idea 2 — Award / replicability stamp classification (binary/multiclass): predict Award (yes/no/type) or GraphicsReplicabilityStamp from Title, Abstract, AuthorKeywords, Conference, Year, PaperType, Downloads_Xplore using logistic regression / SVM / XGBoost.
+
+Idea 3 — Topic modeling and temporal trend analysis: discover topics with LDA / NMF / embeddings + clustering on Title, Abstract, AuthorKeywords and analyze topic prevalence over Year and Conference.
+
+Idea 4 — Author network and influence modeling: build co-authorship and citation graphs from AuthorNames-Deduped, AuthorAffiliation, InternalReferences and PubsCited_CrossRef; compute centrality/clusters and predict author or paper impact (citations) from network features.
+
+Idea 5 — Content + citation based paper similarity / recommendation: compute embeddings (TF-IDF, BERT) on Title+Abstract and combine with citation links (InternalReferences, PubsCited_CrossRef) to produce nearest-neighbor or graph-based recommendations.
+
+Idea 6 — Citation dynamics / survival and count models: model time-to-first-major-citation or citation accrual (Poisson/negative binomial or Cox proportional hazards) using Year, initial Downloads_Xplore, early citation counts, Conference, PaperType, Award. 
+------- Next set of Ideas for 3-------
+Idea 1 — Citation regression:
+Predict a paper's CitationCount_CrossRef (or AminerCitationCount) using numeric and derived features: Downloads_Xplore, PubsCited_CrossRef, page_count = LastPage-FirstPage, Year, plus categorical encodings for Conference and PaperType and derived author_count from AuthorNames. Models: linear regression (with Lasso/Ridge), Random Forest, Gradient Boosting (XGBoost/LightGBM).
+
+Idea 2 — Award classification:
+Binary classification to predict Award (yes/no) using textual features (Title, Abstract, AuthorKeywords → TF-IDF or embeddings), categorical features (Conference, PaperType), numeric signals (Downloads_Xplore, CitationCount_CrossRef). Models: logistic regression (with text features), SVM, XGBoost.
+
+Idea 3 — Graphics replicability stamp classification:
+Predict GraphicsReplicabilityStamp (categorical) from metadata: Abstract+Title+AuthorKeywords (text embeddings), PaperType, Conference, AuthorAffiliation patterns, and citation/download metrics. Models: Random Forest, Gradient Boosting, SVM on combined text + tabular features.
+
+Idea 4 — Thematic clustering and visualization:
+Unsupervised clustering of papers by content using Title+Abstract+AuthorKeywords embeddings (BERT or TF-IDF) with k-means / hierarchical / DBSCAN; visualize with UMAP/t-SNE and profile clusters by average AminerCitationCount, Downloads_Xplore, Conference, Year.
+
+Idea 5 — Author/co‑authorship network and influence modeling:
+Construct co-authorship graph from AuthorNames (and AuthorAffiliation); run community detection, compute centrality measures, and predict influential authors (high future citations) using node features (degree, centrality, avg paper citations) with classifiers/regressors (random forest, gradient boosting).
+
+Idea 6 — Paper recommendation / link prediction:
+Content-based and hybrid recommender: compute pairwise similarity (Title+Abstract embeddings, AuthorKeywords) for nearest-neighbor recommendations (k-NN). Also build supervised link-prediction model to predict InternalReferences / citation links between paper pairs using similarity features, shared authors/affiliations, and graph features; model with gradient boosting or logistic regression. 
+------- Next set of Ideas for 4-------
+1) Predict paper downloads (regression) — target: Downloads_Xplore. Methods: Gradient Boosting / Random Forest / Elastic Net. Features: Conference, Year, PaperType, page_count (LastPage-FirstPage), author_count (from AuthorNames-Deduped), AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Award, GraphicsReplicabilityStamp, vectorized Title/Abstract/AuthorKeywords.
+
+2) Predict whether a paper received an award (classification) — target: Award (binary/multiclass). Methods: XGBoost / Logistic Regression / SVM. Features: Conference, Year, PaperType, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, page_count, author_count, GraphicsReplicabilityStamp, Title/Abstract/AuthorKeywords embeddings.
+
+3) Model citation counts (count regression) — target: AminerCitationCount or CitationCount_CrossRef. Methods: Poisson/Negative-Binomial GLM, Random Forest Regressor. Features: Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, author_count, page_count, Award, GraphicsReplicabilityStamp, Title/Abstract embeddings.
+
+4) Topic clustering of papers (unsupervised) — input: Title + Abstract + AuthorKeywords embeddings. Methods: KMeans / Hierarchical Clustering / LDA. Post-analysis features: cluster vs Conference, Year, Citation & Download distributions, Award frequency.
+
+5) Author/co-authorship network and influence modeling — build graph from AuthorNames and AuthorAffiliation; apply community detection and centrality metrics, then predict author influence (e.g., mean AminerCitationCount) or identify rising authors using node features (publication counts, avg citations, collaboration degree).
+
+6) Classify PaperType or GraphicsReplicabilityStamp from text (NLP classification) — targets: PaperType and/or GraphicsReplicabilityStamp. Methods: Transformer-based classifier / SVM with TF-IDF. Features: Title, Abstract, AuthorKeywords, Conference, Year, AuthorAffiliation, InternalReferences. 
+------- Next set of Ideas for 5-------
+Idea 1 — Gradient boosting regression to predict CitationCount_CrossRef using numeric and engineered features (Year, Conference one‑hot, page count from LastPage−FirstPage, AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore, InternalReferences, Award, GraphicsReplicabilityStamp, TF‑IDF/embeddings from Title+Abstract+AuthorKeywords, author count from AuthorNames).
+
+Idea 2 — Random forest classification to predict Award (binary) using metadata and text embeddings (Conference, Year, Citation counts, Downloads_Xplore, page count, InternalReferences, GraphicsReplicabilityStamp, Title/Abstract/AuthorKeywords embeddings, AuthorAffiliation features).
+
+Idea 3 — Unsupervised topic/clustering (LDA or K‑means on embeddings) on Title+Abstract+AuthorKeywords to discover research-topic clusters and then analyze cluster differences by Conference and Year.
+
+Idea 4 — Content‑based nearest‑neighbor recommender (k‑NN on sentence/embed vectors) for finding similar papers using combined embeddings of Title, Abstract, AuthorKeywords and metadata (Conference, Year, AuthorNames-Deduped).
+
+Idea 5 — SVM or multiclass gradient boosting to predict PaperType (categorical) from textual features (Title, Abstract, AuthorKeywords), metadata (Conference, Year, page count), and citation/download signals.
+
+Idea 6 — Count-modeling (Poisson or negative‑binomial regression) to model and forecast AminerCitationCount (or CitationCount_CrossRef) as count data using predictors: Year, Conference, page count, PubsCited_CrossRef, Downloads_Xplore, InternalReferences, Award, text feature summaries (e.g., topic proportions). 
+------- Next set of Ideas for 6-------
+1) Idea 1: Gradient-boosting regression to predict CitationCount_CrossRef (features: Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, AminerCitationCount, author count from AuthorNames, text embeddings from Abstract/AuthorKeywords).
+
+2) Idea 2: Binary / multiclass classification (logistic regression / random forest / SVM) to predict Award (yes/no or award type) using metadata and text (Year, Conference, PaperType, Downloads_Xplore, citation metrics, Abstract/AuthorKeywords embeddings).
+
+3) Idea 3: Unsupervised topic modeling and clustering of papers (LDA / BERTopic / K-means / HDBSCAN) using Abstract and AuthorKeywords, with downstream cluster analysis by Conference and Year.
+
+4) Idea 4: Content-based paper recommender using nearest neighbors on text embeddings (Abstract + AuthorKeywords) augmented by citation and conference features (KNN similarity search for related papers).
+
+5) Idea 5: Classification (random forest / SVM) to predict GraphicsReplicabilityStamp (categorical) from text features (Abstract), author metadata (AuthorNames, AuthorAffiliation), and metrics (Downloads_Xplore, citation counts).
+
+6) Idea 6: Co-authorship network analysis and influence modeling: build author graph from AuthorNames and AuthorAffiliation, compute centrality/community features and use them to predict high-impact papers or AminerCitationCount (graph features + paper metadata with e.g., graph-based boosting). 
+------- Next set of Ideas for 7-------
+Idea 1 — Citation regression:
+Predict CitationCount_CrossRef (or AminerCitationCount) using Year, Downloads_Xplore, PubsCited_CrossRef, Conference, PaperType, Award, GraphicsReplicabilityStamp, pages (LastPage−FirstPage), number_of_authors (from AuthorNames-Deduped), AuthorAffiliation features. Algorithms: linear regression, random forest regression, gradient boosting (XGBoost/LightGBM), SVR.
+
+Idea 2 — Award classification:
+Binary classification to predict Award (yes/no) using Title and Abstract embeddings, AuthorKeywords, Conference, Year, CitationCount_CrossRef, Downloads_Xplore, PaperType, AuthorAffiliation. Algorithms: logistic regression, random forest, XGBoost, fine-tuned transformer + classifier.
+
+Idea 3 — Topic modeling & clustering:
+Unsupervised topic extraction and clustering over research content using Abstract, Title, AuthorKeywords to produce LDA/topic models and cluster papers (k-means, hierarchical, spectral). Then analyze topic distribution by Conference and Year.
+
+Idea 4 — Co-authorship and citation network analysis:
+Build graphs from AuthorNames-Deduped (co-authorship edges) and InternalReferences / PubsCited_CrossRef (citation edges). Perform community detection, centrality, and apply node embeddings (Node2Vec/GAT) for author influence ranking and link-prediction (future collaborations / citations).
+
+Idea 5 — Conference (venue) classification from text:
+Multi-class classification to predict Conference from Title, Abstract, AuthorKeywords, Year, PaperType. Algorithms: multinomial logistic regression, SVM, random forest, or transformer-based text classifier (BERT fine-tuning).
+
+Idea 6 — Reproducibility / quality prediction and anomaly detection:
+(a) Predict GraphicsReplicabilityStamp (or missing/inconsistent metadata) using Abstract (method-related keywords), PaperType, AuthorAffiliation, Award, Citation counts, DOI/Link presence, pages, number_of_authors. (b) Unsupervised anomaly detection for inconsistent records (missing DOI/Link, impossible page ranges, duplicate AuthorNames/Title) using rule-based checks + isolation forest. 
+------- Next set of Ideas for 8-------
+1) Idea 1 — Predict paper citation count (regression): use AminerCitationCount or CitationCount_CrossRef as target; features: Year, paper length (LastPage−FirstPage), number of authors (from AuthorNames‑Deduped), PubsCited_CrossRef, Downloads_Xplore, Conference, PaperType, Award, GraphicsReplicabilityStamp, plus text embeddings / topic features from Abstract and AuthorKeywords. Models: gradient boosting / random forest / regularized linear models.
+
+2) Idea 2 — Award classification (binary/multi‑class): predict Award using Citation counts, Downloads_Xplore, Year, Conference, paper length, number of authors, PaperType and text features from Abstract/AuthorKeywords. Models: logistic regression, SVM, XGBoost.
+
+3) Idea 3 — GraphicsReplicabilityStamp classification: predict GraphicsReplicabilityStamp label using Abstract/AuthorKeywords text features, PaperType, Conference, citation/download metrics, and author count. Models: random forest, SVM, boosting.
+
+4) Idea 4 — Topic modeling and clustering of papers: apply LDA or transformer embeddings on Abstract + AuthorKeywords and cluster (KMeans / hierarchical / HDBSCAN); then profile clusters by average citations, downloads, conferences, years, and award rates.
+
+5) Idea 5 — Co‑authorship network and influence analysis: build graph from AuthorNames‑Deduped and AuthorAffiliation, perform community detection, compute centrality (pagerank, betweenness) and relate author influence to citation/download metrics.
+
+6) Idea 6 — Similarity / recommendation and nearest‑neighbor search: compute semantic embeddings from Title+Abstract+AuthorKeywords and implement KNN for “most similar papers” / recommendation; optionally use nearest‑neighbor regression to predict citations or downloads from similar papers. 
+------- Next set of Ideas for 9-------
+Idea 1 — Linear regression (predict citations)
+Target: CitationCount_CrossRef or AminerCitationCount.
+Features: Year, paper_length = LastPage - FirstPage, PubsCited_CrossRef, Downloads_Xplore, numeric author_count (from AuthorNames or AuthorNames-Deduped), Conference (one‑hot), PaperType, Award (binary), GraphicsReplicabilityStamp (encoded).
+
+Idea 2 — Logistic regression (binary classification)
+Target: Award (yes/no) or GraphicsReplicabilityStamp (e.g., replicable vs not).
+Features: numeric features (Year, paper_length, PubsCited_CrossRef, Downloads_Xplore, author_count), plus text embeddings from Title + Abstract + AuthorKeywords.
+
+Idea 3 — Gradient boosting regression (XGBoost/LightGBM)
+Target: Downloads_Xplore or CitationCount_CrossRef (regression).
+Features: Year, Conference, PaperType, paper_length, PubsCited_CrossRef, author_count, Award, GraphicsReplicabilityStamp, plus TF-IDF / embedding features from Title + Abstract + AuthorKeywords.
+
+Idea 4 — Random forest classification
+Target: PaperType (multiclass: e.g., Full/Short/Poster) or Conference category.
+Features: numeric features (Year, paper_length, Downloads_Xplore, PubsCited_CrossRef, AminerCitationCount), author_count, and text embeddings for Title/Abstract/AuthorKeywords.
+
+Idea 5 — Unsupervised clustering / topic modeling
+Goal: Discover research topic clusters and temporal trends.
+Inputs: Title + Abstract + AuthorKeywords (TF-IDF, LDA topics or sentence embeddings), optionally include Year and Conference to analyze evolution over time.
+
+Idea 6 — K-nearest neighbors / similarity-based recommender
+Goal: Given a paper, recommend similar papers.
+Similarity space: combined embedding of Title + Abstract + AuthorKeywords + (AuthorAffiliation / AuthorNames-Deduped), optionally incorporate graph similarity from InternalReferences and citation counts (AminerCitationCount, CitationCount_CrossRef). 
+------- Next set of Ideas for 10-------
+1) Predict CitationCount_CrossRef (regression) — gradient boosting / random forest using Year, page count (LastPage−FirstPage), PubsCited_CrossRef, Downloads_Xplore, Conference, PaperType, Award, GraphicsReplicabilityStamp, plus text features from Title+Abstract+AuthorKeywords.
+
+2) Predict Award presence (binary classification) — logistic regression / SVM / random forest using metadata (Conference, Year, PaperType), author features (author count from AuthorNames, affiliation indicators), citation/download metrics, and text embeddings from Title+Abstract.
+
+3) Topic clustering of papers (unsupervised) — use LDA or document embeddings on Title+Abstract+AuthorKeywords (optionally include Conference and Year) and cluster with K-means / HDBSCAN to discover topical groups and their temporal shifts.
+
+4) Author collaboration & influence network analysis — build graph from AuthorNames-Deduped and InternalReferences (or citation edges), run community detection and centrality measures to identify influential authors and predict high AminerCitationCount nodes (node classification).
+
+5) Content-based paper recommender (nearest neighbors) — construct combined vector of text embeddings (Title+Abstract+AuthorKeywords) and metadata (Conference, Year, PaperType) and use ANN / K-NN for similar-paper recommendations.
+
+6) Citation dynamics modeling (count/time-to-event) — fit Poisson/negative binomial or survival models for AminerCitationCount (or citation accrual over Year) using paper features (pages, keywords, conference, author features, Downloads_Xplore) to estimate growth rates and detect outlier/viral papers. 
+------- Next set of Ideas for 11-------
+1) Idea 1 — Citation regression model  
+   Predict continuous citation counts (AminerCitationCount or CitationCount_CrossRef) using regression (e.g., gradient boosting / random forest / linear regression). Use features: Year, Conference, PaperLength (LastPage−FirstPage), NumAuthors (from AuthorNames), Title/Abstract embeddings, AuthorKeywords count, PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp.
+
+2) Idea 2 — Award classification  
+   Binary/multiclass classification to predict Award (yes/no or award type) from early/publication features: Year, Conference, PaperType, Title/Abstract embeddings, NumAuthors, AuthorAffiliation features, Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef.
+
+3) Idea 3 — Topic modeling / clustering of papers  
+   Unsupervised topic modeling and clustering (LDA, NMF, or embedding + k-means / HDBSCAN) using Title, Abstract, AuthorKeywords to discover research themes and cluster papers by topic. Use Year/Conference as metadata for cluster analysis.
+
+4) Idea 4 — Paper similarity & recommendation (KNN / embedding retrieval)  
+   Build semantic embeddings from Title+Abstract+Keywords and implement nearest-neighbor retrieval or content-based recommender for similar papers; optionally incorporate citation-based similarity using DOI/InternalReferences and citation counts.
+
+5) Idea 5 — Temporal trend forecasting and panel analysis  
+   Aggregate metrics by Year and Conference (mean citations, downloads, publication counts) and apply time-series / panel models (ARIMA, Prophet, or dynamic linear models) to forecast citation/download trends and detect shifts in topic popularity (use topic proportions from Idea 3).
+
+6) Idea 6 — Citation network and influence analysis (graph methods)  
+   Construct directed citation network from DOI and InternalReferences, compute centrality/PageRank, detect communities (Louvain), and predict node influence (future citations) using graph features combined with node attributes (Year, Conference, NumAuthors, Paper topics). 
+------- Next set of Ideas for 12-------
+Idea 1 — Citation-count regression
+- Predict numeric citation counts (AminerCitationCount and/or CitationCount_CrossRef) using regression models (e.g., gradient boosting, random forest, linear models on log-target). Use numeric and engineered features: Year, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, page_count (LastPage−FirstPage+1), number_of_authors (from AuthorNames-Deduped), Conference (categorical), Award, GraphicsReplicabilityStamp, plus text features from Title, Abstract, AuthorKeywords.
+
+Idea 2 — Award classification
+- Binary/multiclass classification to predict Award (yes/no or award type) using SVM / logistic regression / boosting. Inputs: Title/Abstract/AuthorKeywords text features, Conference, Year, citation metrics (AminerCitationCount, CitationCount_CrossRef), Downloads_Xplore, AuthorAffiliation-derived features, PaperType.
+
+Idea 3 — Topic modeling and clustering of papers
+- Unsupervised topic extraction and clustering using LDA or embedding + KMeans on text (Abstract + Title + AuthorKeywords). Then analyze cluster composition by Conference, Year, Citation counts, and Award.
+
+Idea 4 — Author/co-authorship network and influence analysis
+- Build co-authorship graph from AuthorNames-Deduped (and AuthorAffiliation), run community detection and centrality measures to identify influential authors and communities; optionally perform link-prediction for future collaborations and regression/classification to predict author-level impact (aggregate citations, awards).
+
+Idea 5 — Paper similarity / recommendation system
+- Content-based (TF-IDF or sentence embeddings of Title+Abstract+AuthorKeywords) and metadata-augmented (Conference, Year, citations, Downloads_Xplore) KNN or approximate nearest neighbors for “similar paper” retrieval and citation-recommendation.
+
+Idea 6 — Predict GraphicsReplicabilityStamp or PaperType
+- Classification (random forest / boosting / SVM) to predict GraphicsReplicabilityStamp or PaperType from features: Abstract and Title text, AuthorKeywords, Conference, Year, full-text-derived proxies (page_count), citation metrics, and AuthorAffiliation signals. 
+------- Next set of Ideas for 13-------
+Idea 1 — Regression for citation prediction:
+Predict CitationCount_CrossRef (or AminerCitationCount) using Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, Award, GraphicsReplicabilityStamp, page length (LastPage–FirstPage), and encoded AuthorKeywords/Abstract with models like linear regression, random forest, or gradient boosting.
+
+Idea 2 — Binary classification for awards:
+Classify whether Award is present using Year, Conference, PaperType, Downloads_Xplore, CitationCount_CrossRef/AminerCitationCount, AuthorKeywords, Abstract embeddings, and AuthorAffiliation with logistic regression, SVM, or ensemble methods.
+
+Idea 3 — Predict GraphicsReplicabilityStamp:
+Multi-class classification of GraphicsReplicabilityStamp from Abstract text, AuthorKeywords, PaperType, Conference, and citation/download features using text-based classifiers (fine-tuned transformer, Random Forest on embeddings).
+
+Idea 4 — Topic modeling and temporal trend analysis:
+Apply topic modeling (LDA / BERTopic / dynamic topic models) to Abstract and AuthorKeywords, then analyze topic prevalence over Year and Conference to detect emerging/declining research areas.
+
+Idea 5 — Author/co‑authorship clustering and profiling:
+Build co-authorship network from AuthorNames / AuthorNames-Deduped and AuthorAffiliation, generate author embeddings (node2vec or graph embeddings + text features), and cluster to identify research communities and prolific author profiles.
+
+Idea 6 — Citation network analysis and link prediction:
+Construct directed citation graph using DOI and InternalReferences (and PubsCited_CrossRef), compute centrality/communities, and perform link-prediction or future-citation growth forecasting with graph ML (GNNs, node2vec + supervised models). 
+------- Next set of Ideas for 14-------
+1) Idea 1 — Citation-count regression: predict CitationCount_CrossRef (or AminerCitationCount) using Year, Conference, PaperType, numeric features (PubsCited_CrossRef, Downloads_Xplore, InternalReferences count), Author features (author count from AuthorNames‑Deduped, aggregated citation history), Award, GraphicsReplicabilityStamp, plus text embeddings from Title/Abstract/AuthorKeywords; models: gradient boosting / random forest / linear regression.
+
+2) Idea 2 — Award / badge classification: classify Award (binary/multi) or GraphicsReplicabilityStamp label from metadata and text (Title, Abstract, AuthorKeywords, Conference, Year, citation/downloads); models: logistic regression / SVM / random forest.
+
+3) Idea 3 — Topic modeling and clustering of papers: unsupervised LDA or embeddings + k‑means / hierarchical clustering on Title+Abstract+AuthorKeywords to discover topical groups and label conferences by topic distributions.
+
+4) Idea 4 — Co‑authorship and citation network analysis: build graphs from AuthorNames / AuthorAffiliation and InternalReferences, compute centrality and communities, and apply link‑prediction or node‑classification to identify influential authors or likely collaborations.
+
+5) Idea 5 — Paper similarity / recommendation engine: content‑based (embeddings of Title/Abstract/Keywords) combined with citation overlap (InternalReferences, PubsCited_CrossRef) to implement k‑NN or ANN retrieval for related‑paper recommendations.
+
+6) Idea 6 — Temporal trend and forecasting per conference/topic: aggregate by Conference and Year (mean citations, downloads, counts by PaperType/Award), then model trends and forecast future citation/download rates or topic prevalence with time‑series / boosting models (ARIMA, Prophet, or GBM). 
+------- Next set of Ideas for 15-------
+Idea 1 — Predict citation count (regression): use boosting / random forest / linear regression to predict CitationCount_CrossRef or AminerCitationCount (target) from Year, Conference (one-hot/embeddings), PaperType, PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp, paper length (LastPage–FirstPage), and text embeddings from Title + Abstract + AuthorKeywords.
+
+Idea 2 — Award classification (binary/multiclass): use logistic regression / SVM / random forest to predict Award (yes/no or award type) from Abstract & Title embeddings, AuthorKeywords, Conference, Year, CitationCount_CrossRef, Downloads_Xplore, PaperType, and GraphicsReplicabilityStamp.
+
+Idea 3 — Topic modeling and temporal trend analysis: apply LDA / NMF / BERTopic on Abstract + AuthorKeywords + Title to extract topics, then cluster papers by topic and analyze topic prevalence over Year and across Conference.
+
+Idea 4 — Co-authorship and citation network analysis (graph ML): build co-authorship and citation graphs from AuthorNames, AuthorAffiliation and InternalReferences, then run community detection, centrality measures, and node/edge-level link prediction (graph embedding methods) to identify influential authors and predict future collaborations/citations.
+
+Idea 5 — Paper similarity / recommendation system: compute document embeddings (transformer or TF-IDF + SVD) from Title + Abstract + AuthorKeywords and use K-nearest neighbors / approximate nearest neighbors to find similar papers and recommend related works (optionally incorporate Conference, Year, Citation counts as filters).
+
+Idea 6 — Predict paper metadata from text (classification/regression): train SVM / random forest to predict PaperType (classification) and Downloads_Xplore (regression) from Title, Abstract, AuthorKeywords, Conference, Year, AuthorNames-Deduped features (author counts), and citation features (AminerCitationCount, CitationCount_CrossRef). 
+------- Next set of Ideas for 16-------
+1) Award prediction (binary classification) — target: Award; features: Conference, Year, PaperType, Title/Abstract embeddings, AuthorKeywords, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef (models: logistic regression, random forest, XGBoost, SVM)
+
+2) Citation count regression — target: CitationCount_CrossRef (or future citations); features: Year, Conference, PaperType, Title/Abstract embeddings, AuthorKeywords, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, InternalReferences (models: linear/regularized regression, gradient boosting, random forest)
+
+3) Unsupervised topic discovery and paper clustering — inputs: Abstract, Title, AuthorKeywords, Year, Conference (methods: LDA, BERTopic, hierarchical/k-means clustering on embedding space)
+
+4) Paper recommendation / similarity and citation link prediction — inputs: Title+Abstract+AuthorKeywords embeddings, InternalReferences, PubsCited_CrossRef, CitationCount_CrossRef (methods: k-NN on embeddings for recommendations; graph embedding/link-prediction on citation network)
+
+5) Author disambiguation and author-impact modeling — tasks: (a) cluster/resolve AuthorNames vs AuthorNames-Deduped using AuthorAffiliation, coauthor patterns, Title/Abstract embeddings (b) predict author impact (aggregate AminerCitationCount or future citations) using author features and paper-level metrics (methods: clustering, graph/community detection, supervised regression/classification)
+
+6) Predict Downloads_Xplore or GraphicsReplicabilityStamp (regression or multiclass/binary classification) — targets: Downloads_Xplore (regression) or GraphicsReplicabilityStamp (classification); features: Conference, Year, PaperType, Title/Abstract embeddings, AuthorKeywords, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences (models: gradient boosting, random forest, multiclass logistic/SVM) 
+------- Next set of Ideas for 17-------
+Idea 1 — Predict paper citation count (AminerCitationCount or CitationCount_CrossRef) using metadata and text features (Year, Conference, Paper length from FirstPage/LastPage, Author count from AuthorNames-Deduped, Downloads_Xplore, PaperType, Abstract embeddings, AuthorKeywords); models: gradient boosting (XGBoost/LightGBM), random forest, ElasticNet.
+
+Idea 2 — Classify whether a paper received an Award (binary) from metadata and textual signals (Conference, Year, PaperType, Author features, Abstract/keywords); models: logistic regression, random forest, XGBoost, SVM.
+
+Idea 3 — Predict Downloads_Xplore (count/regression) using Year, Conference, citation counts, paper length, author features, Abstract embeddings and keywords; models: Poisson/negative-binomial regression or tree-based regressors (LightGBM/XGBoost).
+
+Idea 4 — Multi-class classification of GraphicsReplicabilityStamp (categorical) from PaperType, Abstract, AuthorKeywords, Conference and citation/download signals; models: random forest, SVM, neural network with text embeddings.
+
+Idea 5 — Unsupervised topic discovery and clustering: apply LDA / BERTopic / clustering on Abstract + AuthorKeywords (or embeddings) to produce topics, then cluster papers by topic and analyze topic–conference–citation relationships.
+
+Idea 6 — Author/co-authorship network and influence modeling: build graph from AuthorNames-Deduped and AuthorAffiliation, compute centrality/community features and use them (plus metadata) to predict paper citation growth or high-impact status (regression/classification with random forest or gradient boosting). 
+------- Next set of Ideas for 18-------
+1) Predict citation counts (regression) — target: CitationCount_CrossRef; features: Year, Conference, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef, PaperType, Award, GraphicsReplicabilityStamp, InternalReferences, numeric features extracted from AuthorNames/AuthorNames-Deduped, embeddings from Title + Abstract + AuthorKeywords.
+
+2) Award prediction (binary/multiclass classification) — target: Award; features: Title & Abstract embeddings, AuthorKeywords, Conference, Year, Downloads_Xplore, CitationCount_CrossRef, AminerCitationCount, PaperType, GraphicsReplicabilityStamp.
+
+3) Unsupervised topic modeling / clustering of papers — inputs: Abstract, Title, AuthorKeywords, Conference, Year; methods: LDA / NMF / embedding + k-means / hierarchical clustering to discover topical groups.
+
+4) Author / co-authorship network analysis and author impact modeling — build graph from AuthorNames / AuthorNames-Deduped and AuthorAffiliation; tasks: community detection, centrality measures, and prediction of AminerCitationCount or per-author citation rank.
+
+5) Content-based paper similarity and recommendation (KNN) — inputs: embeddings from Title + Abstract + AuthorKeywords + DOI/Link metadata; method: approximate nearest neighbors to recommend similar papers or detect duplicates.
+
+6) Predict graphics replicability stamp (classification) and analyze text cues — target: GraphicsReplicabilityStamp; features: Abstract & Title embeddings, PaperType, AuthorKeywords, Conference, Year, CitationCount_CrossRef, Downloads_Xplore, AuthorAffiliation. 
+------- Next set of Ideas for 19-------
+1) Predict citation counts (regression) — e.g., XGBoost / Random Forest to predict AminerCitationCount or CitationCount_CrossRef using Year, Conference, PaperType, paper length (LastPage−FirstPage), Author count (from AuthorNames), PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp, and text embeddings from Abstract/AuthorKeywords.
+
+2) Classify award-winning papers (binary classification) — e.g., logistic regression / SVM / gradient boosting using Abstract and AuthorKeywords embeddings plus metadata (Conference, Year, PaperType, citation/download features).
+
+3) Topic modeling and temporal trend analysis (unsupervised) — e.g., LDA / NMF / clustering on Abstract + AuthorKeywords to discover topics and track topic prevalence by Year and Conference.
+
+4) Citation/Reference network analysis (graph analytics) — build directed graph from DOI/InternalReferences to compute PageRank, centrality, and detect communities to rank influential papers/authors.
+
+5) Paper recommendation system (content-based + collaborative) — use Abstract embeddings and AuthorKeywords for content-based similarity and incorporate Downloads_Xplore / citation co-occurrence for collaborative filtering.
+
+6) Citation dynamics / survival analysis (time-to-event) — use Cox proportional hazards or time-series regression to model time until a paper reaches citation/download milestones using Year, Conference, metadata, and text-derived features. 
+------- Next set of Ideas for 20-------
+Idea 1 — Predict citation counts (regression): use features Year, Conference, PaperType, PaperLength (=LastPage-FirstPage+1), PubsCited_CrossRef, Downloads_Xplore, AuthorKeywords, Abstract/Title embeddings to predict CitationCount_CrossRef or AminerCitationCount (e.g., gradient boosting / random forest).
+
+Idea 2 — Award prediction (classification): predict Award (binary/categorical) from Conference, Year, PaperType, AuthorAffiliation-derived features, citation counts, Downloads_Xplore, Abstract/Title embeddings and AuthorNames-Deduped (author-level features) using logistic regression / SVM / boosting.
+
+Idea 3 — Topic modeling and clustering (unsupervised): extract topics and clusters from Abstract + Title + AuthorKeywords (LDA, BERTopic, or embedding + k-means) and produce per-conference / per-year topic distributions.
+
+Idea 4 — Citation/citation-network analysis and link prediction (graph ML): build directed graph from DOI/InternalReferences/PubsCited_CrossRef, compute centrality and communities, and perform link prediction or citation recommendation with node2vec / GNNs.
+
+Idea 5 — Similarity-based recommendation / nearest-neighbor search: create dense embeddings from Title+Abstract+AuthorKeywords and use KNN / ANN to recommend related papers, filtering by Conference, Year, or AuthorAffiliation.
+
+Idea 6 — Predict replicability/graphics stamp or downloads (classification/regression): predict GraphicsReplicabilityStamp (categorical) or Downloads_Xplore (regression) from PaperLength, PaperType, Abstract quality signals (readability, keywords), Author citation metrics (AminerCitationCount), Conference and Year using random forest / boosting. 
+------- Next set of Ideas for 21-------
+Idea 1 — Regression (GBM / Random Forest / Linear): Predict Downloads_Xplore (numeric) using Year, Conference, PaperType, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Award, GraphicsReplicabilityStamp, derived features (title length, abstract length, number of authors from AuthorNames-Deduped), and Conference embeddings.
+
+Idea 2 — Binary / Multiclass Classification (Boosting / Random Forest / SVM): Predict Award (binary/multiclass) or GraphicsReplicabilityStamp status using Title and Abstract embeddings, AuthorKeywords, Conference, Year, PaperType, citation counts (AminerCitationCount, CitationCount_CrossRef), and Downloads_Xplore.
+
+Idea 3 — Count Regression / Time-aware Forecasting (Poisson/Negative Binomial / Gradient Boosting): Predict AminerCitationCount or CitationCount_CrossRef using Year, PubsCited_CrossRef, Downloads_Xplore, Author counts, Conference, PaperType, and textual features from Title/Abstract.
+
+Idea 4 — Unsupervised Topic Modeling and Clustering: Cluster papers by topic using Title, Abstract, and AuthorKeywords (TF-IDF or transformer embeddings) and optionally include Conference and Year to produce thematic clusters and temporal topic trajectories.
+
+Idea 5 — Graph / Network Analysis + Predictive Modeling: Build co-authorship graph from AuthorNames (and AuthorAffiliation); compute author/paper centrality features and use them in a model (e.g., logistic regression / random forest) to predict high-citation papers or future collaborations (target: AminerCitationCount threshold or new coauthor edges).
+
+Idea 6 — Record Linkage / Anomaly Detection and Data Quality Models: Use string-similarity and structured fields (DOI, Title, FirstPage/LastPage, Link) to detect duplicate or mismatched records; apply anomaly detection (Isolation Forest / Autoencoder) on feature vectors combining citations, downloads, and publication metadata to flag inconsistent entries (e.g., very high Downloads_Xplore but near-zero citations). 
+------- Next set of Ideas for 22-------
+Idea 1 — Gradient boosting regression to predict CitationCount_CrossRef (or AminerCitationCount) using numeric and derived features: Downloads_Xplore, PubsCited_CrossRef, paper length (LastPage−FirstPage), Year, Conference, PaperType, author count (from AuthorNames-Deduped), plus text embeddings from Title/Abstract/AuthorKeywords.
+
+Idea 2 — Binary classification (Random Forest / XGBoost / SVM) to predict Award (award vs no award) using Abstract/Title embeddings, AuthorKeywords, Conference, Year, Citation counts, Downloads_Xplore, AuthorAffiliation features, and PaperType.
+
+Idea 3 — Topic modeling / clustering of papers (LDA or embedding + k-means / hierarchical clustering) using Abstract and AuthorKeywords to discover research topics and then analyze per-topic citation and download patterns across Conference and Year.
+
+Idea 4 — Graph analysis and link-prediction on a co-authorship network built from AuthorNames-Deduped to (a) cluster collaboration communities, (b) compute centrality features to predict paper impact (citations/Downloads_Xplore).
+
+Idea 5 — Anomaly / outlier detection (Isolation Forest / Local Outlier Factor) to find inconsistent or suspicious records using features such as large discrepancies between AminerCitationCount and CitationCount_CrossRef, unusually high Downloads_Xplore relative to citations, missing/odd DOI/Link patterns, and improbable page ranges.
+
+Idea 6 — Multi-class classification (SVM / Random Forest) to predict PaperType or GraphicsReplicabilityStamp from text features (Title, Abstract, AuthorKeywords), metadata (Conference, Year, AuthorAffiliation), and citation/download metrics. 
+------- Next set of Ideas for 23-------
+Idea 1 — Gradient boosting regression to predict future citation count:
+Predict target = CitationCount_CrossRef (or AminerCitationCount) using features: Year, Conference, PaperType, Downloads_Xplore, Award (binary), GraphicsReplicabilityStamp, PubsCited_CrossRef, InternalReferences, pages = LastPage−FirstPage, author_count = count(AuthorNames-Deduped). (Use numeric/categorical encodings and optional text features from Title/Abstract as embeddings.)
+
+Idea 2 — Classification (XGBoost / Random Forest / SVM) to predict Award presence:
+Target = Award (binary/multiclass). Features: Abstract embeddings, AuthorKeywords, Conference, Year, PaperType, Downloads_Xplore, CitationCount_CrossRef, AminerCitationCount, GraphicsReplicabilityStamp, author_count.
+
+Idea 3 — Supervised classification to predict GraphicsReplicabilityStamp:
+Target = GraphicsReplicabilityStamp (categorical). Features: Abstract + Title embeddings, AuthorKeywords, PaperType, Conference, Year, Citation counts, Downloads_Xplore, Award, author affiliations. Methods: Random Forest / SVM / boosting.
+
+Idea 4 — Unsupervised topic modeling and clustering of papers:
+Use Abstract, Title, AuthorKeywords to produce topics (LDA / BERTopic / embeddings + k-means) and cluster papers; analyze cluster distributions by Conference, Year, CitationCount_CrossRef, Downloads_Xplore, Award.
+
+Idea 5 — Author collaboration and influence graph analysis (graph ML):
+Build co-authorship graph from AuthorNames-Deduped and AuthorAffiliation, compute centrality/community detection, create node2vec embeddings, and predict author influence (target = AminerCitationCount or future citations) or recommend collaborators.
+
+Idea 6 — Citation network and recommendation / link prediction:
+Construct directed citation graph from DOI, InternalReferences, PubsCited_CrossRef; compute PageRank / node features and do link prediction (will paper A cite paper B?) and paper-to-paper recommendation using text similarity (Abstract/Title/Keywords) combined with graph features (use GNNs or KNN on embeddings). 
+------- Next set of Ideas for 24-------
+1) Regression — Predict CitationCount_CrossRef (or AminerCitationCount) using Gradient Boosting (XGBoost) with numeric features (Year, PubsCited_CrossRef, Downloads_Xplore, paper length = LastPage−FirstPage), categorical features (Conference, PaperType), and text features (TF‑IDF / embeddings from Title + Abstract + AuthorKeywords).
+
+2) Classification — Predict Award (binary/multiclass) using Random Forest and logistic regression baseline with inputs: Title, Abstract, AuthorKeywords (TF‑IDF or embeddings), numeric features (AminerCitationCount, Downloads_Xplore, Year), and Conference.
+
+3) Unsupervised topic discovery — Topic modeling and clustering of papers by Abstract + AuthorKeywords (LDA and/or embedding + K‑means / hierarchical clustering) and analyze topic distributions by Conference and Year.
+
+4) Entity resolution / author disambiguation — Cluster AuthorNames with AuthorAffiliation, InternalReferences, and co‑authorship links using graph community detection or hierarchical clustering to deduplicate/identify unique authors.
+
+5) Classification — Predict GraphicsReplicabilityStamp (present/absent) using SVM or Gradient Boosting with features from Abstract/Title/AuthorKeywords, paper metadata (Conference, PaperType, Year), and citation/download counts.
+
+6) Retrieval / recommendation — Build a similar‑paper recommender using k‑nearest neighbors in an embedding space (Title + Abstract + AuthorKeywords embeddings), optionally weighted by citation/download signals (AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore) and Conference. 
+------- Next set of Ideas for 25-------
+Idea 1: Predict CitationCount_CrossRef (regression) — use linear models with regularization (Ridge/Lasso) on numeric features (Year, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, page span = LastPage-FirstPage), one-hot Conference and PaperType, plus TF-IDF/embeddings of Title+Abstract+AuthorKeywords.
+
+Idea 2: Predict Award (binary classification) — use logistic regression on metadata (Conference, Year, PaperType, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, counts of AuthorNames/AuthorAffiliation) and text embeddings (Title+Abstract+AuthorKeywords).
+
+Idea 3: Predict Downloads_Xplore or AminerCitationCount (regression) — use gradient boosting machines / Random Forests with categorical handling (Conference, PaperType, GraphicsReplicabilityStamp), numeric features, and text-derived features (TF-IDF or topic proportions from Abstract).
+
+Idea 4: Topic discovery and clustering of papers — apply topic modeling (LDA/NMF) on Title+Abstract+AuthorKeywords, then cluster papers (k-means or hierarchical) by topic vectors and analyze cluster distributions over Year and Conference.
+
+Idea 5: Classify PaperType or GraphicsReplicabilityStamp (multi-class) — use SVM and k-NN on combined feature vectors (text embeddings from Abstract/Title, AuthorKeywords, numeric metadata like citations/downloads) to predict categorical labels.
+
+Idea 6: Author-level network and influence modeling — build a citation/internal-reference graph from InternalReferences and CitationCount_CrossRef, compute author-paper-level network features (degree, PageRank, aggregated AminerCitationCount), then use supervised models (boosting or random forest) to predict author impact metrics or to cluster authors (community detection) using AuthorNames-Deduped and AuthorAffiliation. 
+------- Next set of Ideas for 26-------
+Idea 1 — Citation-count regression:
+Predict AminerCitationCount or CitationCount_CrossRef using Year, Conference, PaperType, page count (LastPage−FirstPage), Downloads_Xplore, InternalReferences, PubsCited_CrossRef, Award, GraphicsReplicabilityStamp, and author-count (from AuthorNames); methods: linear regression, random forest, gradient boosting.
+
+Idea 2 — Award / recognition classification:
+Binary/multiclass predict Award (presence/type) from Abstract and AuthorKeywords embeddings, Conference, Year, Citation counts, Downloads_Xplore, PaperType, GraphicsReplicabilityStamp, and author features; methods: logistic regression, SVM, gradient boosting, deep text classifiers.
+
+Idea 3 — Topic modeling and paper clustering:
+Unsupervised discovery of topical clusters using Title + Abstract + AuthorKeywords (TF-IDF or neural embeddings) and Conference/Year as metadata; methods: LDA/NMF, K‑means, hierarchical clustering, spectral clustering.
+
+Idea 4 — Author-impact / high-impact author prediction (author‑level aggregation):
+Aggregate by AuthorNames‑Deduped to create features (total/mean citations, total papers, avg downloads, awards, conference diversity) and classify/regress future impact (e.g., top-quartile total citations); methods: random forest, gradient boosting, logistic/robust regression.
+
+Idea 5 — Citation-network analysis and link prediction:
+Build directed graph from InternalReferences and PubsCited_CrossRef to compute centrality, communities, and predict new citation links or future citation growth per paper; methods: network metrics, graph clustering, link-prediction models, graph neural networks.
+
+Idea 6 — Content-based paper recommendation / nearest neighbors:
+Compute embeddings from Title+Abstract+AuthorKeywords (and optionally AuthorAffiliation, Conference) and use k‑NN or approximate nearest neighbors to recommend similar papers (with filters by Year/Conference or high citation/download thresholds). 
+------- Next set of Ideas for 27-------
+Idea 1 — Predict paper citation count (regression): use CitationCount_CrossRef or AminerCitationCount as target and features Year, Conference, PaperType, FirstPage/LastPage (paper length), Downloads_Xplore, PubsCited_CrossRef, Author count (derived from AuthorNames), AuthorAffiliation statistics, AuthorKeywords + Abstract (converted to embeddings). Models: linear regression, random forest, gradient boosting.
+
+Idea 2 — Predict award receipt (classification): use Award as target (binary/categorical) with features Conference, Year, PaperType, Citation counts, Downloads_Xplore, Author reputation features (aggregated AminerCitationCount), paper length, Abstract/Keywords embeddings. Models: logistic regression, XGBoost, SVM.
+
+Idea 3 — Topic modeling and content clustering: group papers by topical similarity using Title, Abstract, AuthorKeywords (TF‑IDF / LDA or transformer embeddings) and clustering (k‑means, hierarchical, DBSCAN) to discover thematic communities and per‑topic citation/download profiles.
+
+Idea 4 — Paper recommendation / nearest‑neighbor retrieval: build similarity-based recommender using sentence embeddings from Title+Abstract+AuthorKeywords and k‑NN or approximate nearest neighbor; optionally hybridize with citation links (InternalReferences) and Downloads_Xplore for popularity‑aware ranking.
+
+Idea 5 — Co‑authorship and citation network analysis: build graphs from AuthorNames (co‑authorship edges) and InternalReferences/CitationCount_CrossRef (citation edges); run community detection, centrality, and link‑prediction; use graph features to predict paper/author influence (regression/classification).
+
+Idea 6 — Temporal trend and forecasting analyses: aggregate by Year and Conference (mean/median citations, downloads, publications cited) to forecast future citations or downloads using time‑series models (ARIMA, Prophet) or per‑paper citation growth prediction (survival analysis or regression using Year, initial citations, Downloads_Xplore, author metrics). 
+------- Next set of Ideas for 28-------
+Idea 1 — Regression of future impact:
+Predict CitationCount_CrossRef or AminerCitationCount using numeric and derived features (Year, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, paper length from FirstPage/LastPage, author count derived from AuthorNames, Conference, PaperType) plus text embeddings from Title/Abstract/AuthorKeywords. Models: gradient boosting regression (XGBoost/LightGBM), random forest, elastic-net.
+
+Idea 2 — Award (binary) classification:
+Classify Award (yes/no) from features: Conference, Year, PaperType, Citation counts (AminerCitationCount, CitationCount_CrossRef), Downloads_Xplore, GraphicsReplicabilityStamp, text features from Title/Abstract/AuthorKeywords, author reputation signals (derived from AuthorNames and AminerCitationCount). Models: logistic regression, SVM, boosting, random forest.
+
+Idea 3 — Topic modeling and clustering of papers:
+Unsupervised clustering / topic modeling using Abstract, AuthorKeywords and Title (TF-IDF, word2vec/BERT embeddings, LDA) to produce topics and clusters; optionally compare topic prevalence by Year and Conference.
+
+Idea 4 — Classification of GraphicsReplicabilityStamp:
+Predict GraphicsReplicabilityStamp (categorical/ordinal) using textual signals (Abstract, AuthorKeywords), PaperType, Conference, Citation/Download metrics, and author/affiliation features. Models: multiclass boosting, random forest, SVM; include feature importance analysis.
+
+Idea 5 — Co-authorship network and author influence analysis:
+Construct co-authorship graph from AuthorNames / AuthorNames-Deduped and AuthorAffiliation, compute centrality and community detection, then model author influence (predict AminerCitationCount or award probability) using graph features + paper-level features.
+
+Idea 6 — Similarity-based paper recommender (KNN):
+Build content + citation similarity metric using Title/Abstract/AuthorKeywords embeddings combined with citation vectors (CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences) to return nearest-neighbor recommendations (k-NN / approximate nearest neighbors) for a query paper. 
+------- Next set of Ideas for 29-------
+1) Predict citation counts (regression) — Target: AminerCitationCount or CitationCount_CrossRef; Features: Year, Conference (encoded), PaperType, Downloads_Xplore, Award, GraphicsReplicabilityStamp, numeric text features (abstract length, title length), counts (InternalReferences, PubsCited_CrossRef), author features (author count from AuthorNames); Models: gradient boosting / random forest / linear regression baseline.
+
+2) Predict award receipt (binary classification) — Target: Award (binary); Features: Title + Abstract embeddings, Conference, Year, PaperType, Downloads_Xplore, AminerCitationCount, GraphicsReplicabilityStamp, AuthorFeatures; Models: logistic regression, random forest, SVM, boosting.
+
+3) PaperType classification from text (multi-class) — Target: PaperType; Features: Title, Abstract, AuthorKeywords (text tokens/embeddings), Conference, Year; Models: SVM / multinomial Naive Bayes / neural text classifier.
+
+4) Topic discovery and thematic clustering (unsupervised) — Inputs: Title + Abstract + AuthorKeywords embeddings (plus citation/download metadata); Methods: k-means / hierarchical clustering / LDA topic modeling to find topical groups and their citation/download profiles.
+
+5) Predict downloads/popularity (regression or rank) — Target: Downloads_Xplore (or rank into high/low download buckets); Features: Title/Abstract embeddings, Conference, Year, Author count, AminerCitationCount, InternalReferences, Award, GraphicsReplicabilityStamp; Models: gradient boosting, random forest, KNN regression for baseline.
+
+6) Author impact / author-level modeling and clustering — Aggregate by AuthorNames-Deduped: targets like total/mean AminerCitationCount per author or classify high-impact authors; Features: number of papers, mean downloads, mean citations, affiliation features (from AuthorAffiliation), coauthor counts (from InternalReferences/AuthorNames); Methods: regression/classification and author clustering / graph centrality analysis. 
+------- Next set of Ideas for 30-------
+Idea 1 — Regression for citation prediction:
+Predict CitationCount_CrossRef and/or AminerCitationCount using gradient boosting or random forest regression with features: Year, Conference (encoded), PaperLength (LastPage − FirstPage), Downloads_Xplore, PubsCited_CrossRef, InternalReferences, author count (from AuthorNames-Deduped), Award, GraphicsReplicabilityStamp, plus TF-IDF/embeddings of Abstract and AuthorKeywords.
+
+Idea 2 — Binary classification for awards:
+Predict Award (yes/no) using logistic regression / random forest / XGBoost with features: TF-IDF or embeddings of Abstract and AuthorKeywords, Conference, Year, PaperLength, Downloads_Xplore, citation counts, and author-affiliation-derived features.
+
+Idea 3 — Topic discovery and clustering:
+Apply LDA and K-means / hierarchical clustering on TF-IDF or transformer embeddings of Abstract + AuthorKeywords to discover topics; analyze topic distributions by Conference and Year.
+
+Idea 4 — Co-authorship network analysis and author influence modeling:
+Build co-authorship graph from AuthorNames-Deduped and AuthorAffiliation; run community detection and compute centrality features, then predict author-level influence (AminerCitationCount) with regression models using network features + per-paper attributes.
+
+Idea 5 — Regression/classification of reproducibility badge:
+Predict GraphicsReplicabilityStamp (categorical) using SVM / random forest / gradient boosting with inputs: Abstract and AuthorKeywords embeddings, code/graphics-related tokens from Title/Abstract, Conference, Year, PaperLength, citation/download metrics.
+
+Idea 6 — Content-based paper recommendation:
+Implement K-Nearest Neighbors or embedding-based similarity (cosine on sentence/Doc2Vec/transformer embeddings of Title+Abstract+AuthorKeywords) to recommend similar papers; optionally augment with collaborative signals from citation links (InternalReferences, PubsCited_CrossRef). 
+------- Next set of Ideas for 31-------
+Idea 1: Predict Award (binary classification) — features: Conference, Year, PaperType, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, GraphicsReplicabilityStamp, derived AuthorCount (from AuthorNames) — methods: logistic regression / random forest / XGBoost.
+
+Idea 2: Predict future citations (regression) — target: CitationCount_CrossRef or AminerCitationCount — features: Year, Conference, PaperLength (LastPage−FirstPage), Downloads_Xplore, PubsCited_CrossRef, PaperType, Award, derived AuthorCount — methods: linear regression / gradient boosting.
+
+Idea 3: Topic modeling and trend analysis (unsupervised) — use Abstract and AuthorKeywords (text) plus Year and Conference to run LDA / NMF and track topic prevalence over time.
+
+Idea 4: Paper similarity and recommendation (nearest-neighbor) — build embeddings from Title + Abstract + AuthorKeywords, compute similarity for paper-to-paper recommendations using cosine similarity or K-NN.
+
+Idea 5: Author collaboration and influence analysis (graph + prediction) — build coauthor graph from AuthorNames / AuthorNames-Deduped and AuthorAffiliation, compute centrality features per author, aggregate to paper-level to predict citation counts or award probability (graph features + random forest / GNN).
+
+Idea 6: Classify GraphicsReplicabilityStamp (categorical) — features: PaperType, Conference, Year, PaperLength, Downloads_Xplore, citation counts, AuthorAffiliation-derived features, AuthorKeywords embeddings — methods: SVM / random forest / boosting. 
+------- Next set of Ideas for 32-------
+Idea 1 — Award prediction (binary classification): use logistic regression / random forest / XGBoost / SVM. Features: Year, Conference, PaperType, PaperLength (LastPage−FirstPage), AuthorCount (from AuthorNames-Deduped), AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp, embeddings from Abstract / AuthorKeywords / Title.
+
+Idea 2 — Citation-count modeling (regression / count models): predict CitationCount_CrossRef or AminerCitationCount using linear regression / Poisson / negative binomial / gradient boosting. Features: Year, Conference, PaperType, PaperLength, AuthorCount, InternalReferences (or count), PubsCited_CrossRef, Downloads_Xplore, Abstract/Title/Keywords embeddings, Award.
+
+Idea 3 — Topic discovery and clustering (unsupervised): use LDA / BERTopic / sentence-embedding + k-means / hierarchical to cluster papers by Abstract + AuthorKeywords + Title; then profile clusters by Conference, Year, citation and download statistics. Columns used: Abstract, AuthorKeywords, Title, Conference, Year, AminerCitationCount, Downloads_Xplore.
+
+Idea 4 — Related-paper recommendation & link prediction (graph + similarity): build citation graph from DOI and InternalReferences, compute node embeddings (node2vec / GNN) and text embeddings (Abstract/Title) and use KNN or link-prediction models to recommend citations or predict missing links. Columns used: DOI, InternalReferences, Title, Abstract, AuthorNames, Year.
+
+Idea 5 — Predict Downloads / readership (regression or high/low classification): model Downloads_Xplore with gradient boosting / random forest / elastic net or classify high vs low downloads. Features: Year, Conference, PaperType, PaperLength, AuthorCount, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Award, Abstract/Title/Keywords embeddings.
+
+Idea 6 — Author-impact and collaboration analysis (author-level modeling & network analysis): aggregate per-author features from AuthorNames-Deduped, AuthorAffiliation, count papers, mean/median citations and downloads; tasks: cluster authors, predict high-impact authors (classification/regression), build co-authorship network and apply community detection or centrality measures. Columns used: AuthorNames-Deduped, AuthorNames, AuthorAffiliation, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, Year. 
+------- Next set of Ideas for 33-------
+1) Idea 1 — Citation regression: predict AminerCitationCount (or CitationCount_CrossRef) from Year, Conference, Paper length (LastPage − FirstPage), PaperType, Award, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, Author count (from AuthorNames[-Deduped]), plus TF‑IDF/embeddings of Title/Abstract/AuthorKeywords.
+
+2) Idea 2 — Award classification: predict Award (binary/multi) using Year, Conference, PaperType, citation metrics (AminerCitationCount, CitationCount_CrossRef), Downloads_Xplore, GraphicsReplicabilityStamp, paper length, and textual features from Abstract/AuthorKeywords.
+
+3) Idea 3 — Topic modeling and clustering: unsupervised discovery of topics and paper clusters using LDA / BERTopic / k‑means on embeddings or TF‑IDF of Abstract, Title and AuthorKeywords; analyze cluster composition by Conference and Year.
+
+4) Idea 4 — Author collaboration network & community detection: construct co‑authorship graph from AuthorNames (and AuthorAffiliation), compute centrality, detect communities, and perform link‑prediction / author influence ranking with node features (citation counts, publication counts).
+
+5) Idea 5 — Content‑based paper recommender / similarity search: build nearest‑neighbor retrieval using embeddings from Title+Abstract+AuthorKeywords (cosine similarity) to recommend similar papers and evaluate with citation/Download overlap.
+
+6) Idea 6 — Predict Downloads_Xplore (regression) and interpret drivers: model Downloads_Xplore using Year, Conference, PaperType, citations, paper length, InternalReferences, PubsCited_CrossRef, textual features (Abstract/Title/Keywords), and report feature importances/SHAP. 
+------- Next set of Ideas for 34-------
+Idea 1 — Predict Award (binary classification): use Random Forest / Gradient Boosting / Logistic Regression to predict Award from Year, Conference, PaperType, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, GraphicsReplicabilityStamp, page_count (LastPage−FirstPage+1), author_count (from AuthorNames‑Deduped), AuthorKeywords, Abstract embeddings.
+
+Idea 2 — Predict citation counts (regression): use Gradient Boosting Regression / Random Forest / Elastic Net to predict CitationCount_CrossRef or AminerCitationCount from Year, Conference, PaperType, Award, Downloads_Xplore, PubsCited_CrossRef, page_count, author_count, AuthorKeywords and Abstract embeddings.
+
+Idea 3 — Topic modeling and clustering: apply LDA / BERTopic / k‑means on Abstract + Title + AuthorKeywords embeddings to discover topical clusters, then analyze cluster distribution by Conference and Year.
+
+Idea 4 — Paper similarity and recommendation (k‑NN / embedding search): build TF‑IDF or sentence‑embedding index (cosine similarity) on Title+Abstract+AuthorKeywords to recommend similar papers and evaluate with nearest‑neighbor retrieval.
+
+Idea 5 — Co‑authorship network analysis & predictive graph ML: construct author collaboration graph from AuthorNames / AuthorNames‑Deduped, compute centrality/community structure, use node2vec / GNNs to predict prolific authors or future collaborations and relate author features to citation impact.
+
+Idea 6 — Text classification of PaperType or GraphicsReplicabilityStamp: use SVM / Logistic Regression / Boosting to predict categorical PaperType or GraphicsReplicabilityStamp from Title, Abstract, AuthorKeywords, Conference and author/affiliation metadata. 
+------- Next set of Ideas for 35-------
+Idea 1 — Gradient boosting regression for citation prediction:
+Use Year, Conference, PaperType, number_of_authors (from AuthorNames-Deduped), paper_length (LastPage−FirstPage+1), PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp and TF-IDF / embeddings from Title+Abstract+AuthorKeywords to predict CitationCount_CrossRef (or AminerCitationCount).
+
+Idea 2 — Random forest / SVM classification for award detection:
+Train a classifier to predict Award (binary/multiclass) from Conference, Year, PaperType, citation/download features, author count/affiliations, and text features from Title/Abstract/AuthorKeywords.
+
+Idea 3 — Topic modeling and unsupervised clustering:
+Apply LDA / BERTopic on Abstract + AuthorKeywords (and Title) to discover topics, then cluster papers and analyze topic distributions by Conference, Year, and citation metrics.
+
+Idea 4 — Author collaboration network analysis and link prediction:
+Build a graph from AuthorNames-Deduped and AuthorAffiliation (nodes=authors, edges=coauthorship or internal references), compute centrality/community detection, and use graph features to predict high-citation papers or future collaborations.
+
+Idea 5 — Content-based paper recommendation / KNN similarity:
+Create document embeddings from Title+Abstract+AuthorKeywords, compute nearest-neighbors or train a KNN recommender, validate using InternalReferences, DOI linkages, or citation overlaps as ground truth.
+
+Idea 6 — Count/time-series modeling of citations:
+Use Poisson/negative binomial regression or survival analysis with Year, Conference, PaperType, PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp, and author features to model citation counts over time (growth rate or time-to-threshold). 
+------- Next set of Ideas for 36-------
+Idea 1: Gradient boosting regression to predict CitationCount_CrossRef (or AminerCitationCount) using Year, paper length (LastPage−FirstPage), InternalReferences, PubsCited_CrossRef, Downloads_Xplore, Conference, PaperType, numeric author features (author count), plus embedded features from Title/Abstract/AuthorKeywords.
+
+Idea 2: Random forest classification to predict Award (binary) using Conference, Year, PaperType, citation/download counts (AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore), paper length, and text-derived features from Abstract/AuthorKeywords.
+
+Idea 3: Unsupervised clustering (k-means or hierarchical) of papers using TF-IDF or transformer embeddings from Title+Abstract+AuthorKeywords to discover topical groups and relate clusters to Conferences and citation statistics.
+
+Idea 4: K-nearest neighbors document similarity / recommendation system using cosine similarity on Title+Abstract+AuthorKeywords embeddings to return similar papers (use AuthorNames-Deduped and Conference filters as optional constraints).
+
+Idea 5: SVM or logistic regression classification to predict GraphicsReplicabilityStamp (categorical) using text features (Abstract, PaperType), citation/download metrics, and engineered layout features (page count), optionally combined with keyword presence indicators.
+
+Idea 6: Author-collaboration graph analysis: build graph from AuthorNames-Deduped, compute node/edge features (degree, centrality, team size), then use these graph features in a regression or classification model (linear regression / random forest) to predict paper-level outcomes such as Downloads_Xplore or Citation counts. 
+------- Next set of Ideas for 37-------
+Idea 1 — Regression: Predict CitationCount_CrossRef (or AminerCitationCount)  
+Features: Year, Conference, PaperType, FirstPage/LastPage (paper length), InternalReferences, PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp, numeric author features (author count, mean author citation), and text embeddings from Title/Abstract/AuthorKeywords. Models: linear regression baseline, Random Forest, XGBoost, neural nets.
+
+Idea 2 — Classification: Predict Award (binary/multiclass)  
+Features: Year, Conference, PaperType, Citation counts, Downloads_Xplore, InternalReferences, Author features, Title/Abstract/Keywords embeddings. Models: logistic regression, SVM, Random Forest, gradient boosting (XGBoost/LightGBM).
+
+Idea 3 — Topic modeling & clustering of papers (unsupervised)  
+Inputs: Title, Abstract, AuthorKeywords, Year, Conference. Methods: LDA / NMF on bag-of-words, clustering (k-means / hierarchical) on transformer or TF-IDF embeddings, plus temporal topic-trend analysis by Year.
+
+Idea 4 — Paper similarity / recommender system (content + citation)  
+Inputs: Title+Abstract+AuthorKeywords embeddings, InternalReferences and PubsCited_CrossRef graph. Methods: nearest neighbors (KNN/ANN) on embeddings, graph-based recommendations using citation links, hybrid scoring.
+
+Idea 5 — Co‑authorship and citation network analysis / node tasks  
+Inputs: AuthorNames-Deduped, AuthorAffiliation, InternalReferences, PubsCited_CrossRef, DOI. Methods: build co-authorship and citation graphs, compute centrality/community detection, graph embeddings (node2vec/GAT) and downstream node classification/regression (predict prolific authors or future citation influence).
+
+Idea 6 — Author disambiguation / entity resolution  
+Inputs: AuthorNames, AuthorNames-Deduped, AuthorAffiliation, Paper metadata (Title, DOI, Year). Methods: pairwise record-linkage and clustering using string similarity, affiliation, coauthor overlap and supervised classifiers (SVM/gradient boosting) or hierarchical clustering to resolve duplicate author identities. 
+------- Next set of Ideas for 38-------
+Idea 1 — Gradient-boosted regression to predict citations:
+- Task & method: XGBoost/LightGBM regression to predict CitationCount_CrossRef (or AminerCitationCount).
+- Features: Year, Conference (categorical), PaperType, page_length = LastPage-FirstPage (derived), Downloads_Xplore, PubsCited_CrossRef, InternalReferences, author_count (from AuthorNames or AuthorNames-Deduped), Award, GraphicsReplicabilityStamp, plus text features from Title/Abstract/AuthorKeywords (TF-IDF or embeddings).
+
+Idea 2 — Binary classification of award-winning papers:
+- Task & method: Logistic regression / Random Forest / SVM to predict Award (binary/multi-class).
+- Features: TF-IDF or embeddings from Title + Abstract + AuthorKeywords, Conference, Year, page_length, citation features (CitationCount_CrossRef, AminerCitationCount), Downloads_Xplore, author_count, PaperType.
+
+Idea 3 — Topic discovery and temporal trend analysis:
+- Task & method: Topic modeling (LDA/NMF) or clustering (k-means / hierarchical) on text.
+- Data used: Abstract + AuthorKeywords + Title for topic extraction; analyze topic prevalence by Year and Conference; optionally map AuthorNames/Affiliation to topics.
+
+Idea 4 — Co-authorship network & author-impact modeling:
+- Task & method: Build graph from AuthorNames (edges = co-authorship); run community detection and compute centrality features (degree, betweenness, PageRank). Use those graph features in regression/classification (e.g., predict AminerCitationCount or award propensity) with Random Forest or boosting.
+- Data used: AuthorNames, AuthorNames-Deduped, AuthorAffiliation, AminerCitationCount, CitationCount_CrossRef.
+
+Idea 5 — Content-based paper recommendation / similarity search:
+- Task & method: Compute dense embeddings or TF-IDF vectors from Title+Abstract+AuthorKeywords and return nearest neighbors (cosine similarity or KNN) for recommendation; optionally incorporate citation links (InternalReferences, PubsCited_CrossRef) into hybrid scoring.
+- Data used: Title, Abstract, AuthorKeywords, InternalReferences, PubsCited_CrossRef, DOI/Link for retrieval.
+
+Idea 6 — Predict GraphicsReplicabilityStamp or PaperType (multi-class classification):
+- Task & method: Random Forest / SVM / Gradient boosting for categorical label prediction.
+- Features: Title/Abstract/AuthorKeywords text features, Conference, Year, page_length, citation/download metrics (CitationCount_CrossRef, Downloads_Xplore), author_count, AuthorAffiliation, InternalReferences. 
+------- Next set of Ideas for 39-------
+Idea 1 — Regression: Predict CitationCount_CrossRef (or AminerCitationCount) using gradient boosting / random forest.  
+Columns used: CitationCount_CrossRef (target), Year, Conference, Paper length (LastPage−FirstPage), PaperType, Downloads_Xplore, PubsCited_CrossRef, AminerCitationCount, Author count (from AuthorNames-Deduped), AuthorKeywords (TF‑IDF), Abstract (embeddings).
+
+Idea 2 — Classification: Predict Award (binary/multiclass) with logistic regression / SVM / XGBoost.  
+Columns used: Award (target), Abstract (embeddings), AuthorKeywords, Conference, Year, PaperType, Downloads_Xplore, AminerCitationCount, GraphicsReplicabilityStamp, AuthorAffiliation features.
+
+Idea 3 — Regression: Predict Downloads_Xplore using boosted trees and feature engineering.  
+Columns used: Downloads_Xplore (target), Year, Conference, Paper length, PaperType, CitationCount_CrossRef, AminerCitationCount, PubsCited_CrossRef, AuthorNames-Deduped, AuthorKeywords, Abstract embeddings.
+
+Idea 4 — Unsupervised topic modeling and clustering of papers (LDA / BERTopic + k‑means).  
+Columns used: Abstract, AuthorKeywords, Title — produce topics and cluster assignments for downstream analysis (Conference / Year comparisons).
+
+Idea 5 — Graph/network analysis: author collaboration and citation network analysis (community detection, PageRank) to identify influential authors and communities.  
+Columns used: AuthorNames / AuthorNames-Deduped / AuthorAffiliation (nodes), InternalReferences / DOI / Citation links (edges), AminerCitationCount, CitationCount_CrossRef (node attributes).
+
+Idea 6 — Content‑based paper recommendation and similarity search (k‑NN on embeddings; approximate nearest neighbors).  
+Columns used: Abstract and Title embeddings, AuthorKeywords, Conference, Year, DOI/Link for retrieval. 
+------- Next set of Ideas for 40-------
+Idea 1 — Citation count regression:
+Predict CitationCount_CrossRef (numeric) and/or AminerCitationCount using linear regression, random forest, and gradient boosting with features: Year, Conference, Paper length (LastPage−FirstPage), Author count (from AuthorNames-Deduped), PubsCited_CrossRef, Downloads_Xplore, Award, GraphicsReplicabilityStamp, numeric text features from Abstract/Title/AuthorKeywords.
+
+Idea 2 — Award / high-impact paper classification:
+Binary classification (logistic regression, SVM, XGBoost) to predict Award (yes/no) or a high-citation class (CitationCount threshold) using Year, Conference, PaperType, Author count, Downloads_Xplore, paper length, plus text embeddings/keyword features from Title/Abstract/AuthorKeywords.
+
+Idea 3 — Downloads prediction:
+Regression (random forest / boosting / SVM regression) to predict Downloads_Xplore using Conference, Year, PaperType, Citation counts, Author metrics (AminerCitationCount), paper length, presence of DOI/Link, and text-derived features from Abstract/Title.
+
+Idea 4 — Topic modeling and clustering:
+Unsupervised topic modeling (LDA) and clustering (k-means / hierarchical) on Abstract + AuthorKeywords + Title to discover topical groups; augment clusters with Conference, Year, CitationCount_CrossRef to analyze topical impact.
+
+Idea 5 — Paper similarity / recommendation engine:
+Content-based K-nearest neighbors using TF-IDF or sentence embeddings of Title+Abstract+AuthorKeywords to recommend similar papers; optionally combine with citation overlap (InternalReferences) and co-author signals.
+
+Idea 6 — Citation network analysis and link prediction:
+Build directed citation graph from InternalReferences/DOI, compute centrality and communities (community detection), and perform link-prediction (predict future/InternalReferences edges) with graph features and node metadata (Conference, Year, Author affiliations, citation counts). 
+------- Next set of Ideas for 41-------
+1) Idea 1 — Logistic regression to predict Award (binary) using numeric and encoded features: Year, PaperType, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, pages (LastPage−FirstPage), number of authors (from AuthorNames-Deduped), GraphicsReplicabilityStamp (encoded), and affiliation-derived features.
+
+2) Idea 2 — Gradient boosting regression (e.g., XGBoost) to predict CitationCount_CrossRef (or AminerCitationCount) from Year, PaperType, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, pages, Abstract length / TF-IDF features, AuthorKeywords counts, Award, and author/affiliation features.
+
+3) Idea 3 — Random forest or SVM classification to predict GraphicsReplicabilityStamp (categorical) using text features (TF-IDF or embeddings from Title + Abstract + AuthorKeywords), citation/download counts, PaperType, Year, and author counts/affiliations.
+
+4) Idea 4 — Unsupervised clustering (K-means / hierarchical / Gaussian mixtures) on document embeddings (Title + Abstract + AuthorKeywords) combined with numeric metadata (Year, CitationCounts, Downloads) to discover topic clusters and research-area groupings across Conferences and Years.
+
+5) Idea 5 — K-Nearest Neighbors (similarity-based recommender) for paper recommendation: build vector representations from Title+Abstract+Keywords+author embeddings and/or normalized numeric features (citations, downloads) and return k most similar papers for a given paper or query.
+
+6) Idea 6 — Citation network analysis and graph-based ranking: construct a directed graph from InternalReferences / CrossRef citation links (and use AminerCitationCount as node attributes), run PageRank / community detection and train a classifier/regressor (e.g., boosting) on graph features + metadata to predict influential papers (high future citations). 
+------- Next set of Ideas for 42-------
+Idea 1 — Predict future citations (regression):
+- Target: CitationCount_CrossRef (or AminerCitationCount)
+- Features: Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, Award, Pages (LastPage−FirstPage+1), derived AuthorCount (from AuthorNames), numeric encodings
+- Models: Gradient boosting (XGBoost/LightGBM), Random Forest, Elastic Net linear regression
+
+Idea 2 — Classify award-winning papers (binary classification):
+- Target: Award (binary / presence)
+- Features: Title & Abstract embeddings, AuthorKeywords, Conference, AuthorAffiliation features, Citation counts, Downloads_Xplore, PaperType
+- Models: Logistic Regression (with text features), SVM, LightGBM
+
+Idea 3 — Topic clustering and temporal topic trends:
+- Inputs: Abstract, Title, AuthorKeywords
+- Processing: TF-IDF / LSA / Transformer embeddings
+- Methods: K-Means, Agglomerative clustering, dynamic clustering by Year to analyze topic drift
+
+Idea 4 — Predict GraphicsReplicabilityStamp (classification):
+- Target: GraphicsReplicabilityStamp (categorical)
+- Features: Abstract/title embeddings, PaperType, AuthorAffiliation (institutional signals), Award, Citation/Download metrics, Pages
+- Models: Random Forest, Gradient Boosting, SVM
+
+Idea 5 — Author and paper influence network analysis + community detection:
+- Data: DOI, InternalReferences (build citation graph), AuthorNames-Deduped (author nodes)
+- Tasks: Compute centrality (PageRank, betweenness), detect communities (Louvain/Infomap), rank influential papers/authors, temporal evolution of communities
+
+Idea 6 — Content-based paper recommender / similarity search (k-NN):
+- Inputs: Title + Abstract + AuthorKeywords embeddings; optional filters: Conference, Year
+- Method: Approximate nearest neighbors (FAISS/Annoy) or K-NN for recommending similar papers or potential citations; incorporate citation counts and Downloads_Xplore as re-ranking signals 
+------- Next set of Ideas for 43-------
+Idea 1 — Predict citation count (regression): predict CitationCount_CrossRef (or AminerCitationCount) with gradient boosting / random forest / linear reg. Features: Year, Conference, PaperType, Pages = LastPage−FirstPage, NumAuthors (from AuthorNames-Deduped), Downloads_Xplore, PubsCited_CrossRef, InternalReferences (counts), Award, GraphicsReplicabilityStamp, Abstract/Title embeddings, AuthorKeywords.
+
+Idea 2 — Predict award status (binary classification): predict Award (yes/no) with logistic regression / SVM / tree ensembles. Features: Title/Abstract embeddings, AuthorKeywords, Conference, Year, CitationCount_CrossRef, Downloads_Xplore, NumAuthors, PaperType, GraphicsReplicabilityStamp, Pages.
+
+Idea 3 — Paper-type classification (multi-class): predict PaperType (full paper / poster / demo / etc.) using text + metadata with SVM / random forest / neural net. Features: Abstract and Title embeddings, AuthorKeywords, Conference, Year, NumAuthors, Pages, Downloads_Xplore, Citation counts.
+
+Idea 4 — Topic modeling / clustering of papers (unsupervised): derive research topics via LDA / NMF on Abstract+AuthorKeywords+Title or via sentence-embedding + KMeans / hierarchical clustering. Use clusters to analyze topic distributions by Year and Conference.
+
+Idea 5 — Author disambiguation and author-level clustering: resolve unique authors and cluster author records using AuthorNames, AuthorNames-Deduped, AuthorAffiliation, coauthorship (from AuthorNames), DOI and InternalReferences; methods: record linkage, string similarity + graph clustering.
+
+Idea 6 — Paper similarity / recommendation and link prediction: build similarity/recommendation system and predict citation/internal-reference links using Title/Abstract embeddings, InternalReferences, DOI, AuthorNames, CitationCount_CrossRef; methods: KNN on embeddings, graph-based link prediction, or GNN-based edge scoring. 
+------- Next set of Ideas for 44-------
+1) Predict CitationCount_CrossRef (regression) — target: CitationCount_CrossRef. Methods: gradient boosting / random forest / linear regression baseline. Features: Year, Conference, PaperType, pages = LastPage−FirstPage, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, AminerCitationCount, Abstract/Title embeddings, AuthorKeywords.
+
+2) Predict Award (classification) — target: Award (binary/multiclass). Methods: logistic regression / random forest / XGBoost / SVM. Features: Year, Conference, PaperType, pages, CitationCount_CrossRef, Downloads_Xplore, Abstract/Title embeddings, AuthorKeywords, GraphicsReplicabilityStamp, AuthorAffiliation.
+
+3) Predict Downloads_Xplore (regression) — target: Downloads_Xplore. Methods: gradient boosting / random forest / SVR / k-NN regression. Features: Year, Conference, PaperType, pages, Citation counts (AminerCitationCount, CitationCount_CrossRef), PubsCited_CrossRef, InternalReferences, Abstract/Title embeddings, AuthorNames count.
+
+4) Topic modeling and clustering of papers — unsupervised methods: LDA / nonnegative matrix factorization / k-means / hierarchical clustering on Abstract + AuthorKeywords + Title embeddings. Use Year and Conference to analyze topic drift and cluster prevalence over time/conference.
+
+5) Co‑authorship network and author influence modeling — graph methods and supervised ranking. Build graph from AuthorNames / AuthorNames‑Deduped and AuthorAffiliation; compute centrality/community detection, then predict/score author influence using aggregated AminerCitationCount and publication features (use random forest or learning‑to‑rank).
+
+6) Content‑based paper recommendation / similarity search — methods: dense embeddings (BERT/TF-IDF) + k‑NN / approximate nearest neighbors; augment with citation links (InternalReferences, PubsCited_CrossRef) and Conference/Year filtering to recommend related papers or potential reviewers. 
+------- Next set of Ideas for 45-------
+Idea 1: Predict paper citation count (AminerCitationCount or CitationCount_CrossRef) — regression using numeric/categorical features (Year, Conference, PaperType, FirstPage/LastPage → length, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, Award, GraphicsReplicabilityStamp, author count from AuthorNames) plus text features from Title+Abstract+AuthorKeywords (TF-IDF or embeddings); models: linear regression, random forest, gradient boosting, SVR.
+
+Idea 2: Classify whether a paper receives an Award — supervised classification using Year, Conference, PaperType, citation/downloads (AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore), paper length, GraphicsReplicabilityStamp, author features, and Title/Abstract/Keywords embeddings; models: logistic regression, XGBoost, SVM.
+
+Idea 3: Unsupervised topic discovery and temporal trend analysis — apply LDA/NMF or clustering (KMeans / HDBSCAN) on Title+Abstract+AuthorKeywords embeddings to define topics, then analyze topic prevalence by Year and Conference and correlate with citation/download metrics.
+
+Idea 4: Content-based paper similarity and recommender system — build dense embeddings from Title+Abstract+AuthorKeywords (BERT/TF-IDF+SVD), use K-nearest neighbors or approximate nearest neighbor search to recommend similar papers; optionally re-rank by CitationCount_CrossRef/Downloads_Xplore.
+
+Idea 5: Citation/author network analysis and graph ML — construct paper/author graph using DOI, InternalReferences, PubsCited_CrossRef and AuthorAffiliation/AuthorNames-Deduped, compute centrality, community detection, and use node2vec/graph embeddings for author influence prediction or link prediction (collaboration/citation).
+
+Idea 6: Predict GraphicsReplicabilityStamp (categorical) or Downloads_Xplore (regression) from paper content and metadata — use Title+Abstract+Figures-related keywords (AuthorKeywords, Abstract) encoded as text features plus metadata (Conference, Year, PaperType, citation counts, author features); models: random forest, gradient boosting, or multiclass logistic/SVM. 
+------- Next set of Ideas for 46-------
+Idea 1 — Regression (Gradient Boosting / Random Forest): predict CitationCount_CrossRef (numeric) using Year, Conference (encoded), PageCount (LastPage−FirstPage), PubsCited_CrossRef, Downloads_Xplore, AminerCitationCount, PaperType, Award, GraphicsReplicabilityStamp, plus text features from Title and Abstract.
+
+Idea 2 — Binary Classification (Logistic / Random Forest / XGBoost): predict Award (yes/no) using text embeddings / TF‑IDF from Title + Abstract, AuthorKeywords, Conference, Year, CitationCount_CrossRef, Downloads_Xplore, AuthorAffiliation features and PaperType.
+
+Idea 3 — Topic Clustering (K‑means / Hierarchical / Topic Modeling): cluster papers by research topic using AuthorKeywords and Abstract embeddings (optionally include Conference and Year as features); analyze cluster composition and dominant keywords.
+
+Idea 4 — Similarity / Recommendation (k‑NN or Approximate Nearest Neighbors): build a paper-to-paper recommendation system using dense embeddings from Title+Abstract+AuthorKeywords (cosine similarity) to retrieve nearest papers for a given paper.
+
+Idea 5 — Author-level Aggregation + Supervised Modeling: aggregate per-author features from AuthorNames-Deduped (total papers, mean CitationCount_CrossRef, sum Downloads_Xplore, avg PubsCited_CrossRef, first/last Year) and predict/score author impact (regress or classify high-impact) using Gradient Boosting or SVM.
+
+Idea 6 — Classification (SVM / Boosting) of GraphicsReplicabilityStamp: predict GraphicsReplicabilityStamp (categorical) using Abstract and Title text features, AuthorKeywords, Conference, PaperType, CitationCount_CrossRef, Downloads_Xplore, and Award. 
+------- Next set of Ideas for 47-------
+1) Idea 1 — Gradient boosting regression (e.g., XGBoost) to predict CitationCount_CrossRef using Year, Conference (one‑hot), PaperType, PubsCited_CrossRef, InternalReferences, Downloads_Xplore, AminerCitationCount, derived author_count from AuthorNames-Deduped, TF-IDF/embeddings from Title+Abstract+AuthorKeywords.
+
+2) Idea 2 — Linear regression to model Downloads_Xplore using Year, Conference, Paper length (LastPage−FirstPage), PubsCited_CrossRef, AminerCitationCount, InternalReferences, numeric author features (from AuthorNames-Deduped), and simple text features (keyword counts).
+
+3) Idea 3 — Logistic regression to predict Award (binary) using Year, Conference, PaperType, CitationCount_CrossRef/AminerCitationCount, Downloads_Xplore, Author affiliation counts, and Abstract/Title embeddings.
+
+4) Idea 4 — Random forest (classification) to predict GraphicsReplicabilityStamp (categorical) from Title+Abstract embeddings, AuthorKeywords, PaperType, Conference, Year, citation/download metrics, and author features.
+
+5) Idea 5 — Unsupervised clustering (k-means / hierarchical / topic modeling) on TF-IDF or embedding vectors from Title+Abstract+AuthorKeywords to discover topical clusters and analyze cluster-wise citation/download/Award patterns (use Conference and Year as metadata).
+
+6) Idea 6 — k-Nearest Neighbors for paper similarity/recommendation (using embeddings from Title+Abstract+AuthorKeywords and author features) and Support Vector Machine (SVM) classifier to identify high-impact papers (e.g., top-decile CitationCount_CrossRef) using the same feature set plus downloads and citation history.

@@ -22,6 +22,7 @@ def code_plotly(state:State) -> Command[Literal[END, 'vis_agent']]:
                     "content": (
                         f"Here is the code for the plotly graphs that runs without errors: \n {code} \n"
                         "Your goal is to improve this code by making the plotly graphs more interactive and beautiful! Currently some of them look blank and don't show any meaningful data! \n"
+                        "Make sure everything is easy to see. NO overlapping buttons with button description, NO overlapping buttons with graph keys, NO BUTTON DESCRIPTIONS that disppear on selection, and NO white out hover/selected buttons!\n"
                         "Make sure the code runs without errors and bugs! \n"
                         "Return the full python code with plotly and the html/javascript code at the end! \n"
                         "Thank you ! \n"

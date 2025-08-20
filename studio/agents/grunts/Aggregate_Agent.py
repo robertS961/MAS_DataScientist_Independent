@@ -3,7 +3,7 @@ from classes import Temp, State
 from helper_functions import get_llm
 
 def aggregate_agent(state: State):
-    llm = get_llm(model = '4o-mini')
+    llm = get_llm(model = 'o4-mini')
     ideas = state['ideas']
     prompt = (
         f"You will be given a text file in the form of a string of statistic and data science ideas \n {ideas} \n"

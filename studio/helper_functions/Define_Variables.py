@@ -53,11 +53,12 @@ def define_variables(thread: int, loop_limit: int, data:str, data_info:str , nam
         )
     elif name =="single_agent":
         prompt = (
+            f"Here is the data you need \n {data} \n"
             "Give 6 ideas for statistical and machine learning to perform on the data set. Don't explain the ideas. Just list the  six. Thank you \n"
         )
     elif name == "aggregate":
         prompt = (
-            "Give the top 5-10 most common ideas with their respective count \n Thank you \n"
+            f"Give the top 5-10 most common ideas with their respective count from \n {input}\n Thank you \n"
         )
 
     '''

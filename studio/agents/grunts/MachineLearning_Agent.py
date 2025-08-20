@@ -4,7 +4,7 @@ from classes import State, globe
 from helper_functions import get_llm
 
 def machinelearning_agent(state: State):
-    llm = get_llm()
+    llm = get_llm(model = "gpt-5-mini")
     data = state['dataset_info']
     data_info = state['data_info']
     prompt = (
@@ -16,7 +16,6 @@ def machinelearning_agent(state: State):
         "Make sure the ideas corretly use the columns! Like don't use linear regression on strings etc. \n"
         "Thank you! \n"
     )
-    globe.edges.append(["a","b"])
     ml_agent = create_react_agent(
         model=llm, 
         tools=[],
