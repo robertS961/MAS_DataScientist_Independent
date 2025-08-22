@@ -8,7 +8,7 @@ def chain(count: int, state:State, name = "chain_gang"):
     graph = StateGraph(State)
     graph.add_sequence(agents_name)
     graph.add_edge(START, "chain_agent_0")
-    graph.add_edge("chain_agent_2", END)
+    graph.add_edge(f"chain_agent_{count - 1}", END)
     return graph.compile(name = name)
     '''
     for node_cnt in range(count):

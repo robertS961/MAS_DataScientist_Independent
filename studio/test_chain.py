@@ -11,10 +11,10 @@ data_description = data_describe("dataset.csv")
 dic, config = define_variables(thread = 1, loop_limit = 10, data = data,name = "single_agent", data_info = data_info, data_description= data_description)
 dic['revise'] = True
 
-for i in range(48):
-    ans = chain(3,State).invoke(input = dic, config =config)
+for i in range(50):
+    ans = chain(9,State).invoke(input = dic, config =config) #Switch to 3 for the schain_agent_ideas.text
     print(f"This is the output \n{ans} \n")
     ideas = get_last_ai_message(ans['messages'])
-    with open("schain_agent_ideas.txt", "a", encoding="utf-8") as f:
+    with open("schain_agent_9ideas.txt", "a", encoding="utf-8") as f:
         f.write(f" \n------- Next set of Ideas for {i}-------\n")
         f.write(ideas)

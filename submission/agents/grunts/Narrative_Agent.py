@@ -9,7 +9,7 @@ def narrative_agent(state: State):
         f"You will be given python plotly code to be executed on a tabular data set. It will display graphs on various statistical, machine learning, and data science ideas. \n"
         "Your goal is to take this code for an HTML server and make it a cohesive report for a HTML website\n"
         "Add a paragraph to each graph along with an introduction and conclusion, each needs to be at least a paragraph long! \n"
-        "Each paragraph should explain the algorithms being used and why this algorithm was selected! \n"
+        "Each paragraph should explain the algorithm(s) being used and why this algorithm was selected. Make it easy to understand what this algorithm does and why it is the best pick. Make it educational and easy to understand! \n"
         "The paragraph should also explain what the graph is doing, why its important, What do the axis and keys mean, and the significance of the findings and why these findings are important \n"
         "We want also each paragraph to explain what significant findings would look like in this graph, or what is considered average. This way the user can easily interupt the graph without any expertise! \n"
         "Make sure each paragraph flows into the next one just like an actual report and it is okay if you need more than one paragraph per graph to achieve these goals!\n"

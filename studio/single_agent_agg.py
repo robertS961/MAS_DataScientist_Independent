@@ -23,6 +23,20 @@ with open("research_agent_ideas.txt", "r", encoding = "utf-8") as f:
 with open("sml_agent_ideas.txt", "r", encoding = "utf-8") as f:
       text_data_3 = f.read()
 
+with open('supervisor_agent_ideas.txt', "r", encoding = "utf-8") as f:
+      text_data_4 = f.read()
+
+with open('schain_agent_6ideas.txt', "r", encoding = "utf-8") as f:
+      text_data_5 = f.read()
+
+with open('schain_agent_9ideas.txt', "r", encoding = "utf-8") as f:
+      text_data_6 = f.read()
+
+with open('sresearch_team.txt', "r", encoding = "utf-8") as f:
+      text_data_7 = f.read()
+
+
+
 
 
 
@@ -52,11 +66,27 @@ ideas = get_last_ai_message(ans['messages'])
 with open("single_agent_agg_ideas.txt", "a", encoding="utf-8") as f:
         f.write(f" \n------- Next set of Ideas for Research Team -------\n")
         f.write(ideas)
-'''
+
 state, config = define_variables(thread = 1, loop_limit = 10, data = data,name = "aggregate", data_info = data_info, data_description= data_description, input = text_data_3)
 ans = aggregate_agent(State).invoke(input = state, config = config)
 ideas = get_last_ai_message(ans['messages'])
 
 with open("single_agent_agg_ideas.txt", "a", encoding="utf-8") as f:
         f.write(f" \n------- Next set of Ideas for Machine Learning Team -------\n")
+        f.write(ideas)
+
+state, config = define_variables(thread = 1, loop_limit = 10, data = data,name = "aggregate", data_info = data_info, data_description= data_description, input = text_data_4)
+ans = aggregate_agent(State).invoke(input = state, config = config)
+ideas = get_last_ai_message(ans['messages'])
+
+with open("single_agent_agg_ideas.txt", "a", encoding="utf-8") as f:
+        f.write(f" \n------- Next set of Ideas for Supervisor Independent Team -------\n")
+        f.write(ideas)
+'''
+state, config = define_variables(thread = 1, loop_limit = 10, data = data,name = "aggregate", data_info = data_info, data_description= data_description, input = text_data_7)
+ans = aggregate_agent(State).invoke(input = state, config = config)
+ideas = get_last_ai_message(ans['messages'])
+
+with open("single_agent_agg_ideas.txt", "a", encoding="utf-8") as f:
+        f.write(f" \n------- Next set of Ideas for Research_Team agents -------\n")
         f.write(ideas)

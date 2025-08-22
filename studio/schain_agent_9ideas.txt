@@ -1,0 +1,357 @@
+ 
+------- Next set of Ideas for 0-------
+1. Mixed‐effects Poisson regression predicting CitationCount_CrossRef with fixed effects Downloads_Xplore, PubsCited_CrossRef, GraphicsReplicabilityStamp, (LastPage – FirstPage) and random intercepts for Conference and Year  
+2. Causal forest estimation of heterogeneous treatment effects of Downloads_Xplore on CitationCount_CrossRef conditioning on PaperType, AuthorKeywords and AminerCitationCount  
+3. Graph neural network on the co‐authorship graph built from AuthorNames-Deduped and AuthorAffiliation to predict AminerCitationCount  
+4. Fine‐tune a SciBERT transformer on Abstract and Title for multi‐task classification of Award and GraphicsReplicabilityStamp  
+5. K-shape time-series clustering of annual CitationCount_CrossRef trajectories by Conference to uncover latent citation growth archetypes  
+6. Matrix‐factorization recommender for future Conference targets based on the AuthorNames-Deduped × Conference interaction matrix weighted by CitationCount_CrossRef and Downloads_Xplore 
+------- Next set of Ideas for 1-------
+1. Bayesian hierarchical regression of CitationCount_CrossRef on AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore and Year with random intercepts for Conference and PaperType  
+2. Structural topic modeling on Abstract + AuthorKeywords with Conference and Year as covariates, followed by regression of topic prevalences against CitationCount_CrossRef and Downloads_Xplore  
+3. Contrastive deep embedding of Title + Abstract via BERT, fine-tuned to jointly classify Award and GraphicsReplicabilityStamp using PaperType and AuthorKeywords  
+4. Graph neural network on the author graph (nodes=AuthorNames-Deduped; edges from InternalReferences and shared AuthorAffiliation) with node features AminerCitationCount and Year to predict CitationCount_CrossRef  
+5. Hierarchical time-series forecasting of Downloads_Xplore by Conference using past Downloads_Xplore, CitationCount_CrossRef and Award as exogenous inputs  
+6. Multi-task deep regression jointly predicting CitationCount_CrossRef and Downloads_Xplore from Title embeddings, Abstract embeddings, PaperLength=(LastPage–FirstPage), PaperType and GraphicsReplicabilityStamp 
+------- Next set of Ideas for 2-------
+1. Fit a zero-inflated negative binomial mixed-effects model of CitationCount_CrossRef with fixed effects PubsCited_CrossRef, InternalReferences, Downloads_Xplore and random intercepts for Conference and Year  
+2. Train a dynamic graph neural network on the co-authorship graph (nodes=AuthorNames-Deduped with AuthorAffiliation features; edge weights=shared InternalReferences) to forecast AminerCitationCount  
+3. Apply a hierarchical Dirichlet process on Abstract and AuthorKeywords to extract topic distributions, then use topic proportions in a mixed-effects regression to predict Downloads_Xplore with random intercepts for Conference  
+4. Conduct two-stage least squares using PubsCited_CrossRef as an instrument for Downloads_Xplore to estimate its causal effect on CitationCount_CrossRef, controlling for InternalReferences, AminerCitationCount and PaperType  
+5. Fine-tune SciBERT on Abstract to generate embeddings, concatenate with numeric features (CitationCount_CrossRef, Downloads_Xplore, AminerCitationCount) and one-hot PaperType, then train a LightGBM model to predict Award  
+6. Perform time-series clustering of Conference based on annual trajectories of CitationCount_CrossRef and Downloads_Xplore over Year, then apply Bayesian change-point detection within each cluster 
+------- Next set of Ideas for 3-------
+1. Bayesian hierarchical negative binomial regression of CitationCount_CrossRef on AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore, Year, Conference and PaperType  
+2. Transformer‐based classifier for Award using features extracted from Abstract and AuthorKeywords augmented by GraphicsReplicabilityStamp  
+3. Dynamic topic modeling on Abstract over Year with subsequent regression of topic proportions against Downloads_Xplore and AminerCitationCount  
+4. Graph neural network on the citation graph defined by DOI nodes and InternalReferences edges to predict future PubsCited_CrossRef and CitationCount_CrossRef  
+5. Unsupervised clustering of papers via embeddings from AuthorAffiliation combined with the AuthorNames-Deduped co-authorship network, profiling clusters by mean CitationCount_CrossRef and Award rate  
+6. Autoencoder-based anomaly detection on [AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp] to flag high-impact outlier papers 
+------- Next set of Ideas for 4-------
+1. Heterogeneous graph neural network on co‐authorship and citation graph (nodes=DOI & AuthorNames-Deduped; edges=writes & InternalReferences), node features=[PubsCited_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp], multi‐task predict=[CitationCount_CrossRef, AminerCitationCount]  
+2. Difference‐in‐differences estimation of Award on CitationCount_CrossRef trajectories using matched control papers by Conference, Year & PaperType  
+3. Dynamic topic modeling on Abstract + AuthorKeywords over Year, with generalized additive models regressing topic prevalence on CitationCount_CrossRef and Downloads_Xplore  
+4. Hierarchical Bayesian zero-inflated negative binomial model for CitationCount_CrossRef with predictors=[Downloads_Xplore, PubsCited_CrossRef, InternalReferences, Award, GraphicsReplicabilityStamp] and random intercepts for Conference & PaperType  
+5. Transformer embeddings of Title + Abstract clustered via HDBSCAN, then cluster-level characterization of AminerCitationCount, CitationCount_CrossRef, Award & PubsCited_CrossRef  
+6. Propensity score matching on covariates=[Year, Conference, PaperType, Downloads_Xplore, InternalReferences] to estimate the causal effect of Award on CitationCount_CrossRef 
+------- Next set of Ideas for 5-------
+1. Fit a hierarchical Bayesian negative‐binomial model for CitationCount_CrossRef with fixed effects PaperType, InternalReferences, Downloads_Xplore, GraphicsReplicabilityStamp and random intercepts for Conference and Year  
+2. Embed Abstract + AuthorKeywords using SciBERT, cluster embeddings via Gaussian Mixture Model, then compare cluster‐wise means of AminerCitationCount and CitationCount_CrossRef  
+3. Train a multi‐task GraphSAGE on the citation graph (nodes=DOI, edges=InternalReferences) with node features Downloads_Xplore, PubsCited_CrossRef and AminerCitationCount to jointly predict future CitationCount_CrossRef and PubsCited_CrossRef  
+4. Build a Cox proportional‐hazards survival model for time‐to‐Award (event=Award) using covariates CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef and stratify by Conference  
+5. Construct the co‐authorship network from AuthorNames-Deduped and AuthorAffiliation, compute centrality metrics (degree, betweenness, eigenvector) and apply Lasso regression to predict Downloads_Xplore and CitationCount_CrossRef  
+6. Train a deep autoencoder on numeric features [CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, InternalReferences] for anomaly detection, then profile outliers by PaperType and Conference 
+------- Next set of Ideas for 6-------
+1. Multi-output gradient boosting regressor to jointly predict CitationCount_CrossRef and AminerCitationCount using Year, PubsCited_CrossRef, Downloads_Xplore, PaperType, Award and GraphicsReplicabilityStamp  
+2. Transformer-based classifier on concatenated Abstract and AuthorKeywords embeddings, augmented with features Year, Conference and GraphicsReplicabilityStamp, to predict Award  
+3. Graph transformer network on the InternalReferences graph (node features: Title TF-IDF, AuthorAffiliation embeddings, Year) to forecast future PubsCited_CrossRef  
+4. Dynamic structural topic modeling on Abstract and AuthorKeywords across Year, then regress topic-prevalence trajectories against subsequent CitationCount_CrossRef and Downloads_Xplore growth  
+5. Hierarchical Bayesian regression predicting Downloads_Xplore with fixed effects PaperType and GraphicsReplicabilityStamp plus random intercepts for Conference and random slopes for count(AuthorNames-Deduped)  
+6. Spectral clustering on joint latent factors from NMF of Abstract TF-IDF and AuthorKeywords TF-IDF, then compare clusters on CitationCount_CrossRef, AminerCitationCount, Award rate and GraphicsReplicabilityStamp frequency 
+------- Next set of Ideas for 7-------
+1. Multi‐task regression to jointly predict CitationCount_CrossRef and Downloads_Xplore from Year, PaperType, PaperLength=(LastPage–FirstPage), ReferenceCount=len(InternalReferences), TF-IDF(Abstract) and TF-IDF(AuthorKeywords)  
+2. Graph Neural Network on the combined citation graph (nodes=DOI, edges=InternalReferences) and co-authorship graph (nodes=AuthorNames-Deduped, edges=shared papers) to forecast future AminerCitationCount  
+3. Dynamic topic modeling (e.g. Dynamic LDA/BerTopic) on Abstract+AuthorKeywords to extract topic trajectories, then regress topic loadings against Year-specific Downloads_Xplore at the Conference level  
+4. Gradient‐boosted classifier for Award using Conference, Year, PaperType, AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp and embeddings of Abstract  
+5. Bayesian hierarchical mixed-effects regression for CitationCount_CrossRef with fixed effects Year, PaperType and Award, plus random intercepts for Conference and AuthorAffiliation  
+6. Unsupervised clustering of papers via document embeddings of Title+Abstract+AuthorKeywords, followed by cluster profiling on PubsCited_CrossRef, AminerCitationCount, Downloads_Xplore and GraphicsReplicabilityStamp incidence 
+------- Next set of Ideas for 8-------
+1. Hierarchical zero-inflated negative-binomial regression of CitationCount_CrossRef on AminerCitationCount, PubsCited_CrossRef, InternalReferences and PaperType with random intercepts for Conference and Year  
+2. Multi-task transformer model to jointly predict Award and GraphicsReplicabilityStamp using Title, Abstract, AuthorKeywords, Downloads_Xplore and CitationCount_CrossRef embeddings  
+3. Dynamic topic modeling on Abstract and AuthorKeywords across Year, followed by panel regression of topic prevalence against AminerCitationCount and Downloads_Xplore  
+4. Graph neural network on the citation network (nodes = DOI, edges = InternalReferences) with node features [CitationCount_CrossRef, PubsCited_CrossRef, Downloads_Xplore] to forecast next-year PubsCited_CrossRef  
+5. Co-authorship network embedding from AuthorNames-Deduped and AuthorAffiliation, feeding learned node embeddings plus InternalReferences into a gradient-boosted regressor for Downloads_Xplore and CitationCount_CrossRef  
+6. Causal inference via propensity-score matching to estimate the effect of GraphicsReplicabilityStamp on CitationCount_CrossRef, controlling for Year, Conference, PaperType and Downloads_Xplore 
+------- Next set of Ideas for 9-------
+1. Graph neural network on the citation graph (edges from InternalReferences and PubsCited_CrossRef) using node features [AminerCitationCount, CitationCount_CrossRef] to predict GraphicsReplicabilityStamp  
+2. Multi-task deep learning model to jointly predict CitationCount_CrossRef (regression) and Award (classification) from BERT embeddings of Title+Abstract plus Downloads_Xplore, InternalReferences, PubsCited_CrossRef  
+3. Cox proportional hazards survival analysis for time to reach a target in CitationCount_CrossRef with covariates [Conference, Year, AuthorAffiliation diversity derived from AuthorNames-Deduped]  
+4. Dynamic topic modeling on Abstract and AuthorKeywords over Year and correlation of topic prevalence trajectories with Downloads_Xplore and CitationCount_CrossRef  
+5. UMAP clustering on combined TF-IDF(Abstract, AuthorKeywords) and numeric features [(LastPage–FirstPage), AminerCitationCount] with cluster profiling by Award and GraphicsReplicabilityStamp  
+6. Bayesian hierarchical time-series forecasting of Downloads_Xplore with random intercepts for Conference and PaperType, controlling for AminerCitationCount and CitationCount_CrossRef 
+------- Next set of Ideas for 10-------
+1. Bayesian hierarchical regression predicting CitationCount_CrossRef with fixed effects for Year, PaperType and Downloads_Xplore, and random intercepts for Conference and AuthorAffiliation.  
+2. Dynamic topic modeling on Abstract + AuthorKeywords to extract evolving topics by Year, followed by multivariate time-series regression linking topic prevalence to CitationCount_CrossRef and Downloads_Xplore.  
+3. Graph neural network on the directed citation graph built from InternalReferences (DOI→DOI), using node features AminerCitationCount and PubsCited_CrossRef to predict Award and GraphicsReplicabilityStamp.  
+4. Community detection on the co-authorship network (AuthorNames-Deduped + AuthorAffiliation), compute community-level means of CitationCount_CrossRef and PubsCited_CrossRef, and train a classifier to distinguish high-impact author communities.  
+5. Difference-in-differences causal analysis of Award on subsequent Downloads_Xplore and CitationCount_CrossRef, with propensity score matching on Conference, Year, PaperType and AuthorAffiliation.  
+6. Cox proportional-hazards survival model for time-to-reach AminerCitationCount thresholds, with covariates Year, PaperType, Downloads_Xplore, Award and GraphicsReplicabilityStamp. 
+------- Next set of Ideas for 11-------
+1. Multi‐output LightGBM regression: {CitationCount_CrossRef, Downloads_Xplore} ~ Year + Conference + PaperType + InternalReferences + PubsCited_CrossRef + AminerCitationCount + GraphicsReplicabilityStamp  
+2. DTW‐based hierarchical clustering of Conference‐level time series built from Year, AminerCitationCount and CitationCount_CrossRef  
+3. Graph Neural Network on the citation graph (edges from InternalReferences and PubsCited_CrossRef; node features: Title embeddings, AuthorAffiliation, PaperType) to predict Award  
+4. BERTopic on Abstract + AuthorKeywords, followed by Cox proportional hazards model for “time‐to‐first‐citation” (AminerCitationCount ≥ 1) using topic scores + InternalReferences + PubsCited_CrossRef  
+5. Causal mediation analysis quantifying the effect of InternalReferences on Downloads_Xplore mediated by PubsCited_CrossRef, controlling for Year, Conference and GraphicsReplicabilityStamp  
+6. SciBERT‐based semantic novelty scoring of Title + Abstract, then quantile regression of novelty score against AminerCitationCount and CitationCount_CrossRef 
+------- Next set of Ideas for 12-------
+1. Compute a semantic-novelty score for each paper by embedding Title and Abstract (e.g. Sentence-BERT), measuring cosine distance to the centroid of all papers from Year–1, then regress CitationCount_CrossRef on that novelty score.  
+2. Train a graph-neural-network on the citation graph defined by DOI nodes and InternalReferences edges, using node features [PubsCited_CrossRef, Downloads_Xplore, AminerCitationCount, GraphicsReplicabilityStamp] to predict AminerCitationCount.  
+3. Apply dynamic topic modeling to Abstract and AuthorKeywords across Year, then correlate per-paper topic prevalence vectors with both Downloads_Xplore and CitationCount_CrossRef.  
+4. Fit a Cox proportional-hazards model for time-to-first-10-citations (CitationCount_CrossRef ≥ 10) using covariates [PubsCited_CrossRef, InternalReferences, Downloads_Xplore, Award, GraphicsReplicabilityStamp].  
+5. Fine-tune a multi-task Transformer (e.g. BERT) on Title + Abstract + AuthorKeywords to jointly predict PaperType (classification) and estimate CitationCount_CrossRef (regression).  
+6. Perform Gaussian-Mixture clustering on [InternalReferences, PubsCited_CrossRef, Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef, GraphicsReplicabilityStamp, (LastPage–FirstPage)] and profile clusters by Conference, AuthorAffiliation and Award. 
+------- Next set of Ideas for 13-------
+1. Train a multi‐output gradient boosting regressor to predict CitationCount_CrossRef and Downloads_Xplore using Year, Conference, AminerCitationCount, PubsCited_CrossRef, PaperType and AuthorKeywords.  
+2. Apply dynamic topic modeling on Abstract and AuthorKeywords over Year (stratified by Conference) and correlate evolving topic prevalence with CitationCount_CrossRef trends.  
+3. Build a heterogeneous graph neural network on co-authorship edges (AuthorNames-Deduped + AuthorAffiliation) and citation edges (InternalReferences) to predict GraphicsReplicabilityStamp.  
+4. Fit a Cox proportional hazards survival model for time-to-first-10 citations using CitationCount_CrossRef trajectories with covariates Year, PaperType and Award.  
+5. Train a variational autoencoder on [CitationCount_CrossRef, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef, GraphicsReplicabilityStamp] conditioned on PaperType and Award for unsupervised anomaly detection.  
+6. Extract transformer embeddings from Title + Abstract, cluster papers at the conference level, and analyze cluster associations with changes in AminerCitationCount and CitationCount_CrossRef. 
+------- Next set of Ideas for 14-------
+1. Zero‐inflated negative‐binomial mixed‐effects model for CitationCount_CrossRef with fixed effects Year, PubsCited_CrossRef, Downloads_Xplore, PaperType, GraphicsReplicabilityStamp and random intercepts for Conference  
+2. Graph Neural Network on the directed citation graph from InternalReferences, using node features [AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp, PaperType] to jointly predict future CitationCount_CrossRef and Award  
+3. Dynamic topic modeling on combined Abstract + AuthorKeywords over Year, cluster the resulting topic‐prevalence trajectories, then regress cluster membership against CitationCount_CrossRef growth and PubsCited_CrossRef  
+4. Propensity score matching followed by causal‐forest estimation to quantify the effect of Award on subsequent Downloads_Xplore and CitationCount_CrossRef, controlling for Year, Conference, AminerCitationCount and PubsCited_CrossRef  
+5. Stochastic blockmodeling of the AuthorNames-Deduped–Conference bipartite network to derive community embeddings for predicting AminerCitationCount and PubsCited_CrossRef via gradient‐boosted trees  
+6. Unsupervised multivariate anomaly detection (e.g. robust covariance or Isolation Forest) on [CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, GraphicsReplicabilityStamp] and characterize outliers by PaperType, Conference and Award patterns 
+------- Next set of Ideas for 15-------
+1. Multi‐task Transformer regression predicting CitationCount_CrossRef and Downloads_Xplore from Abstract embeddings, one‐hot PaperType, Year, Conference, InternalReferences and AuthorKeywords.  
+2. Graph Neural Network on the co‐authorship graph (nodes from AuthorNames-Deduped and AuthorAffiliation) with node features AminerCitationCount and PubsCited_CrossRef to predict future CitationCount_CrossRef.  
+3. Two‐stage least squares IV regression using GraphicsReplicabilityStamp as an instrument for InternalReferences to estimate its causal effect on AminerCitationCount, controlling for Conference, Year and PaperType.  
+4. Dynamic Bayesian topic modeling on time‐sliced Abstract + AuthorKeywords by Year, linking evolving topic proportions to downstream trends in Downloads_Xplore and CitationCount_CrossRef per Conference.  
+5. Cox proportional hazards model of time-to-Award (event when Award≠“None”) with time-varying covariates CitationCount_CrossRef, Downloads_Xplore and PubsCited_CrossRef, stratified by PaperType.  
+6. Variational Autoencoder anomaly detection on [CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, InternalReferences, PubsCited_CrossRef], then profile outliers by Award and GraphicsReplicabilityStamp. 
+------- Next set of Ideas for 16-------
+1. Multi-task neural model to jointly predict CitationCount_CrossRef and Downloads_Xplore from Year, Conference, PaperType, (LastPage–FirstPage), AminerCitationCount, PubsCited_CrossRef, InternalReferences, GraphicsReplicabilityStamp, AuthorAffiliation plus BERT embeddings of Abstract and AuthorKeywords  
+2. Causal-forest estimation of heterogeneous treatment effects of Award on CitationCount_CrossRef, conditioning on Year, Conference, PaperType, Downloads_Xplore, AminerCitationCount, InternalReferences and AuthorAffiliation  
+3. Temporal Graph Neural Network on the citation graph (nodes=DOI; edges from InternalReferences and PubsCited_CrossRef) with node features TF-IDF(Abstract), TF-IDF(AuthorKeywords) to forecast future CitationCount_CrossRef  
+4. Dynamic topic modeling (DTM) on concatenated Abstract + AuthorKeywords across Year to extract time-evolving topic proportions and regress those proportions on Downloads_Xplore and CitationCount_CrossRef stratified by Conference  
+5. Isolation Forest anomaly detection on [Year, Conference, PaperType, (LastPage–FirstPage), Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences, GraphicsReplicabilityStamp] to flag outlier publications  
+6. Gradient-boosted multi-label classifier for Award and GraphicsReplicabilityStamp using Year, Conference, PaperType, (LastPage–FirstPage), Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences, AuthorAffiliation and TF-IDF(Abstract + AuthorKeywords) 
+------- Next set of Ideas for 17-------
+1. Graph Neural Network on the citation graph (nodes=DOI, edges=InternalReferences) to jointly predict CitationCount_CrossRef and AminerCitationCount.  
+2. Dynamic topic modeling on Abstract + AuthorKeywords stratified by Year, then regress per-year topic weights against Downloads_Xplore and CitationCount_CrossRef.  
+3. Cox proportional hazards survival analysis for time‐to‐first‐PubsCited_CrossRef using Year, Conference, PaperType, GraphicsReplicabilityStamp and AuthorAffiliation.  
+4. Multi‐task Transformer (e.g. SciBERT) fine‐tuned on Abstract embeddings + AuthorKeywords + Conference one‐hots to simultaneously classify PaperType, predict Award probability and regress Downloads_Xplore.  
+5. DoWhy causal inference estimating the effect of InternalReferences and PubsCited_CrossRef on CitationCount_CrossRef, controlling for Year, Conference and AminerCitationCount.  
+6. Co-authorship network from AuthorNames-Deduped (nodes) and InternalReferences (edges), compute community labels and centrality, then correlate with Award and Downloads_Xplore. 
+------- Next set of Ideas for 18-------
+1. Multi‐output CatBoost regression to jointly predict CitationCount_CrossRef and Downloads_Xplore from Year, Conference, PaperType, AminerCitationCount, PubsCited_CrossRef and AuthorAffiliation.  
+2. Graph convolutional neural network on the citation graph built from InternalReferences and PubsCited_CrossRef to forecast future AminerCitationCount for each DOI.  
+3. Dynamic LDA topic modeling on Abstract and AuthorKeywords over Year to uncover emerging themes and correlate topic prevalence with CitationCount_CrossRef and Downloads_Xplore.  
+4. Zero‐inflated negative binomial regression of PubsCited_CrossRef using CitationCount_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp and Year as predictors.  
+5. Transformer‐based classifier on Title + Abstract + AuthorKeywords embeddings, augmented with numeric features CitationCount_CrossRef and Downloads_Xplore, to predict Award.  
+6. Construct co‐authorship network from AuthorNames-Deduped and AuthorAffiliation, compute network metrics per DOI, then apply PCA on AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef and Downloads_Xplore to relate collaboration patterns to impact. 
+------- Next set of Ideas for 19-------
+1. Train a multi-task gradient-boosted tree to jointly predict CitationCount_CrossRef and Downloads_Xplore using Year, Conference, PaperType, AminerCitationCount, PubsCited_CrossRef, InternalReferences, GraphicsReplicabilityStamp and sentence-transformer embeddings of Title + Abstract + AuthorKeywords.  
+2. Fit a hierarchical Bayesian regression with random intercepts for Conference and PaperType to model Downloads_Xplore from AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences and Award.  
+3. Build a dynamic topic model on Abstract + AuthorKeywords to extract evolving themes by Year and Conference, then correlate annual topic prevalence with AminerCitationCount.  
+4. Construct a heterogeneous graph with nodes DOI, AuthorNames-Deduped and Conference and edges from InternalReferences, PubsCited_CrossRef and co-authorship (AuthorNames-Deduped–DOI), then apply a Graph Neural Network to predict future CitationCount_CrossRef.  
+5. Implement a causal-impact analysis using GraphicsReplicabilityStamp as treatment and CitationCount_CrossRef/Downloads_Xplore as outcomes via propensity-score matching on Year, Conference, PaperType and AminerCitationCount.  
+6. Cluster papers via UMAP + HDBSCAN on embeddings of Title + Abstract + AuthorKeywords to identify research fronts, then perform survival analysis on time-to-Award using cluster labels and Year. 
+------- Next set of Ideas for 20-------
+1. Multi‐modal regression to predict CitationCount_CrossRef using AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore, count(InternalReferences), Year, one‐hot Conference, PaperType, Award, GraphicsReplicabilityStamp and high-dimensional embeddings from Abstract + AuthorKeywords.  
+2. Binary classification of Award (present vs. absent) with stacked models on BERT embeddings of Abstract, TF-IDF of AuthorKeywords, numeric Downloads_Xplore, CitationCount_CrossRef and encoded GraphicsReplicabilityStamp.  
+3. Dynamic topic modeling (e.g. BERTopic) on combined Abstract + AuthorKeywords to derive yearly/Conference topic trajectories, then panel-regression of topic prevalence against CitationCount_CrossRef and Downloads_Xplore.  
+4. Citation‐graph embedding via node2vec or GraphSAGE on directed InternalReferences, clustering learned paper vectors to define research domains and correlating domain membership with AminerCitationCount, CitationCount_CrossRef and Award rate.  
+5. Co-authorship community detection using AuthorNames-Deduped edges and AuthorAffiliation attributes (Louvain), profiling each community by mean CitationCount_CrossRef, Downloads_Xplore, PaperType mix and GraphicsReplicabilityStamp distribution.  
+6. Causal-inference analysis (difference-in-differences or propensity-score matching) estimating the effect of Award on subsequent CitationCount_CrossRef growth and Downloads_Xplore, controlling for pre-award Year, Conference, PaperType and GraphicsReplicabilityStamp. 
+------- Next set of Ideas for 21-------
+1. Dynamic topic modeling on Abstract and AuthorKeywords over Year by Conference to uncover evolving research themes.  
+2. Temporal graph neural network on the co-authorship graph from AuthorNames-Deduped (edge weights = InternalReferences; node features = PubsCited_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp) to predict CitationCount_CrossRef.  
+3. Bayesian hierarchical negative-binomial regression of AminerCitationCount with random intercepts for Conference and AuthorAffiliation and fixed effects Year, PaperType, Award and InternalReferences.  
+4. Causal forest estimation of the treatment effects of Award and GraphicsReplicabilityStamp on CitationCount_CrossRef adjusting for Year, PaperType, InternalReferences and Downloads_Xplore.  
+5. Multimodal deep classifier combining BERT embeddings of Abstract, TF-IDF of AuthorKeywords, one-hot PaperType, and numeric features Downloads_Xplore, CitationCount_CrossRef and GraphicsReplicabilityStamp to predict Award.  
+6. Survival analysis (Cox proportional hazards or random survival forest) for time to reach a CitationCount_CrossRef milestone using covariates Year, Conference, AuthorAffiliation, PubsCited_CrossRef and InternalReferences. 
+------- Next set of Ideas for 22-------
+1. Fit a Cox proportional hazards model for time‐to‐first CitationCount_CrossRef event using Year, Conference, PaperType, Downloads_Xplore and InternalReferences.  
+2. Build a multi‐modal neural network that fuses BERT embeddings of Title + Abstract with GraphSAGE embeddings from the co‐authorship graph (nodes=AuthorNames‐Deduped; node features=AuthorAffiliation) to predict AminerCitationCount.  
+3. Use propensity score matching to estimate the causal effect of GraphicsReplicabilityStamp on CitationCount_CrossRef, adjusting for Year, Conference, PaperType and AuthorKeywords.  
+4. Apply a dynamic topic model on Abstract over Year to extract topic trajectories and correlate topic prevalence with Downloads_Xplore and CitationCount_CrossRef.  
+5. Develop a zero‐inflated negative binomial regression for CitationCount_CrossRef with predictors PaperType, Conference, PubsCited_CrossRef, InternalReferences and Award.  
+6. Train a deep autoencoder on [AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences] to detect anomalous papers. 
+------- Next set of Ideas for 23-------
+1. Multi-task Bayesian regression to jointly predict CitationCount_CrossRef and Downloads_Xplore from Year, Conference, PaperType, InternalReferences, PubsCited_CrossRef, paper length (LastPage–FirstPage+1) and count of AuthorKeywords with uncertainty estimates.  
+2. Dynamic heterogeneous graph neural network on DOI nodes (linked by InternalReferences) and co-authorship edges from AuthorNames-Deduped, using Abstract embeddings as node features, to forecast future AminerCitationCount.  
+3. Explainable text-numeric fusion classifier: fine-tune BERT on Abstract+AuthorKeywords, combine with numeric features CitationCount_CrossRef, Downloads_Xplore and PubsCited_CrossRef in XGBoost to predict GraphicsReplicabilityStamp, with SHAP for feature attribution.  
+4. Time-to-event survival analysis (Cox model) for time-to-Award (censoring papers without Award) using covariates CitationCount_CrossRef, Downloads_Xplore, GraphicsReplicabilityStamp, PubsCited_CrossRef and author-network centrality metrics from AuthorAffiliation.  
+5. Dynamic topic modeling (Dynamic LDA) on Abstract and AuthorKeywords over Year by Conference, ARIMA/Prophet forecasting of topic prevalence, and correlation of forecasted growth rates with PubsCited_CrossRef.  
+6. Multivariate anomaly detection (Isolation Forest or Robust Covariance) on [AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, InternalReferences, Downloads_Xplore] to flag publications with atypical citation/reference profiles. 
+------- Next set of Ideas for 24-------
+1. Bayesian hierarchical regression of CitationCount_CrossRef on AminerCitationCount, Downloads_Xplore and PubsCited_CrossRef with random intercepts for Conference and Year  
+2. Causal-forest estimation of the heterogeneous effect of GraphicsReplicabilityStamp on Downloads_Xplore, adjusting for CitationCount_CrossRef, AminerCitationCount and InternalReferences  
+3. Graph Neural Network on the citation graph (nodes=DOI, edges=InternalReferences) with node features [AuthorAffiliation embeddings, AuthorKeywords topic distributions, AminerCitationCount, CitationCount_CrossRef] to predict Award  
+4. Dynamic topic modeling on Abstract + AuthorKeywords over Year slices to uncover emerging research themes and correlate theme prevalence with Conference-level CitationCount_CrossRef trajectories  
+5. Variational Autoencoder anomaly detection on feature vectors [AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, PaperType one-hot] to flag atypical publications  
+6. Multi-task Transformer embedding of Title + Abstract + AuthorKeywords, augmented with AuthorNames-Deduped and AuthorAffiliation encodings, to jointly classify PaperType and predict PubsCited_CrossRef 
+------- Next set of Ideas for 25-------
+1. Train a Graph Neural Network on the DOI citation graph (edges from InternalReferences and PubsCited_CrossRef) to jointly predict AminerCitationCount and CitationCount_CrossRef.  
+2. Apply propensity-score matching to estimate the causal effect of GraphicsReplicabilityStamp on CitationCount_CrossRef, adjusting for Year, Conference, PaperType and InternalReferences.  
+3. Perform dynamic embedded topic modeling on Abstract + AuthorKeywords, cluster time-evolving topics by Conference, and correlate topic trajectories with Downloads_Xplore.  
+4. Fit a Cox proportional hazards model for time-to-Award using AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore and InternalReferences as covariates.  
+5. Train a variational multimodal autoencoder on Abstract embeddings, categorical features (Conference, PaperType) and numeric features (Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef) to derive latent paper clusters and compare clusters by Award.  
+6. Construct a co-authorship network from AuthorNames-Deduped and AuthorAffiliation, compute centrality metrics per author, and use mixed-effects regression (random intercepts for Conference) to predict CitationCount_CrossRef. 
+------- Next set of Ideas for 26-------
+1. Multi-task gradient-boosting model jointly predicting CitationCount_CrossRef and Downloads_Xplore from Year, Conference, InternalReferences, AminerCitationCount, PubsCited_CrossRef and PaperType.  
+2. Graph neural network on the co-authorship graph (nodes=AuthorNames-Deduped, edges via shared papers with AuthorAffiliation) to predict AminerCitationCount and CitationCount_CrossRef.  
+3. Instrumental-variable regression using PubsCited_CrossRef as an instrument for InternalReferences to estimate the causal effect on CitationCount_CrossRef, controlling for Year and Conference.  
+4. Dynamic topic modeling on Abstract and AuthorKeywords with annual time slices by Year, then forecasting topic-specific CitationCount_CrossRef trajectories.  
+5. Multimodal Transformer combining Title and Abstract embeddings with numeric features Downloads_Xplore, GraphicsReplicabilityStamp and AminerCitationCount to classify Award status.  
+6. UMAP dimensionality reduction on hybrid features (TF-IDF of Abstract + AuthorKeywords plus CitationCount_CrossRef, Downloads_Xplore, AminerCitationCount) followed by HDBSCAN clustering to reveal paper archetypes and compare Award frequencies. 
+------- Next set of Ideas for 27-------
+1. Bayesian hierarchical regression predicting CitationCount_CrossRef from InternalReferences, Downloads_Xplore, (LastPage–FirstPage+1) with random intercepts for Conference and Year  
+2. Heterogeneous graph neural network on DOI and AuthorNames-Deduped nodes (edges: InternalReferences, co-authorship via AuthorNames) plus AuthorAffiliation to forecast AminerCitationCount  
+3. Dynamic topic modeling of Abstract + AuthorKeywords to trace evolving research themes across Year and Conference  
+4. Multi-task transformer on Title, Abstract and AuthorKeywords to jointly classify Award (Yes/No) and predict GraphicsReplicabilityStamp  
+5. Cox proportional-hazards survival analysis for time-to-reach CitationCount_CrossRef thresholds using PubsCited_CrossRef, Downloads_Xplore, PaperType and Conference as covariates  
+6. Isolation Forest anomaly detection over [AminerCitationCount, CitationCount_CrossRef, PubsCited_CrossRef, Downloads_Xplore] with outlier validation via GraphicsReplicabilityStamp 
+------- Next set of Ideas for 28-------
+1. Train a RandomForestRegressor to predict CitationCount_CrossRef using Year, Conference, PaperType, PubsCited_CrossRef, Downloads_Xplore, Award and GraphicsReplicabilityStamp  
+2. Train an XGBoost classifier to predict Award using CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef, PaperType and GraphicsReplicabilityStamp  
+3. Apply dynamic topic modeling on Abstract + AuthorKeywords across Year slices, extract per-paper topic trend slopes, then fit an ElasticNet regression with [topic slopes, PaperType, Downloads_Xplore] to predict AminerCitationCount  
+4. Build a co‐authorship graph from AuthorNames-Deduped, compute per-paper author centrality metrics (degree, betweenness), and regress CitationCount_CrossRef on those centrality measures plus Year and PubsCited_CrossRef  
+5. Use propensity score matching (treatment = Award; covariates = Year, Conference, PaperType, Downloads_Xplore, InternalReferences, AminerCitationCount) to estimate the causal effect of Award on CitationCount_CrossRef  
+6. Run an IsolationForest on [InternalReferences, PubsCited_CrossRef, Downloads_Xplore, CitationCount_CrossRef, AminerCitationCount] to detect anomalous papers and analyze their Award and GraphicsReplicabilityStamp distributions 
+------- Next set of Ideas for 29-------
+1. Fit a mixed-effects regression  
+   CitationCount_CrossRef ~ InternalReferences + PubsCited_CrossRef + Downloads_Xplore + GraphicsReplicabilityStamp + (1 | Conference) + (1 | Year)
+
+2. Train a graph-neural-network on the co-authorship graph built from AuthorNames-Deduped and AuthorAffiliation to predict Downloads_Xplore
+
+3. Build a per-DOI time-series forecasting model (e.g. LSTM or Prophet) using sequences of AminerCitationCount, CitationCount_CrossRef and Downloads_Xplore to project next-year citations
+
+4. Apply BERTopic or LDA on combined Abstract + AuthorKeywords, then cluster papers by topic prevalence and profile each cluster by mean CitationCount_CrossRef, Award rate and Downloads_Xplore
+
+5. Run isolation-forest anomaly detection on GraphicsReplicabilityStamp, InternalReferences, CitationCount_CrossRef and PubsCited_CrossRef to surface reproducibility or citation outliers
+
+6. Use Conference and Year as instruments in an instrumental-variable causal-inference framework to estimate the effect of InternalReferences on future CitationCount_CrossRef 
+------- Next set of Ideas for 30-------
+1. Multi‐output regression to jointly predict AminerCitationCount and CitationCount_CrossRef from Year, Conference (one‐hot), PaperType, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, AuthorAffiliation and GraphicsReplicabilityStamp.  
+2. Dynamic topic modeling on Abstract + AuthorKeywords across Year to extract per‐paper topic trajectories, cluster those trajectories, then correlate cluster labels with Downloads_Xplore and CitationCount_CrossRef.  
+3. Graph neural network on a heterogeneous graph (nodes: DOI, AuthorNames-Deduped; edges: InternalReferences as citations and co-authorship via AuthorNames) to predict Award or AminerCitationCount.  
+4. Cox proportional-hazards survival model for time to first CrossRef citation (event: CitationCount_CrossRef>0) with covariates Year, Downloads_Xplore, PubsCited_CrossRef, InternalReferences and stratification by Conference and PaperType.  
+5. Isolation Forest (or Local Outlier Factor) anomaly detection on AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences and PageCount (=LastPage–FirstPage) to flag unusual high-impact papers.  
+6. Propensity-score matching to estimate the causal effect of Award on subsequent CitationCount_CrossRef using covariates Year, Conference, PaperType, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef and GraphicsReplicabilityStamp. 
+------- Next set of Ideas for 31-------
+1. Multi-output LightGBM regression predicting AminerCitationCount and CitationCount_CrossRef from Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, Award and GraphicsReplicabilityStamp  
+2. Bayesian hierarchical regression of Downloads_Xplore on Year, Conference and PaperType with random intercepts for AuthorAffiliation and Award  
+3. Graph Neural Network on the citation graph (nodes=DOI, edges=InternalReferences) with node features PubsCited_CrossRef, CitationCount_CrossRef and AuthorAffiliation embeddings to predict AminerCitationCount  
+4. Dynamic LDA topic modeling on Abstract and AuthorKeywords by Year and Conference, followed by logistic regression of Award on topic proportions and GraphicsReplicabilityStamp  
+5. Cox proportional-hazards survival model for time-to-50 CitationCount_CrossRef using AminerCitationCount, PubsCited_CrossRef and PaperType as covariates  
+6. Link-prediction on the AuthorNames-Deduped⇆DOI bipartite graph augmented with AuthorAffiliation and AuthorKeywords embeddings to recommend future collaborations 
+------- Next set of Ideas for 32-------
+1. Hierarchical Bayesian negative‐binomial regression of CitationCount_CrossRef with random intercepts for Conference and random slopes for Year, predictors: PaperType, InternalReferences, PubsCited_CrossRef, Downloads_Xplore, AminerCitationCount, Award and GraphicsReplicabilityStamp  
+2. Gradient boosting classification of Award using TF-IDF features from Abstract and AuthorKeywords plus numeric features CitationCount_CrossRef, Downloads_Xplore and InternalReferences  
+3. Dynamic topic modeling on concatenated Abstract + AuthorKeywords across Year and Conference to extract evolving topics, then regress per-paper topic proportions on Downloads_Xplore and AminerCitationCount  
+4. Graph neural network on the co-authorship graph built from AuthorNames-Deduped (node features from AuthorAffiliation) to predict papers in the top decile of CitationCount_CrossRef  
+5. Causal forest estimation of the effect of Award on CitationCount_CrossRef, controlling for Year, Conference, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef, InternalReferences and GraphicsReplicabilityStamp  
+6. Isolation Forest anomaly detection on [AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences] to flag outlier or landmark publications 
+------- Next set of Ideas for 33-------
+1. Fit a zero‐inflated negative‐binomial mixed‐effects model with CitationCount_CrossRef as outcome, fixed effects Year + Conference + PaperType + Downloads_Xplore + InternalReferences, and random intercepts for AuthorAffiliation.  
+2. Train a temporal graph neural network on the citation graph (nodes=DOI, edges=InternalReferences) using node features [Abstract embeddings, AuthorKeywords, AminerCitationCount] to jointly forecast future CitationCount_CrossRef and Downloads_Xplore by Year.  
+3. Apply dynamic topic modeling on the combined Abstract + AuthorKeywords corpus over Year, cluster Conferences by their topic‐trajectory profiles, and relate clusters to PubsCited_CrossRef trends.  
+4. Use propensity‐score matching to estimate the causal effect of GraphicsReplicabilityStamp (“Yes” vs “No”) on Downloads_Xplore, controlling for Year, Conference, PaperType, AminerCitationCount, CitationCount_CrossRef and InternalReferences.  
+5. Build a multi‐modal deep classifier for Award using text embeddings from Title + Abstract + AuthorKeywords alongside numeric features AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore and GraphicsReplicabilityStamp.  
+6. Construct the co‐authorship network from AuthorNames-Deduped + AuthorAffiliation, perform community detection, then apply anomaly detection on community‐level PubsCited_CrossRef and Downloads_Xplore to flag standout research groups. 
+------- Next set of Ideas for 34-------
+1. Bayesian hierarchical Poisson regression with outcome CitationCount_CrossRef, predictors AminerCitationCount + Downloads_Xplore + PubsCited_CrossRef, and random intercepts for Conference and Year  
+2. Structural equation model linking InternalReferences → PubsCited_CrossRef → CitationCount_CrossRef, with a latent “ReferencingEfficiency” factor  
+3. Dynamic topic modeling on Abstract and AuthorKeywords to extract evolving themes, then mixed-effects regressions of topic prevalence against Award and Downloads_Xplore (stratified by Year and Conference)  
+4. Graph neural network on a multi-modal network combining citation edges from DOI → InternalReferences and co-authorship edges from AuthorNames-Deduped + AuthorAffiliation to predict future AminerCitationCount  
+5. Survival analysis of “time to reach CitationCount_CrossRef ≥ 10” with covariates Year, PaperType, PubsCited_CrossRef and strata by Conference  
+6. Multi-task transformer model ingesting Title, Abstract and AuthorKeywords to jointly classify Award and GraphicsReplicabilityStamp 
+------- Next set of Ideas for 35-------
+1. Gradient-boosted regression to predict CitationCount_CrossRef using Year, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef, GraphicsReplicabilityStamp, one-hot PaperType, count(InternalReferences) and embeddings from Title+Abstract  
+2. Random-forest classification of Award (yes/no) from CitationCount_CrossRef, Downloads_Xplore, AminerCitationCount, count(InternalReferences), GraphicsReplicabilityStamp, one-hot PaperType and number of unique AuthorAffiliation  
+3. BERTopic modeling on combined Abstract+AuthorKeywords, then regression of topic prevalence per Conference–Year against future AminerCitationCount and Downloads_Xplore  
+4. Dynamic co-authorship network built from AuthorNames-Deduped & AuthorAffiliation: extract yearly centrality features to predict PubsCited_CrossRef and CitationCount_CrossRef  
+5. Conference-level time-series forecasting of Downloads_Xplore and CitationCount_CrossRef by Year using Prophet with AminerCitationCount and PubsCited_CrossRef as external regressors  
+6. Semantic-novelty scoring via cosine distance between BERT embeddings of each Abstract and the previous-year Conference centroid, followed by regression on CitationCount_CrossRef and classification for Award 
+------- Next set of Ideas for 36-------
+1. Multi‐output Gaussian Process regression to jointly forecast CitationCount_CrossRef and Downloads_Xplore over Year with hierarchical kernels stratified by Conference.  
+2. Transformer‐based multi‐task classifier using embeddings from Title, Abstract and AuthorKeywords to predict Award and GraphicsReplicabilityStamp simultaneously.  
+3. Heterogeneous Graph Neural Network on a paper–author–affiliation graph (nodes: papers, AuthorNames-Deduped, AuthorAffiliation; edges: InternalReferences, authorship) to predict future AminerCitationCount.  
+4. Dynamic Correlated Topic Modeling on Abstract and AuthorKeywords to uncover topic evolution by Year and quantify topic impacts on CitationCount_CrossRef via hierarchical panel regression.  
+5. Causal mediation analysis estimating total, direct and indirect effects of GraphicsReplicabilityStamp on CitationCount_CrossRef mediated through Downloads_Xplore, controlling for Conference, Year and PaperType.  
+6. Zero‐inflated negative‐binomial mixed‐effects model for AminerCitationCount with PubsCited_CrossRef, CitationCount_CrossRef and Year as fixed effects and random intercepts for Conference and PaperType. 
+------- Next set of Ideas for 37-------
+1. Train a graph neural network on the citation graph (nodes=DOI, edges=InternalReferences) to jointly predict CitationCount_CrossRef and AminerCitationCount using node features PubsCited_CrossRef and Downloads_Xplore.  
+2. Fine-tune a transformer (e.g., SciBERT) on concatenated Title + Abstract + AuthorKeywords to predict Downloads_Xplore.  
+3. Apply dynamic topic modeling on Abstract + AuthorKeywords over Year and use the evolving topic proportions to forecast conference-level CitationCount_CrossRef.  
+4. Construct a bipartite graph between DOI and AuthorNames-Deduped, perform spectral clustering to identify author communities, then compare clusters on mean Award rate and mean Downloads_Xplore.  
+5. Train a gradient-boosting regressor to predict PubsCited_CrossRef from Conference, Year, PaperType, PaperLength = LastPage–FirstPage, AuthorAffiliation, and CitationCount_CrossRef.  
+6. Build an ensemble classifier to predict GraphicsReplicabilityStamp using text features (Abstract, AuthorKeywords), numeric features (Downloads_Xplore, AminerCitationCount, CitationCount_CrossRef), and categorical features (Conference, PaperType). 
+------- Next set of Ideas for 38-------
+1. Linear mixed‐effects regression to predict CitationCount_CrossRef using fixed effects Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef, (LastPage−FirstPage+1) and random intercepts for Conference and Year  
+2. BERTopic modeling on Abstract and AuthorKeywords followed by a logistic regression to predict Award based on per‐paper topic proportions  
+3. Co‐authorship network from AuthorNames-Deduped and AuthorAffiliation: compute eigenvector and betweenness centrality per author and regress paper‐level centrality summaries against CitationCount_CrossRef and Downloads_Xplore  
+4. Directed citation graph from InternalReferences: compute PageRank and HITS authority scores per paper, cluster papers by score trajectories, and compare clusters on AminerCitationCount and PubsCited_CrossRef  
+5. Time‐normalized clustering of CitationCount_CrossRef/(currentYear−Year), AminerCitationCount/(currentYear−Year) and Downloads_Xplore/(currentYear−Year) via Gaussian mixtures to identify fast-rising vs. slow-burn papers  
+6. Multi‐task deep learning classifier using Abstract embeddings, AuthorKeywords, Conference, PaperType, CitationCount_CrossRef and Downloads_Xplore to jointly predict Award and GraphicsReplicabilityStamp 
+------- Next set of Ideas for 39-------
+1. Train a gradient‐boosting regressor to predict CitationCount_CrossRef using Year, Conference, PaperType, Downloads_Xplore, PubsCited_CrossRef, AminerCitationCount and InternalReferences  
+2. Apply Latent Dirichlet Allocation on Abstract and AuthorKeywords, then k-means cluster papers by topic proportions and compare cluster means of CitationCount_CrossRef and Downloads_Xplore  
+3. Build a co-authorship network from AuthorNames-Deduped and AuthorAffiliation, compute centrality metrics, and regress AminerCitationCount on those centralities and Year  
+4. Fit a zero-inflated negative binomial model for Downloads_Xplore with predictors Year, Conference, PaperType, InternalReferences and PubsCited_CrossRef  
+5. Develop an XGBoost classifier to predict Award using TF-IDF embeddings of Abstract plus CitationCount_CrossRef, Downloads_Xplore and GraphicsReplicabilityStamp  
+6. Perform change-point detection on annual time series of CitationCount_CrossRef and PubsCited_CrossRef by Conference to identify structural breaks over Year 
+------- Next set of Ideas for 40-------
+1. Heterogeneous Graph Transformer over nodes (DOI, AuthorNames-Deduped, Conference) and edges (InternalReferences, co-authorship) to jointly predict PubsCited_CrossRef and CitationCount_CrossRef.  
+2. Zero-inflated negative-binomial regression modeling CitationCount_CrossRef with covariates Year, Conference, PaperType, Downloads_Xplore, AminerCitationCount, PubsCited_CrossRef and GraphicsReplicabilityStamp.  
+3. Multi-modal neural network fusing transformer embeddings of Abstract + AuthorKeywords with numeric/categorical inputs (Year, Conference, PageLength = LastPage–FirstPage+1, Downloads_Xplore) to classify Award and predict future Downloads_Xplore.  
+4. Dynamic topic modeling on Abstract and AuthorKeywords by Year and Conference to extract evolving themes, then cluster topic trajectories and correlate with AminerCitationCount growth patterns.  
+5. Propensity-score matched causal inference estimating the effect of GraphicsReplicabilityStamp on subsequent CitationCount_CrossRef, controlling for Year, Conference, PaperType, Downloads_Xplore and PubsCited_CrossRef.  
+6. Cox proportional-hazards survival analysis for time from Year to reach a CitationCount_CrossRef threshold, with covariates PageLength, Downloads_Xplore, PaperType, GraphicsReplicabilityStamp and AuthorAffiliation diversity. 
+------- Next set of Ideas for 41-------
+1. Zero-inflated negative binomial regression with CitationCount_CrossRef as response and Year, PaperType, Downloads_Xplore, Award and GraphicsReplicabilityStamp as predictors.  
+2. Instrumental-variable analysis using GraphicsReplicabilityStamp as instrument for Downloads_Xplore to estimate its causal effect on CitationCount_CrossRef.  
+3. Structural Topic Modeling (STM) on Abstract with Year and AuthorKeywords as covariates, then regress topic prevalences on AminerCitationCount.  
+4. Heterogeneous Graph Neural Network on a graph of DOI, AuthorNames-Deduped and Conference nodes (edges=InternalReferences + authorship) to predict CitationCount_CrossRef (and optionally Downloads_Xplore).  
+5. Sequence modeling with an LSTM over the ordered InternalReferences list per DOI to forecast PubsCited_CrossRef.  
+6. Propensity-score matching on Year, PaperType and AminerCitationCount to estimate the average treatment effect of Award on CitationCount_CrossRef. 
+------- Next set of Ideas for 42-------
+1. Hierarchical Bayesian negative-binomial regression for CitationCount_CrossRef with fixed effects Year, PaperType, InternalReferences, PubsCited_CrossRef, Downloads_Xplore and nested random intercepts by Conference and AuthorAffiliation  
+2. GraphSAGE on a heterogeneous graph (nodes=DOI, AuthorNames-Deduped, Conference; edges=InternalReferences, co-authorship) to learn embeddings that predict AminerCitationCount  
+3. Multi-task Transformer+FFNN: fine-tune BERT embeddings of Title+Abstract, fuse TF-IDF of AuthorKeywords and numeric features (InternalReferences, PubsCited_CrossRef, Downloads_Xplore) to jointly predict Award and GraphicsReplicabilityStamp  
+4. Dynamic topic modeling on Abstract across Year to track evolving AuthorKeywords themes, then Granger-causality tests between topic prevalence and next-year aggregate Downloads_Xplore by Conference  
+5. Variational autoencoder anomaly detection on combined features [InternalReferences, CitationCount_CrossRef, AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore] with PaperType embeddings to flag breakthrough papers, cross-validate against Award  
+6. Propensity-score matching causal analysis estimating the effect of GraphicsReplicabilityStamp on CitationCount_CrossRef, controlling for Conference, Year, PaperType, InternalReferences and AuthorAffiliation 
+------- Next set of Ideas for 43-------
+1. Fit a hierarchical Bayesian regression of CitationCount_CrossRef on Downloads_Xplore, PubsCited_CrossRef and InternalReferences with random intercepts/slopes for Conference and random intercepts for PaperType.  
+2. Train a transformer‐based multi‐task model using Abstract + AuthorKeywords to jointly predict CitationCount_CrossRef (regression) and Award (classification).  
+3. Build a graph neural network on the co-authorship graph from AuthorNames-Deduped & AuthorAffiliation to predict AminerCitationCount at the paper level.  
+4. Apply causal forest estimation to quantify the heterogeneous effect of Award on subsequent Downloads_Xplore and CitationCount_CrossRef, controlling for Year, Conference and PubsCited_CrossRef.  
+5. Perform seasonal–trend decomposition and anomaly detection on the annual Downloads_Xplore time series by Conference to identify structural shifts.  
+6. Use UMAP embedding + HDBSCAN clustering on [CitationCount_CrossRef, AminerCitationCount, Downloads_Xplore, PubsCited_CrossRef] and profile clusters by PaperType, Award and GraphicsReplicabilityStamp. 
+------- Next set of Ideas for 44-------
+1. Fit a zero‐inflated negative‐binomial mixed‐effects model for CitationCount_CrossRef with fixed effects Downloads_Xplore, PubsCited_CrossRef, AminerCitationCount, PaperType, Year and random intercepts for Conference plus an offset log(LastPage–FirstPage+1).  
+2. Train a Graph Neural Network on the InternalReferences network (nodes = DOI; edges = InternalReferences), using node features from Abstract embeddings, AuthorKeywords embeddings and GraphicsReplicabilityStamp to predict future CitationCount_CrossRef.  
+3. Use a causal‐forest estimator to quantify the heterogeneous effect of Award on subsequent CitationCount_CrossRef and Downloads_Xplore, adjusting for pre‐treatment AminerCitationCount, PubsCited_CrossRef, PaperType and Year.  
+4. Apply BERTopic on Abstract + AuthorKeywords to extract latent topics, then fit a Dirichlet‐multinomial regression of topic proportions on Conference, Year and GraphicsReplicabilityStamp.  
+5. Build a multi‐task XGBoost regressor to jointly predict CitationCount_CrossRef and Downloads_Xplore using AminerCitationCount, PubsCited_CrossRef, count of unique AuthorAffiliation entries, PaperType, Conference and Year.  
+6. Construct a co‐authorship graph from AuthorNames-Deduped and AuthorAffiliation, detect communities via Louvain, compute community centralities, and compare each community’s mean CitationCount_CrossRef and Award rate. 
+------- Next set of Ideas for 45-------
+1. Fit a negative-binomial mixed-effects model predicting CitationCount_CrossRef with fixed effects Downloads_Xplore, AminerCitationCount, InternalReferences, PubsCited_CrossRef, GraphicsReplicabilityStamp and Award, plus random intercepts for Conference and Year.  
+2. Train a transformer-based multi-task regressor using Title and Abstract embeddings to simultaneously predict Downloads_Xplore and CitationCount_CrossRef.  
+3. Construct a graph neural network on the co-authorship network (nodes: AuthorNames-Deduped; edges: shared papers; node features: AuthorAffiliation, PaperType) to predict AminerCitationCount.  
+4. Apply dynamic topic modeling on Abstract and AuthorKeywords over Year to uncover evolving research themes and correlate topic prevalence with CitationCount_CrossRef growth rates.  
+5. Use a Cox proportional hazards model to analyze time to reach CitationCount_CrossRef thresholds (e.g. ≥10, ≥50) with covariates InternalReferences, PubsCited_CrossRef, PaperType, Award and GraphicsReplicabilityStamp.  
+6. Perform propensity score matching on Year, Conference, PaperType and AminerCitationCount to estimate the causal impact of Award on subsequent Downloads_Xplore and CitationCount_CrossRef. 
+------- Next set of Ideas for 46-------
+1. Multi‐task neural network to jointly predict [CitationCount_CrossRef, Downloads_Xplore] from [Year, Conference, PaperType, PubsCited_CrossRef, AminerCitationCount, GraphicsReplicabilityStamp]  
+2. Graph Neural Network on the InternalReferences citation graph with node features [AminerCitationCount, PubsCited_CrossRef, Downloads_Xplore] to predict Award  
+3. Dynamic topic modeling on Abstract + AuthorKeywords over Year, followed by logistic regression of Award on time‐varying topic proportions and PaperType  
+4. Derive co‐authorship network metrics from AuthorNames-Deduped and AuthorAffiliation, then train a random forest to predict CitationCount_CrossRef  
+5. Two‐stage least squares using PubsCited_CrossRef as an instrument for CitationCount_CrossRef to estimate its causal effect on Downloads_Xplore  
+6. Generate BERT embeddings of Title + Abstract, cluster papers, and compare clusters on GraphicsReplicabilityStamp and AminerCitationCount 
+------- Next set of Ideas for 47-------
+1. Multi-task classifier to predict Award and GraphicsReplicabilityStamp using AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences, PaperType, Conference, Year  
+2. ElasticNet regression to predict Downloads_Xplore from AminerCitationCount, CitationCount_CrossRef, InternalReferences, PubsCited_CrossRef, PaperType, Year  
+3. Dynamic topic modeling on Abstract and AuthorKeywords with Year as temporal metadata, then correlate topic trajectories with CitationCount_CrossRef  
+4. Graph Neural Network on the co-authorship graph (AuthorNames-Deduped, AuthorAffiliation) to predict AminerCitationCount  
+5. Cox proportional hazards model for time-to-first CrossRef citation (CitationCount_CrossRef) using DOI, InternalReferences, PubsCited_CrossRef, Conference, Year  
+6. Variational Autoencoder for anomaly detection on AminerCitationCount, CitationCount_CrossRef, Downloads_Xplore, PubsCited_CrossRef, InternalReferences 
+------- Next set of Ideas for 48-------
+1. Zero-inflated negative binomial regression predicting CitationCount_CrossRef using PubsCited_CrossRef, InternalReferences, Downloads_Xplore, Award, and GraphicsReplicabilityStamp with random intercepts for Conference and Year.  
+2. Temporal graph neural network on the citation network (nodes = DOI; edges = InternalReferences & PubsCited_CrossRef) with node features from Abstract and AuthorKeywords embeddings to forecast future AminerCitationCount.  
+3. Multi-task Transformer on Title + Abstract + AuthorKeywords to jointly classify PaperType and predict GraphicsReplicabilityStamp.  
+4. Cox proportional hazards survival model for time-to-50 citations (event: CitationCount_CrossRef ≥ 50) with time-varying covariates Downloads_Xplore, InternalReferences, PubsCited_CrossRef and stratification by Award.  
+5. Propensity-score matching to estimate the causal effect of Award on subsequent Downloads_Xplore and CitationCount_CrossRef, controlling for Year, Conference, PaperType, and InternalReferences.  
+6. Dynamic topic modeling on Abstract and AuthorKeywords to extract yearly topic trajectories, cluster Conferences by topic evolution, and correlate cluster means with Downloads_Xplore. 
+------- Next set of Ideas for 49-------
+1. Fit a negative‐binomial regression predicting CitationCount_CrossRef using Year + Conference + PaperType + InternalReferences + Downloads_Xplore + GraphicsReplicabilityStamp  
+2. Build a Cox proportional‐hazards model for “time to reach 10 CitationCount_CrossRef” with covariates Year, Conference, InternalReferences, AminerCitationCount, Downloads_Xplore, Award and GraphicsReplicabilityStamp  
+3. Generate transformer embeddings from Abstract + AuthorKeywords, apply Gaussian mixture clustering, and compare clusters on mean AminerCitationCount, CitationCount_CrossRef and Award frequency  
+4. Perform dynamic time‐warping clustering on annual Downloads_Xplore trajectories stratified by Conference + PaperType, then profile each cluster by average CitationCount_CrossRef and PubsCited_CrossRef  
+5. Use propensity‐score matching to estimate the causal effect of GraphicsReplicabilityStamp on subsequent CitationCount_CrossRef, controlling for Year, Conference, AminerCitationCount, Downloads_Xplore and PaperType  
+6. Construct the co‐authorship graph (nodes=AuthorNames-Deduped, edges=shared DOI), train a graph neural network with node features AuthorAffiliation + PaperType + AminerCitationCount to predict each author’s future AminerCitationCount
