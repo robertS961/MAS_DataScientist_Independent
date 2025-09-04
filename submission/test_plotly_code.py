@@ -9,6 +9,7 @@ Enhanced interactive Plotly visualization script for dataset.csv with educationa
 Requirements:
     pip install pandas numpy scikit-learn plotly scipy
 Run:
+just a quick test
     python this_script.py
 """
 import os
